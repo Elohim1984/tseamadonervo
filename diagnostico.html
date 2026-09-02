@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico Amado Nervo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#eef2ec; --surface:#ffffff; --surface-2:#e6ebe2; --surface-3:#dde4d8;
+    --ink:#182420; --ink-soft:#4b5750; --muted:#7d8a82;
+    --accent:#1f6f5c; --accent-strong:#154e41; --accent-soft:#dceae4; --accent-ink:#0d332a;
+    --gold:#b9791f; --gold-soft:#f3e3c6;
+    --border:rgba(24,36,32,0.14); --border-strong:rgba(24,36,32,0.28);
+    --good:#0ca30c; --warning:#c98300; --serious:#c1592f; --critical:#c23636;
+    --chart-1:#2a78d6; --chart-2:#c9531f; --chart-3:#12946a;
+    --shadow:0 1px 2px rgba(15,22,19,0.06), 0 8px 24px -12px rgba(15,22,19,0.18);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0f1613; --surface:#172420; --surface-2:#1e2e28; --surface-3:#25382f;
+      --ink:#edefea; --ink-soft:#b7c2bb; --muted:#889186;
+      --accent:#4fa98c; --accent-strong:#6bc0a3; --accent-soft:#1d3830; --accent-ink:#d9f0e6;
+      --gold:#e0a94a; --gold-soft:#3a2e14;
+      --border:rgba(237,239,234,0.14); --border-strong:rgba(237,239,234,0.28);
+      --good:#3fbf3f; --warning:#f0b429; --serious:#ec835a; --critical:#e2685f;
+      --chart-1:#3987e5; --chart-2:#e07a3c; --chart-3:#2fb98a;
+      --shadow:0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1613; --surface:#172420; --surface-2:#1e2e28; --surface-3:#25382f;
+    --ink:#edefea; --ink-soft:#b7c2bb; --muted:#889186;
+    --accent:#4fa98c; --accent-strong:#6bc0a3; --accent-soft:#1d3830; --accent-ink:#d9f0e6;
+    --gold:#e0a94a; --gold-soft:#3a2e14;
+    --border:rgba(237,239,234,0.14); --border-strong:rgba(237,239,234,0.28);
+    --good:#3fbf3f; --warning:#f0b429; --serious:#ec835a; --critical:#e2685f;
+    --chart-1:#3987e5; --chart-2:#e07a3c; --chart-3:#2fb98a;
+    --shadow:0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    color-scheme:dark;
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{margin:0;background:var(--bg);}
+  img{max-width:100%;}
+  [hidden]{display:none!important;}
+
+  .app{
+    background:var(--bg); color:var(--ink); min-height:100vh;
+    font-family:'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased;
+    padding-bottom:64px;
+  }
+  .app h1,.app h2,.app h3{font-family:'Fraunces','Georgia','Times New Roman',serif; font-weight:600; text-wrap:balance; margin:0;}
+  .mono{font-family:'IBM Plex Mono','SFMono-Regular',Menlo,monospace; font-variant-numeric:tabular-nums;}
+
+  a{color:var(--accent);}
+  button{font-family:inherit;}
+
+  .topbar{
+    position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--border);
+    padding:12px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:10px; margin-right:auto;}
+  .brand-mark{
+    width:34px; height:34px; border-radius:8px; background:var(--accent); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif;
+    font-weight:700; font-size:17px; flex:none;
+  }
+  .brand-text{display:flex; flex-direction:column; line-height:1.15;}
+  .brand-text strong{font-family:'Fraunces',serif; font-size:15px; font-weight:600;}
+  .brand-text span{font-size:11.5px; color:var(--muted); letter-spacing:.02em;}
+  .nav-tabs{display:flex; gap:6px; background:var(--surface-2); padding:4px; border-radius:10px;}
+  .nav-tabs button{
+    border:none; background:transparent; color:var(--ink-soft); padding:8px 14px; border-radius:7px;
+    font-size:13.5px; font-weight:600; cursor:pointer;
+  }
+  .nav-tabs button.active{background:var(--surface); color:var(--accent-ink); box-shadow:var(--shadow);}
+
+  .container{max-width:720px; margin:0 auto; padding:28px 20px 40px;}
+  .container.wide{max-width:1080px;}
+
+  .hero{margin-bottom:24px;}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--gold); background:var(--gold-soft); padding:4px 10px; border-radius:999px;
+    margin-bottom:12px;
+  }
+  .hero h1{font-size:26px;}
+  .hero p{color:var(--ink-soft); margin:8px 0 0; max-width:60ch;}
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px;
+    box-shadow:var(--shadow);
+  }
+  .card + .card{margin-top:16px;}
+  .section-num{
+    display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:7px;
+    background:var(--accent-soft); color:var(--accent-ink); font-family:'Fraunces',serif; font-weight:700; font-size:13px;
+    flex:none;
+  }
+  .section-head{display:flex; align-items:center; gap:10px; margin-bottom:4px;}
+  .section-head h2{font-size:17px;}
+  .section-sub{color:var(--muted); font-size:13px; margin:2px 0 16px 36px;}
+
+  label.field{display:block; margin-bottom:16px;}
+  label.field:last-child{margin-bottom:0;}
+  .field-label{display:block; font-size:14px; font-weight:600; margin-bottom:8px;}
+  .field-hint{font-size:12.5px; color:var(--muted); margin-top:4px;}
+  input[type="text"], select, textarea{
+    width:100%; border:1px solid var(--border-strong); background:var(--surface); color:var(--ink);
+    border-radius:9px; padding:10px 12px; font-size:15px; font-family:inherit;
+  }
+  textarea{resize:vertical; min-height:64px;}
+  input[type="text"]:focus, select:focus, textarea:focus{outline:2px solid var(--accent); outline-offset:1px;}
+
+  .likert-item{padding:14px 0; border-top:1px solid var(--border);}
+  .likert-item:first-child{border-top:none; padding-top:2px;}
+  .likert-text{font-size:14.5px; margin-bottom:10px; font-weight:500;}
+  .likert-row{display:grid; grid-template-columns:repeat(var(--scale-n,4),1fr); gap:6px;}
+  .pill{
+    position:relative; display:flex; align-items:center; justify-content:center; text-align:center;
+    border:1px solid var(--border-strong); border-radius:9px; padding:9px 4px; font-size:12.5px; font-weight:600;
+    color:var(--ink-soft); cursor:pointer; user-select:none; background:var(--surface-2);
+  }
+  .pill input{position:absolute; opacity:0; width:1px; height:1px;}
+  .pill:has(input:checked){background:var(--accent); border-color:var(--accent); color:#fff;}
+  .pill:focus-within{outline:2px solid var(--accent); outline-offset:2px;}
+
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip{
+    position:relative; border:1px solid var(--border-strong); border-radius:999px; padding:8px 14px; font-size:13.5px;
+    font-weight:600; color:var(--ink-soft); cursor:pointer; background:var(--surface-2);
+  }
+  .chip input{position:absolute; opacity:0; width:1px; height:1px;}
+  .chip:has(input:checked){background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink);}
+
+  .radio-list{display:flex; flex-direction:column; gap:8px;}
+  .radio-row{
+    position:relative; display:flex; align-items:center; gap:10px; border:1px solid var(--border-strong);
+    border-radius:9px; padding:10px 12px; cursor:pointer; font-size:14px; background:var(--surface-2);
+  }
+  .radio-row input{position:absolute; opacity:0; width:1px; height:1px;}
+  .radio-row:has(input:checked){background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink); font-weight:600;}
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; border:none; border-radius:10px;
+    padding:12px 20px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .btn-primary{background:var(--accent); color:#fff;}
+  .btn-primary:hover{background:var(--accent-strong);}
+  .btn-ghost{background:var(--surface-2); color:var(--ink);}
+  .btn-ghost:hover{background:var(--surface-3);}
+  .btn-danger{background:transparent; color:var(--critical); border:1px solid var(--critical);}
+  .btn-sm{padding:7px 12px; font-size:13px; border-radius:8px;}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+  .btn-block{width:100%;}
+
+  .form-actions{margin-top:22px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+  .status-line{font-size:13px; color:var(--muted);}
+  .status-line.err{color:var(--critical); font-weight:600;}
+
+  .gate{max-width:360px; margin:64px auto; text-align:center;}
+  .gate .card{text-align:left;}
+
+  .kpi-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:20px;}
+  .kpi{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:var(--shadow);}
+  .kpi-label{font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600;}
+  .kpi-value{font-family:'Fraunces',serif; font-size:28px; font-weight:600; margin-top:6px;}
+  .kpi-sub{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+
+  .tabbar{display:flex; gap:4px; overflow-x:auto; border-bottom:1px solid var(--border); margin-bottom:20px; padding-bottom:0;}
+  .tabbar button{
+    border:none; background:transparent; color:var(--ink-soft); padding:10px 14px; font-size:13.5px; font-weight:600;
+    cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; margin-bottom:-1px;
+  }
+  .tabbar button.active{color:var(--accent-ink); border-bottom-color:var(--accent);}
+
+  .grupo-row{display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--border);}
+  .grupo-row:first-child{border-top:none;}
+  .grupo-row input[type="text"]{max-width:110px;}
+  .grupo-row input.inscritos{max-width:80px; text-align:center;}
+  .grupo-row .grow{flex:1;}
+
+  .progress-track{background:var(--surface-3); border-radius:999px; height:10px; overflow:hidden; flex:1;}
+  .progress-fill{height:100%; border-radius:999px;}
+  .status-pill{
+    display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700; padding:3px 9px;
+    border-radius:999px;
+  }
+  .status-pill.good{background:rgba(12,163,12,0.14); color:var(--good);}
+  .status-pill.warning{background:rgba(201,131,0,0.16); color:var(--warning);}
+  .status-pill.critical{background:rgba(194,54,54,0.14); color:var(--critical);}
+  .status-dot{width:7px; height:7px; border-radius:50%; background:currentColor;}
+
+  .grupo-card{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:var(--shadow);}
+  .grupo-card + .grupo-card{margin-top:10px;}
+  .grupo-card-top{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;}
+  .grupo-name{font-weight:700; font-size:15px;}
+  .grupo-count{font-size:13px; color:var(--ink-soft);}
+  .grupo-progress-row{display:flex; align-items:center; gap:10px;}
+
+  .bar-list{display:flex; flex-direction:column; gap:14px;}
+  .bar-row{display:grid; grid-template-columns:minmax(0,1fr) 220px; gap:14px; align-items:center;}
+  .bar-row-label{font-size:13.5px;}
+  .bar-track{background:var(--surface-2); border-radius:6px; height:14px; position:relative; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:6px; min-width:3px;}
+  .bar-value{position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:11px; font-weight:700; color:var(--ink); font-family:'IBM Plex Mono',monospace;}
+  .bar-value.outside{position:static; transform:none; margin-left:8px; display:inline-block;}
+  .bar-wrap{display:flex; align-items:center; gap:8px;}
+
+  .legend{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px; font-size:12.5px; color:var(--ink-soft);}
+  .legend-item{display:flex; align-items:center; gap:6px;}
+  .legend-swatch{width:10px; height:10px; border-radius:3px;}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:13px;}
+  table.data-table th, table.data-table td{text-align:left; padding:8px 10px; border-top:1px solid var(--border);}
+  table.data-table th{color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em;}
+  .table-scroll{overflow-x:auto;}
+
+  .keyword-list{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+  .keyword{background:var(--surface-2); border-radius:999px; padding:6px 12px; font-size:12.5px; font-weight:600; color:var(--ink-soft);}
+  .keyword b{color:var(--accent-ink); font-family:'IBM Plex Mono',monospace; margin-right:5px;}
+
+  .response-item{padding:10px 0; border-top:1px solid var(--border); font-size:13.5px;}
+  .response-item:first-child{border-top:none;}
+  .response-meta{font-size:11.5px; color:var(--muted); margin-bottom:3px;}
+
+  .empty-state{text-align:center; padding:36px 16px; color:var(--muted); font-size:13.5px;}
+
+  .thanks{max-width:440px; margin:80px auto; text-align:center;}
+  .thanks .mark{width:56px; height:56px; border-radius:50%; background:var(--accent-soft); color:var(--accent-ink);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 18px; font-size:26px;}
+
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--bg);
+    padding:10px 18px; border-radius:999px; font-size:13px; font-weight:600; box-shadow:var(--shadow); z-index:50;
+  }
+  :root:not([data-theme="light"]) .toast{background:var(--surface); color:var(--ink); border:1px solid var(--border-strong);}
+  :root[data-theme="dark"] .toast{background:var(--surface); color:var(--ink); border:1px solid var(--border-strong);}
+
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  @media (max-width:640px){ .two-col{grid-template-columns:1fr;} .bar-row{grid-template-columns:1fr;} .bar-row .bar-wrap{margin-top:2px;} }
+  @media (max-width:480px){ .tabbar button{padding:9px 10px; font-size:12.5px;} .nav-tabs button{padding:7px 10px; font-size:12.5px;} }
+  @media (max-width:560px){ .likert-row{grid-template-columns:repeat(3,1fr)!important;} .pill{font-size:11.5px; padding:8px 3px;} }
+
+  .checklist{display:flex; flex-direction:column; gap:10px;}
+  .checklist li{display:flex; gap:10px; align-items:flex-start; font-size:13.5px; color:var(--ink-soft); list-style:none;}
+  .checklist li b{color:var(--ink);}
+  .checklist .num{
+    flex:none; width:22px; height:22px; border-radius:6px; background:var(--surface-2); color:var(--ink-soft);
+    display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700; font-family:'IBM Plex Mono',monospace;
+  }
+  @media print{
+    .topbar,.no-print{display:none!important;}
+    .app{background:#fff; color:#000; padding-bottom:0;}
+    .card{box-shadow:none; border:1px solid #ccc;}
+  }
+  @media print{
+    body.print-poster-mode .card:not(#posterCard){display:none!important;}
+    body.print-poster-mode .container{max-width:100%; padding:0;}
+    body.print-poster-mode #posterCard{border:none; padding:60px 24px;}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ================= conexión con Control Escolar (Apps Script) ================= */
+// Mismo Apps Script / misma Hoja de Google que ya usa Control Escolar y el
+// Examen diagnóstico. No se modifica ese script — solo se usan claves nuevas
+// con prefijo "diag" para no chocar con sus datos.
+var API_URL = "https://script.google.com/macros/s/AKfycbzyP65kGWIq6Ury8VO7eLpAa4q9v91kDUL1gcw0fX4-aMuiEYqaurAIbz3J6R9oKj1sHA/exec";
+var KEY_CONFIG = "diagConfig:main";
+var PREFIX_RESPUESTA = "diagRespuesta:";
+var PREFIX_CONCENTRADO = "diagConcentrado:";
+
+var DEFAULT_CONFIG_BLOB = {
+  meta:{escuela:"Telesecundaria Amado Nervo", programa:"Programa Analítico, PIC y Proyectos Comunitarios", cicloEscolar:"2026-2027", semana:"Semana 1 de inscripción"},
+  config:{pin:"2026", likertScale:["Nunca","Casi nunca","Ocasionalmente","Casi siempre","Siempre"],
+    grupos:[{id:"g1",grado:"1°",grupo:"A",inscritos:0},{id:"g2",grado:"2°",grupo:"A",inscritos:0},{id:"g3",grado:"3°",grupo:"A",inscritos:0}]}
+};
+
+function qs(params){
+  return Object.keys(params).map(function(k){
+    return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]==null?"":params[k]);
+  }).join("&");
+}
+function apiRead(action, params, cb){
+  var p = Object.assign({action:action}, params||{});
+  var url = API_URL + "?" + qs(p);
+  fetch(url, {method:"GET"})
+    .then(function(r){ return r.json(); })
+    .then(function(json){ cb(null, json); })
+    .catch(function(err){ cb(err, null); });
+}
+function apiWrite(action, params, cb){
+  var p = Object.assign({action:action}, params||{});
+  fetch(API_URL, {
+    method:"POST",
+    headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body: qs(p)
+  }).then(function(r){ return r.json(); })
+    .then(function(json){ cb(null, json); })
+    .catch(function(err){ cb(err, null); });
+}
+
+/* ---------- content constants ---------- */
+var SOCIOEMOCIONAL_ITEMS = [
+  "Me siento feliz al asistir a la escuela.",
+  "Me llevo bien con mis compañeros.",
+  "Puedo expresar mis emociones sin problemas.",
+  "Cuando tengo dificultades busco ayuda.",
+  "Me siento seguro en la escuela.",
+  "Trabajo bien en equipo.",
+  "Respeto las opiniones de los demás.",
+  "Manejo adecuadamente mis enojos."
+];
+var APRENDIZAJE_ITEMS = [
+  {key:"visual", text:"Aprendo mejor observando imágenes."},
+  {key:"auditivo", text:"Aprendo mejor escuchando explicaciones."},
+  {key:"kinestesico", text:"Aprendo mejor realizando actividades prácticas."}
+];
+var ACADEMICO_ITEMS = [
+  "Comprendo lo que leo.",
+  "Redacto textos con claridad.",
+  "Resuelvo problemas matemáticos.",
+  "Analizo información.",
+  "Realizo investigaciones."
+];
+var CONVIVENCIA_OPTS = ["Ambos padres","Solo mamá","Solo papá","Abuelos u otros familiares","Otro"];
+var SERVICIOS_OPTS = ["Agua","Electricidad","Internet","Drenaje"];
+var INTERNET_OPTS = ["Sí, en casa","Sí, fuera de casa (biblioteca, familiar, etc.)","No tengo acceso"];
+var ACTIVIDAD_OPTS = ["Comercio o negocio propio","Trabajo agrícola / del campo","Empleo en fábrica o industria",
+  "Empleado(a) de gobierno u oficina","Construcción / albañilería","Servicio doméstico",
+  "Profesionista (salud, docencia, etc.)","Transporte","Ama de casa","Actualmente sin empleo","Otro"];
+var STOPWORDS = ("de la que el en y a los del se las por un para con no una su al lo como mas pero sus le ya o " +
+  "este si porque esta entre cuando muy sin sobre tambien me hasta hay donde quien desde todo nos durante todos " +
+  "uno les ni contra otros ese eso ante ellos e esto mi antes algunos que unos yo otro otras otra el tanto esa " +
+  "estos mucho quienes nada muchos cual poco ella estar estas algunas algo nosotros mis tu te ti tus ellas " +
+  "nosotras vosotros vosotras os esos esas estoy esta estamos estan soy eres es somos son tengo tiene tienen " +
+  "hacer hace mas mejor mucha mucho poca pocos falta faltan hay son").split(/\s+/);
+var STOPWORD_SET = {}; STOPWORDS.forEach(function(w){ STOPWORD_SET[w]=true; });
+
+/* ---------- state ---------- */
+var STATE = null;
+var VIEW = "loading";           // 'loading' | 'load-error' | 'student' | 'teacher' | 'thanks'
+var TEACHER_TAB = "resumen";    // resumen | resultados | comunitario | config | exportar
+var TEACHER_UNLOCKED = false;
+var RESULT_FILTER = "";         // grupoId filter, '' = todos
+var SUBMITTING = false;
+var LAST_ERROR = null;
+var THANKS_RECORD = null;
+var PENDING_RECORD = null;
+var QR_URL = "";
+var CONFIRM_DELETE_ID = null;
+var LOAD_ERROR = null;
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function todayISO(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmtDate(iso){ if(!iso) return ""; var p=iso.split("-"); return p.length===3 ? (p[2]+"/"+p[1]+"/"+p[0]) : iso; }
+function grupoLabel(g){ return g ? (g.grado+" "+g.grupo) : "—"; }
+function findGrupo(id){ return (STATE.config.grupos||[]).find(function(g){ return g.id===id; }); }
+function avg(nums){ if(!nums.length) return 0; return nums.reduce(function(a,b){return a+b;},0)/nums.length; }
+
+/* ---------- keyword frequency for open text ---------- */
+function keywordFreq(texts, topN){
+  var counts = {};
+  texts.forEach(function(t){
+    if(!t) return;
+    var norm = t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+    var words = norm.split(/[^a-z0-9áéíóúñ]+/i).filter(Boolean);
+    words.forEach(function(w){
+      if(w.length<4) return;
+      if(STOPWORD_SET[w]) return;
+      counts[w] = (counts[w]||0)+1;
+    });
+  });
+  var arr = Object.keys(counts).map(function(w){ return {word:w, count:counts[w]}; });
+  arr.sort(function(a,b){ return b.count-a.count; });
+  return arr.slice(0, topN||12);
+}
+
+/* ---------- CSV ---------- */
+function csvCell(v){ v = v==null?"":String(v); if(/[",\n;]/.test(v)) v = '"'+v.replace(/"/g,'""')+'"'; return v; }
+function buildCsv(){
+  var rows = [];
+  var header = ["id","grado_grupo","nombre","fecha",
+    "se_1","se_2","se_3","se_4","se_5","se_6","se_7","se_8",
+    "ap_visual","ap_auditivo","ap_kinestesico",
+    "ac_1","ac_2","ac_3","ac_4","ac_5",
+    "convivencia","servicios","lugar_estudio","internet_tareas","actividad_padres",
+    "problemas_comunidad","temas_interes","propuestas_mejora",
+    "preocupacion","felicidad","mejorar_convivencia","proyecto_deseado"];
+  rows.push(header.map(csvCell).join(","));
+  STATE.respuestas.forEach(function(r){
+    var g = findGrupo(r.grupoId);
+    var row = [r.id, grupoLabel(g), r.nombre, r.fecha]
+      .concat(r.socioemocional)
+      .concat([r.aprendizaje[0], r.aprendizaje[1], r.aprendizaje[2]])
+      .concat(r.academico)
+      .concat([r.socioeconomico.convivencia, (r.socioeconomico.servicios||[]).join("|"),
+        r.socioeconomico.lugarEstudio, r.socioeconomico.internetTareas,
+        r.socioeconomico.actividadPadres + (r.socioeconomico.actividadPadresOtro? (" - "+r.socioeconomico.actividadPadresOtro):"")])
+      .concat([r.comunitario.problemas, r.comunitario.temas, r.comunitario.propuestas])
+      .concat([r.abiertas.preocupacion, r.abiertas.felicidad, r.abiertas.convivencia, r.abiertas.proyecto]);
+    rows.push(row.map(csvCell).join(","));
+  });
+  return rows.join("\r\n");
+}
+
+/* ================= RENDER ================= */
+function render(){
+  var app = document.getElementById("app");
+  if(VIEW==="loading"){ app.innerHTML = renderLoading(); return; }
+  if(VIEW==="load-error"){ app.innerHTML = renderLoadError(); return; }
+  if(VIEW==="thanks"){ app.innerHTML = renderThanks(); return; }
+  var html = renderTopbar() + '<div class="container' + (VIEW==="teacher"?" wide":"") + '">';
+  html += VIEW==="teacher" ? renderTeacher() : renderStudent();
+  html += "</div>";
+  app.innerHTML = html;
+  var f = document.getElementById("diagForm");
+  if(f) f.addEventListener("submit", onSubmitForm);
+  if(VIEW==="teacher" && TEACHER_TAB==="exportar"){ renderQr(QR_URL); }
+}
+
+function renderLoading(){
+  return '<div class="thanks"><div class="mark mono">…</div><h1 style="font-size:18px">Cargando…</h1>' +
+    '<p style="color:var(--ink-soft); margin-top:8px">Conectando con la hoja de la escuela.</p></div>';
+}
+function renderLoadError(){
+  return '<div class="thanks"><div class="mark" style="color:var(--critical)">!</div>' +
+    '<h1 style="font-size:18px">No se pudo cargar</h1>' +
+    '<p style="color:var(--ink-soft); margin-top:8px">' + esc(LOAD_ERROR||"Revisa tu conexión e inténtalo de nuevo.") + '</p>' +
+    '<button class="btn btn-primary" style="margin-top:20px" data-action="reload">Reintentar</button></div>';
+}
+
+function renderQr(url){
+  var el = document.getElementById("qrCanvas");
+  if(!el) return;
+  el.innerHTML = "";
+  if(!url){
+    el.innerHTML = '<div class="empty-state" style="padding:16px">Escribe el enlace público de esta página arriba para generar el código.</div>';
+    return;
+  }
+  if(typeof QRious === "undefined"){
+    el.innerHTML = '<div class="empty-state" style="padding:16px">No se pudo cargar el generador de QR (revisa tu conexión). Copia el enlace de abajo y compártelo manualmente.</div>';
+    return;
+  }
+  try{
+    var canvas = document.createElement("canvas");
+    el.appendChild(canvas);
+    new QRious({ element: canvas, value: url, size: 220, background: "#ffffff", foreground: "#000000", level: "M" });
+  }catch(e){
+    el.innerHTML = '<div class="empty-state" style="padding:16px">No se pudo generar el código QR.</div>';
+  }
+}
+
+function renderTopbar(){
+  return '' +
+  '<div class="topbar no-print">' +
+    '<div class="brand"><div class="brand-mark">AN</div>' +
+      '<div class="brand-text"><strong>' + esc(STATE.meta.escuela) + '</strong><span>' + esc(STATE.meta.programa) + '</span></div>' +
+    '</div>' +
+    (VIEW==="teacher" ? '<button class="btn btn-ghost btn-sm" data-action="nav" data-view="student">← Ver como alumno</button>' : '') +
+  '</div>';
+}
+
+/* ---------- student view ---------- */
+function renderStudent(){
+  var grupos = STATE.config.grupos||[];
+  var ls = STATE.config.likertScale;
+  var out = '' +
+  '<div class="hero">' +
+    '<div class="eyebrow">' + esc(STATE.meta.semana) + '</div>' +
+    '<h1>Instrumento de Diagnóstico Integral</h1>' +
+    '<p>Responde con sinceridad. No hay respuestas correctas o incorrectas: esta información ayuda a tu docente a conocerte mejor y a construir los proyectos del ciclo (Programa Analítico, PIC y Proyectos Comunitarios).</p>' +
+  '</div>' +
+  '<form id="diagForm">' +
+  '<div class="card">' +
+    '<label class="field"><span class="field-label">Nombre del alumno</span>' +
+      '<input type="text" name="nombre" required placeholder="Nombre completo" autocomplete="name"></label>' +
+    '<label class="field"><span class="field-label">Grado y grupo</span>' +
+      '<select name="grupoId" required>' +
+        '<option value="" disabled selected>Selecciona tu grupo</option>' +
+        grupos.map(function(g){ return '<option value="'+esc(g.id)+'">'+esc(grupoLabel(g))+'</option>'; }).join("") +
+      '</select>' +
+      (grupos.length===0 ? '<div class="field-hint">Tu docente aún no ha configurado los grupos. Avísale antes de continuar.</div>' : '') +
+    '</label>' +
+  '</div>' +
+
+  sectionCard(1, "Diagnóstico socioemocional", "¿Qué tan seguido te pasa esto?", likertBlock("se", SOCIOEMOCIONAL_ITEMS, ls)) +
+
+  sectionCard(2, "Diagnóstico socioeconómico", "Nos ayuda a entender tu contexto en casa.",
+    field("¿Con quién vives?", radioList("convivencia", CONVIVENCIA_OPTS)) +
+    field("Tu vivienda cuenta con...", "<div class=\"chip-row\">" + SERVICIOS_OPTS.map(function(s){
+        return '<label class="chip"><input type="checkbox" name="servicios" value="'+esc(s)+'"><span>'+esc(s)+'</span></label>';
+      }).join("") + "</div>") +
+    field("¿Tienes un lugar adecuado para estudiar en casa?", radioList("lugarEstudio", ["Sí","No"])) +
+    field("¿Tienes acceso a internet para hacer tareas?", radioList("internetTareas", INTERNET_OPTS)) +
+    field("Actividad principal de tus padres o tutores", selectField("actividadPadres", ACTIVIDAD_OPTS) +
+      '<input type="text" name="actividadPadresOtro" placeholder="Si elegiste Otro, especifica" style="margin-top:8px">')
+  ) +
+
+  sectionCard(3, "Estilos de aprendizaje", "¿Qué tanto se parece a ti cada frase?", likertBlock("ap", APRENDIZAJE_ITEMS.map(function(i){return i.text;}), ls)) +
+
+  sectionCard(4, "Diagnóstico académico", "¿Qué tan seguido te pasa esto?", likertBlock("ac", ACADEMICO_ITEMS, ls)) +
+
+  sectionCard(5, "Diagnóstico comunitario", "Piensa en tu colonia, barrio o comunidad.",
+    field("Principales problemas de la comunidad", '<textarea name="problemas" placeholder="Escribe aquí..."></textarea>') +
+    field("Temas de interés para proyectos escolares", '<textarea name="temas" placeholder="Escribe aquí..."></textarea>') +
+    field("Propuestas para mejorar la comunidad", '<textarea name="propuestas" placeholder="Escribe aquí..."></textarea>')
+  ) +
+
+  sectionCard(6, "Preguntas abiertas", "",
+    field("¿Qué es lo que más te preocupa actualmente?", '<textarea name="preocupacion"></textarea>') +
+    field("¿Qué te hace sentir feliz?", '<textarea name="felicidad"></textarea>') +
+    field("¿Qué te gustaría mejorar de tu convivencia escolar?", '<textarea name="mejorarConvivencia"></textarea>') +
+    field("¿Qué proyecto te gustaría desarrollar en tu comunidad?", '<textarea name="proyectoDeseado"></textarea>')
+  ) +
+
+  '<div class="form-actions">' +
+    (LAST_ERROR && PENDING_RECORD ?
+      '<button type="button" class="btn btn-primary" data-action="retrysubmit" ' + (SUBMITTING?"disabled":"") + '>' + (SUBMITTING?"Enviando…":"Reintentar envío") + '</button>' :
+      '<button type="submit" class="btn btn-primary" ' + (SUBMITTING?"disabled":"") + '>' + (SUBMITTING?"Enviando…":"Enviar diagnóstico") + '</button>') +
+    '<span class="status-line' + (LAST_ERROR?" err":"") + '">' + (LAST_ERROR ? esc(LAST_ERROR) : "Tus respuestas se guardan solo cuando presionas enviar.") + '</span>' +
+  '</div>' +
+  '</form>';
+  return out;
+}
+
+function sectionCard(n, title, sub, body){
+  return '<div class="card">' +
+    '<div class="section-head"><span class="section-num">' + n + '</span><h2>' + esc(title) + '</h2></div>' +
+    (sub ? '<div class="section-sub">' + esc(sub) + '</div>' : '<div style="margin-bottom:14px"></div>') +
+    body +
+  '</div>';
+}
+function field(label, inner){
+  return '<label class="field"><span class="field-label">' + esc(label) + '</span>' + inner + '</label>';
+}
+function likertBlock(prefix, items, scale){
+  return items.map(function(text, i){
+    return '<div class="likert-item"><div class="likert-text">' + esc(text) + '</div><div class="likert-row" style="--scale-n:'+scale.length+'">' +
+      scale.map(function(opt, idx){
+        var val = idx+1;
+        return '<label class="pill"><input type="radio" name="'+prefix+'_'+i+'" value="'+val+'" required><span>'+esc(opt)+'</span></label>';
+      }).join("") +
+    '</div></div>';
+  }).join("");
+}
+function radioList(name, opts){
+  return '<div class="radio-list">' + opts.map(function(o){
+    return '<label class="radio-row"><input type="radio" name="'+name+'" value="'+esc(o)+'" required><span>'+esc(o)+'</span></label>';
+  }).join("") + '</div>';
+}
+function selectField(name, opts){
+  return '<select name="'+name+'" required><option value="" disabled selected>Selecciona una opción</option>' +
+    opts.map(function(o){ return '<option value="'+esc(o)+'">'+esc(o)+'</option>'; }).join("") + '</select>';
+}
+
+function renderThanks(){
+  var g = THANKS_RECORD ? findGrupo(THANKS_RECORD.grupoId) : null;
+  return '<div class="thanks">' +
+    '<div class="mark">✓</div>' +
+    '<h1 style="font-size:22px">¡Gracias' + (THANKS_RECORD? ", "+esc(THANKS_RECORD.nombre.split(" ")[0]) : "") + '!</h1>' +
+    '<p style="color:var(--ink-soft); margin-top:8px">Tu diagnóstico quedó registrado' + (g? " para "+esc(grupoLabel(g)) : "") + '. Gracias por responder con honestidad — esto ayuda a tu docente a preparar mejores proyectos para tu grupo.</p>' +
+    '<button class="btn btn-primary" style="margin-top:20px" data-action="nav" data-view="student">Volver al inicio</button>' +
+  '</div>';
+}
+
+/* ---------- teacher view ---------- */
+function renderTeacher(){
+  if(!TEACHER_UNLOCKED){ return renderGate(); }
+  var tabs = [["resumen","Resumen"],["resultados","Resultados"],["comunitario","Comunitario"],["config","Configuración"],["exportar","Exportar"]];
+  var out = '<div class="hero no-print"><div class="eyebrow">' + esc(STATE.meta.semana) + '</div><h1>Panel del docente</h1>' +
+    '<p>Sigue el avance de aplicación por grupo y revisa los resultados para construir el Programa Analítico, el PIC y los proyectos comunitarios.</p></div>';
+  out += '<div class="tabbar no-print">' + tabs.map(function(t){
+    return '<button data-action="tteab" data-tab="'+t[0]+'" class="'+(TEACHER_TAB===t[0]?"active":"")+'">'+t[1]+'</button>';
+  }).join("") + '</div>';
+  if(TEACHER_TAB==="resumen") out += renderResumen();
+  else if(TEACHER_TAB==="resultados") out += renderResultados();
+  else if(TEACHER_TAB==="comunitario") out += renderComunitario();
+  else if(TEACHER_TAB==="config") out += renderConfig();
+  else if(TEACHER_TAB==="exportar") out += renderExportar();
+  return out;
+}
+
+function renderGate(){
+  return '<div class="gate"><div class="card">' +
+    '<h2 style="font-size:16px; margin-bottom:6px">Acceso del docente</h2>' +
+    '<p style="color:var(--ink-soft); font-size:13.5px; margin:0 0 14px">Introduce el código para ver el panel y la configuración de grupos.</p>' +
+    '<input type="text" id="pinInput" inputmode="numeric" placeholder="Código" style="margin-bottom:10px">' +
+    '<button class="btn btn-primary btn-block" data-action="unlock">Entrar</button>' +
+    (LAST_ERROR ? '<div class="status-line err" style="margin-top:10px">'+esc(LAST_ERROR)+'</div>' : '') +
+  '</div></div>';
+}
+
+function renderResumen(){
+  var grupos = STATE.config.grupos||[];
+  var totalInscritos = grupos.reduce(function(s,g){return s+(g.inscritos||0);},0);
+  var totalResp = STATE.respuestas.length;
+  var pctTotal = totalInscritos>0 ? Math.round(totalResp/totalInscritos*100) : 0;
+  var withInternet = STATE.respuestas.filter(function(r){ return (r.socioeconomico.servicios||[]).indexOf("Internet")>=0; }).length;
+  var out = '<div class="kpi-grid">' +
+    kpi("Alumnos inscritos", totalInscritos, "en "+grupos.length+" grupo(s)") +
+    kpi("Diagnósticos recibidos", totalResp, pctTotal+"% del total inscrito") +
+    kpi("Con internet en casa", totalResp? Math.round(withInternet/totalResp*100)+"%" : "—", "de quienes respondieron") +
+  '</div>';
+  out += '<div class="card"><h2 style="font-size:15px; margin-bottom:14px">Avance por grupo — aplicar en la primera semana</h2>';
+  if(grupos.length===0){
+    out += '<div class="empty-state">Aún no hay grupos configurados. Ve a la pestaña Configuración para crearlos.</div>';
+  } else {
+    grupos.forEach(function(g){
+      var n = STATE.respuestas.filter(function(r){return r.grupoId===g.id;}).length;
+      var pct = g.inscritos>0 ? Math.min(100, Math.round(n/g.inscritos*100)) : 0;
+      var status = pct>=100 ? "good" : pct>=50 ? "warning" : "critical";
+      var statusText = pct>=100 ? "Completo" : pct>=50 ? "En marcha" : "Falta aplicar";
+      out += '<div class="grupo-card"><div class="grupo-card-top">' +
+        '<span class="grupo-name">' + esc(grupoLabel(g)) + '</span>' +
+        '<span class="status-pill '+status+'"><span class="status-dot"></span>'+statusText+'</span>' +
+      '</div>' +
+      '<div class="grupo-progress-row"><div class="progress-track"><div class="progress-fill" style="width:'+pct+'%; background:var(--'+status+')"></div></div>' +
+      '<span class="grupo-count mono">' + n + ' / ' + (g.inscritos||0) + '</span></div></div>';
+    });
+  }
+  out += '</div>';
+  return out;
+}
+function kpi(label, value, sub){
+  return '<div class="kpi"><div class="kpi-label">'+esc(label)+'</div><div class="kpi-value mono">'+esc(value)+'</div><div class="kpi-sub">'+esc(sub)+'</div></div>';
+}
+
+function renderResultados(){
+  var grupos = STATE.config.grupos||[];
+  var resp = STATE.respuestas.filter(function(r){ return !RESULT_FILTER || r.grupoId===RESULT_FILTER; });
+  var out = '<div class="card no-print" style="margin-bottom:16px">' +
+    '<label class="field" style="margin-bottom:0"><span class="field-label">Filtrar por grupo</span>' +
+    '<select id="resultFilter" data-action="filterchange">' +
+      '<option value=""' + (RESULT_FILTER===""?" selected":"") + '>Todos los grupos ('+STATE.respuestas.length+' respuestas)</option>' +
+      grupos.map(function(g){
+        var c = STATE.respuestas.filter(function(r){return r.grupoId===g.id;}).length;
+        return '<option value="'+esc(g.id)+'"'+(RESULT_FILTER===g.id?" selected":"")+'>'+esc(grupoLabel(g))+' ('+c+' respuestas)</option>';
+      }).join("") +
+    '</select></label></div>';
+
+  if(resp.length===0){
+    out += '<div class="card"><div class="empty-state">Todavía no hay respuestas para mostrar aquí.</div></div>';
+    return out;
+  }
+
+  out += '<div class="card"><h2 style="font-size:15px; margin-bottom:10px">Respuestas registradas ('+resp.length+')</h2>' +
+    '<div class="no-print" style="overflow-x:auto"><table style="width:100%; border-collapse:collapse; font-size:13px">' +
+    '<thead><tr><th style="text-align:left; padding:6px 8px">Nombre</th><th style="text-align:left; padding:6px 8px">Grupo</th><th style="text-align:left; padding:6px 8px">Fecha</th><th style="padding:6px 8px"></th></tr></thead><tbody>' +
+    resp.slice().sort(function(a,b){ return String(b.fecha||"").localeCompare(String(a.fecha||"")); }).map(function(r){
+      var g = findGrupo(r.grupoId);
+      var armado = CONFIRM_DELETE_ID===r.id;
+      return '<tr style="border-top:1px solid var(--border)">' +
+        '<td style="padding:6px 8px">'+esc(r.nombre)+'</td>' +
+        '<td style="padding:6px 8px">'+esc(grupoLabel(g))+'</td>' +
+        '<td style="padding:6px 8px">'+esc(fmtDate(r.fecha))+'</td>' +
+        '<td style="padding:6px 8px; text-align:right; white-space:nowrap">' +
+        (armado ?
+          '<button type="button" class="btn btn-danger btn-sm" data-action="confirmar-borrado" data-id="'+esc(r.id)+'">¿Seguro? Borrar</button> ' +
+          '<button type="button" class="btn btn-sm" data-action="cancelar-borrado">Cancelar</button>'
+          : '<button type="button" class="btn btn-sm" data-action="pedir-borrado" data-id="'+esc(r.id)+'">Eliminar</button>') +
+        '</td></tr>';
+    }).join("") +
+    '</tbody></table></div></div>';
+
+  out += barCard("I. Diagnóstico socioemocional", SOCIOEMOCIONAL_ITEMS.map(function(text,i){
+    return {label:text, value:avg(resp.map(function(r){return r.socioemocional[i];}))};
+  }), "var(--chart-1)");
+
+  var visualAvg = avg(resp.map(function(r){return r.aprendizaje[0];}));
+  var audAvg = avg(resp.map(function(r){return r.aprendizaje[1];}));
+  var kinAvg = avg(resp.map(function(r){return r.aprendizaje[2];}));
+  out += '<div class="card">' +
+    '<h2 style="font-size:15px; margin-bottom:4px">III. Estilos de aprendizaje</h2>' +
+    '<div class="section-sub" style="margin-left:0">Estilo dominante por alumno (mayor puntaje de los tres)</div>';
+  var dom = {visual:0, auditivo:0, kinestesico:0, mixto:0};
+  resp.forEach(function(r){
+    var a=r.aprendizaje[0], b=r.aprendizaje[1], c=r.aprendizaje[2];
+    var m = Math.max(a,b,c);
+    var top = [a===m?"visual":null, b===m?"auditivo":null, c===m?"kinestesico":null].filter(Boolean);
+    if(top.length>1) dom.mixto++; else dom[top[0]]++;
+  });
+  out += '<div class="legend">' +
+    legendItem("var(--chart-1)","Visual "+dom.visual) + legendItem("var(--chart-2)","Auditivo "+dom.auditivo) +
+    legendItem("var(--chart-3)","Kinestésico "+dom.kinestesico) + legendItem("var(--muted)","Mixto "+dom.mixto) +
+  '</div>';
+  out += barCard(null, [
+    {label:"Visual — "+APRENDIZAJE_ITEMS[0].text, value:visualAvg, color:"var(--chart-1)"},
+    {label:"Auditivo — "+APRENDIZAJE_ITEMS[1].text, value:audAvg, color:"var(--chart-2)"},
+    {label:"Kinestésico — "+APRENDIZAJE_ITEMS[2].text, value:kinAvg, color:"var(--chart-3)"}
+  ], "var(--chart-1)", true);
+  out += '</div>';
+
+  out += barCard("IV. Diagnóstico académico", ACADEMICO_ITEMS.map(function(text,i){
+    return {label:text, value:avg(resp.map(function(r){return r.academico[i];}))};
+  }), "var(--chart-1)");
+
+  // socioeconomico
+  var pctInternet = Math.round(resp.filter(function(r){return (r.socioeconomico.servicios||[]).indexOf("Internet")>=0;}).length/resp.length*100);
+  var pctLugar = Math.round(resp.filter(function(r){return r.socioeconomico.lugarEstudio==="Sí";}).length/resp.length*100);
+  out += '<div class="card"><h2 style="font-size:15px; margin-bottom:14px">II. Diagnóstico socioeconómico</h2>';
+  out += '<div class="two-col">' +
+    distBlock("Servicios en casa", SERVICIOS_OPTS.map(function(s){
+      return {label:s, value:resp.filter(function(r){return (r.socioeconomico.servicios||[]).indexOf(s)>=0;}).length};
+    }), resp.length) +
+    distBlock("Acceso a internet para tareas", INTERNET_OPTS.map(function(s){
+      return {label:s, value:resp.filter(function(r){return r.socioeconomico.internetTareas===s;}).length};
+    }), resp.length) +
+  '</div>';
+  out += '<div class="two-col" style="margin-top:14px">' +
+    distBlock("¿Con quién vive?", CONVIVENCIA_OPTS.map(function(s){
+      return {label:s, value:resp.filter(function(r){return r.socioeconomico.convivencia===s;}).length};
+    }), resp.length) +
+    distBlock("Lugar adecuado para estudiar", ["Sí","No"].map(function(s){
+      return {label:s, value:resp.filter(function(r){return r.socioeconomico.lugarEstudio===s;}).length};
+    }), resp.length) +
+  '</div>';
+  out += '</div>';
+
+  return out;
+}
+function legendItem(color, label){
+  return '<span class="legend-item"><span class="legend-swatch" style="background:'+color+'"></span>'+esc(label)+'</span>';
+}
+function barCard(title, items, color, skipWrap){
+  var body = '<div class="bar-list">' + items.map(function(it){
+    var v = it.value||0;
+    var pct = Math.max(0, Math.min(100, v/4*100));
+    return '<div class="bar-row"><div class="bar-row-label">'+esc(it.label)+'</div>' +
+      '<div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:'+pct.toFixed(0)+'%; background:'+(it.color||color)+'"></div></div>' +
+      '<span class="mono" style="font-size:12px; font-weight:700; min-width:30px; text-align:right">'+v.toFixed(1)+'/4</span></div></div>';
+  }).join("") + '</div>';
+  if(skipWrap) return body;
+  return '<div class="card"><h2 style="font-size:15px; margin-bottom:14px">'+esc(title)+'</h2>' + body + '</div>';
+}
+function distBlock(title, items, total){
+  var max = Math.max.apply(null, items.map(function(i){return i.value;}).concat([1]));
+  return '<div><div class="field-label" style="margin-bottom:10px">'+esc(title)+'</div><div class="bar-list">' +
+    items.map(function(it){
+      var pct = total>0 ? Math.round(it.value/total*100) : 0;
+      var widthPct = max>0 ? (it.value/max*100) : 0;
+      return '<div class="bar-row" style="grid-template-columns:minmax(0,1fr) 150px"><div class="bar-row-label" style="font-size:12.5px">'+esc(it.label)+'</div>' +
+      '<div class="bar-wrap"><div class="bar-track" style="height:11px"><div class="bar-fill" style="width:'+widthPct.toFixed(0)+'%; background:var(--chart-1)"></div></div>' +
+      '<span class="mono" style="font-size:11.5px; font-weight:700; min-width:64px; text-align:right">'+it.value+' ('+pct+'%)</span></div></div>';
+    }).join("") + '</div></div>';
+}
+
+function renderComunitario(){
+  var grupos = STATE.config.grupos||[];
+  var resp = STATE.respuestas.filter(function(r){ return !RESULT_FILTER || r.grupoId===RESULT_FILTER; });
+  var out = '<div class="card no-print" style="margin-bottom:16px">' +
+    '<label class="field" style="margin-bottom:0"><span class="field-label">Filtrar por grupo</span>' +
+    '<select id="resultFilter2" data-action="filterchange2">' +
+      '<option value=""' + (RESULT_FILTER===""?" selected":"") + '>Todos los grupos</option>' +
+      grupos.map(function(g){ return '<option value="'+esc(g.id)+'"'+(RESULT_FILTER===g.id?" selected":"")+'>'+esc(grupoLabel(g))+'</option>'; }).join("") +
+    '</select></label></div>';
+
+  if(resp.length===0){ out += '<div class="card"><div class="empty-state">Todavía no hay respuestas para mostrar aquí.</div></div>'; return out; }
+
+  var problemas = resp.map(function(r){return r.comunitario.problemas;});
+  var temas = resp.map(function(r){return r.comunitario.temas;});
+  var propuestas = resp.map(function(r){return r.comunitario.propuestas;});
+  var kw = keywordFreq(problemas.concat(temas).concat(propuestas), 14);
+
+  out += '<div class="card"><h2 style="font-size:15px; margin-bottom:4px">V. Diagnóstico comunitario</h2>' +
+    '<div class="section-sub" style="margin-left:0">Palabras más repetidas en las respuestas — punto de partida para el concentrado, no un resumen final.</div>' +
+    '<div class="keyword-list">' + (kw.length? kw.map(function(k){ return '<span class="keyword"><b>'+k.count+'</b>'+esc(k.word)+'</span>'; }).join("") : '<span class="empty-state">Sin datos suficientes todavía.</span>') + '</div>' +
+  '</div>';
+
+  out += openList("Principales problemas de la comunidad", resp, "comunitario", "problemas");
+  out += openList("Temas de interés para proyectos escolares", resp, "comunitario", "temas");
+  out += openList("Propuestas para mejorar la comunidad", resp, "comunitario", "propuestas");
+  out += openList("¿Qué proyecto te gustaría desarrollar en tu comunidad?", resp, "abiertas", "proyecto");
+  out += openList("¿Qué es lo que más te preocupa actualmente?", resp, "abiertas", "preocupacion");
+  out += openList("¿Qué te gustaría mejorar de tu convivencia escolar?", resp, "abiertas", "convivencia");
+
+  // Concentrado editor, per selected grupo (or 'general' when 'todos')
+  var key = RESULT_FILTER || "general";
+  var c = STATE.concentrados[key] || {fortalezas:"", necesidades:"", problematicas:"", proyectos:""};
+  var gname = RESULT_FILTER ? grupoLabel(findGrupo(RESULT_FILTER)) : "todos los grupos";
+  out += '<div class="card no-print"><h2 style="font-size:15px; margin-bottom:4px">Concentrado para el docente — ' + esc(gname) + '</h2>' +
+    '<div class="section-sub" style="margin-left:0">Usa las respuestas y las palabras frecuentes de arriba para redactar tu síntesis; se guarda por grupo.</div>' +
+    '<form id="concentradoForm">' +
+    field("Fortalezas del grupo", '<textarea name="fortalezas">'+esc(c.fortalezas)+'</textarea>') +
+    field("Necesidades detectadas", '<textarea name="necesidades">'+esc(c.necesidades)+'</textarea>') +
+    field("Problemáticas prioritarias", '<textarea name="problematicas">'+esc(c.problematicas)+'</textarea>') +
+    field("Posibles proyectos comunitarios (PIC)", '<textarea name="proyectos">'+esc(c.proyectos)+'</textarea>') +
+    '<div class="form-actions"><button type="submit" class="btn btn-primary">Guardar concentrado</button>' +
+    '<span class="status-line'+(LAST_ERROR?" err":"")+'">'+(LAST_ERROR?esc(LAST_ERROR):(c.actualizado? "Última actualización: "+fmtDate(c.actualizado): ""))+'</span></div>' +
+    '</form></div>';
+
+  return out;
+}
+function openList(title, resp, group, field2){
+  var items = resp.map(function(r){ return {nombre:r.nombre, grupo:findGrupo(r.grupoId), text: r[group][field2]}; }).filter(function(i){ return i.text; });
+  var body = items.length ? items.map(function(i){
+    return '<div class="response-item"><div class="response-meta">' + esc(i.nombre) + ' · ' + esc(grupoLabel(i.grupo)) + '</div>' + esc(i.text) + '</div>';
+  }).join("") : '<div class="empty-state">Sin respuestas todavía.</div>';
+  return '<div class="card"><h2 style="font-size:15px; margin-bottom:10px">' + esc(title) + '</h2>' + body + '</div>';
+}
+
+function renderConfig(){
+  var grupos = STATE.config.grupos||[];
+  var out = '<div class="card"><h2 style="font-size:15px; margin-bottom:4px">Grupos y alumnos inscritos</h2>' +
+    '<div class="section-sub" style="margin-left:0">Define aquí cuántos alumnos hay inscritos por grupo para poder medir el avance de aplicación en la Semana 1.</div>' +
+    '<form id="gruposForm">' +
+    '<div id="gruposList">' + grupos.map(function(g,idx){
+      return '<div class="grupo-row" data-idx="'+idx+'" data-gid="'+esc(g.id)+'">' +
+        '<input type="text" class="grado" value="'+esc(g.grado)+'" placeholder="Grado (1°)">' +
+        '<input type="text" class="grupo" value="'+esc(g.grupo)+'" placeholder="Grupo (A)">' +
+        '<span class="grow"></span>' +
+        '<label style="font-size:12px; color:var(--muted)">Inscritos</label>' +
+        '<input type="text" inputmode="numeric" class="inscritos" value="'+(g.inscritos||0)+'">' +
+        '<button type="button" class="btn btn-danger btn-sm" data-action="rmgrupo" data-idx="'+idx+'">Quitar</button>' +
+      '</div>';
+    }).join("") + '</div>' +
+    '<div class="form-actions">' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-action="addgrupo">+ Agregar grupo</button>' +
+    '</div>' +
+    '<div class="form-actions">' +
+      '<button type="submit" class="btn btn-primary">Guardar grupos</button>' +
+      '<span class="status-line'+(LAST_ERROR?" err":"")+'">'+(LAST_ERROR?esc(LAST_ERROR):"")+'</span>' +
+    '</div>' +
+    '</form></div>';
+
+  out += '<div class="card"><h2 style="font-size:15px; margin-bottom:4px">Datos generales</h2>' +
+    '<form id="metaForm">' +
+    field("Ciclo escolar", '<input type="text" name="cicloEscolar" value="'+esc(STATE.meta.cicloEscolar)+'">') +
+    field("Etiqueta de aplicación (se muestra a los alumnos)", '<input type="text" name="semana" value="'+esc(STATE.meta.semana)+'">') +
+    field("Código de acceso del panel docente", '<input type="text" name="pin" value="'+esc(STATE.config.pin)+'">') +
+    '<div class="form-actions"><button type="submit" class="btn btn-primary">Guardar datos</button></div>' +
+    '</form></div>';
+
+  out += '<div class="card no-print"><h2 style="font-size:15px; margin-bottom:10px">Cómo aplicar en la Semana 1</h2>' +
+    '<ul class="checklist">' +
+      checklistItem(1, "Antes de clases", "Configura aquí los grupos con su número real de alumnos inscritos.") +
+      checklistItem(2, "Día 1–2", "Comparte el enlace de este diagnóstico con cada grupo (proyector, teléfono o laboratorio de cómputo). Cada alumno elige su grado/grupo y responde una sola vez.") +
+      checklistItem(3, "Sin conexión", "Para alumnos sin internet en casa, resuélvelo en horario de clase o usa la versión impresa como respaldo y captúrala tú después.") +
+      checklistItem(4, "Día 3–4", "Revisa la pestaña Resumen para ver qué grupos van atrasados y aplícalo con ellos.") +
+      checklistItem(5, "Día 5", "Con Resultados y Comunitario ya llenos, redacta el Concentrado por grupo: fortalezas, necesidades, problemáticas y posibles proyectos PIC.") +
+    '</ul></div>';
+  return out;
+}
+function checklistItem(n, title, text){
+  return '<li><span class="num">'+n+'</span><span><b>'+esc(title)+'.</b> '+esc(text)+'</span></li>';
+}
+
+function renderExportar(){
+  var out = '<div class="card"><h2 style="font-size:15px; margin-bottom:4px">Copiar datos (CSV)</h2>' +
+    '<div class="section-sub" style="margin-left:0">Toca "Copiar" y pega el texto en Excel o Google Sheets — cada línea es un alumno. Si el copiado automático no funciona en tu navegador, toca el cuadro para seleccionar todo y copia con Ctrl+C (o mantén presionado y elige Copiar en el celular).</div>' +
+    '<textarea id="csvText" readonly class="mono" style="min-height:170px; font-size:11px; white-space:pre; overflow-x:auto">' + esc(buildCsv()) + '</textarea>' +
+    '<div class="form-actions">' +
+      '<button class="btn btn-primary" data-action="copycsv">Copiar al portapapeles</button>' +
+      '<button class="btn btn-ghost" data-action="printpage">Imprimir vista actual</button>' +
+      '<span class="status-line" id="copyStatus">' + STATE.respuestas.length + ' respuestas</span>' +
+    '</div></div>';
+
+  out += '<div class="card no-print"><h2 style="font-size:15px; margin-bottom:4px">Cartel para el salón (código QR)</h2>' +
+    '<div class="section-sub" style="margin-left:0">Imprime este cartel y pégalo a la entrada del salón: cada alumno apunta la cámara de su celular al código y entra directo al diagnóstico.</div>' +
+    field("Enlace público para compartir con los alumnos", '<input type="text" id="qrUrlInput" value="'+esc(QR_URL)+'" placeholder="https://...">') +
+    '<div class="field-hint">Si esta liga no coincide con la que compartiste con el grupo, pégala aquí y el código se actualiza solo.</div>' +
+  '</div>';
+
+  out += '<div class="card" id="posterCard">' +
+    '<div id="posterWrap" style="text-align:center; padding:8px 4px 4px">' +
+      '<div class="eyebrow" style="margin-bottom:14px">' + esc(STATE.meta.escuela) + '</div>' +
+      '<h2 style="font-size:20px; margin-bottom:6px">Escanea y responde tu Diagnóstico Integral</h2>' +
+      '<p style="color:var(--ink-soft); font-size:13.5px; margin:0 0 18px">' + esc(STATE.meta.semana) + ' · Programa Analítico, PIC y Proyectos Comunitarios</p>' +
+      '<div id="qrCanvas" style="display:flex; justify-content:center; margin-bottom:14px; min-height:220px; align-items:center"></div>' +
+      '<div class="mono" style="font-size:11.5px; color:var(--muted); word-break:break-all; max-width:320px; margin:0 auto">' + esc(QR_URL||"—") + '</div>' +
+    '</div>' +
+    '<div class="form-actions no-print" style="justify-content:center; margin-top:18px">' +
+      '<button class="btn btn-primary" data-action="printposter">Imprimir cartel</button>' +
+    '</div>' +
+  '</div>';
+
+  out += '<div class="card"><h2 style="font-size:15px; margin-bottom:10px">Respaldo en papel</h2>' +
+    '<p style="font-size:13.5px; color:var(--ink-soft)">Conserva el instrumento impreso original como respaldo para alumnos sin acceso a internet o dispositivo. Captura sus respuestas aquí tú mismo cuando puedas, para que se sumen al panel.</p></div>';
+  return out;
+}
+
+/* ================= actions / events ================= */
+document.getElementById("app").addEventListener("click", function(e){
+  var el = e.target.closest("[data-action]");
+  if(!el) return;
+  var action = el.dataset.action;
+  if(action==="nav"){
+    VIEW = el.dataset.view; LAST_ERROR=null;
+    try{ if(VIEW==="student") history.replaceState(null,"",location.pathname+location.search); }catch(e){}
+    persistNav(); render();
+  }
+  else if(action==="tteab"){ TEACHER_TAB = el.dataset.tab; LAST_ERROR=null; persistNav(); render(); }
+  else if(action==="unlock"){ handleUnlock(); }
+  else if(action==="addgrupo"){ addGrupoRow(); }
+  else if(action==="rmgrupo"){ removeGrupoRow(el.dataset.idx); }
+  else if(action==="copycsv"){ handleCopyCsv(); }
+  else if(action==="printpage"){ window.print(); }
+  else if(action==="printposter"){
+    document.body.classList.add("print-poster-mode");
+    window.print();
+    setTimeout(function(){ document.body.classList.remove("print-poster-mode"); }, 500);
+  }
+  else if(action==="retrysubmit"){
+    if(PENDING_RECORD && !SUBMITTING){ SUBMITTING = true; LAST_ERROR = null; render(); attemptSubmit(PENDING_RECORD, 0); }
+  }
+  else if(action==="pedir-borrado"){ CONFIRM_DELETE_ID = el.dataset.id; render(); }
+  else if(action==="cancelar-borrado"){ CONFIRM_DELETE_ID = null; render(); }
+  else if(action==="confirmar-borrado"){ borrarRespuesta(el.dataset.id); }
+  else if(action==="reload"){ VIEW="loading"; render(); cargarTodo(); }
+});
+
+function handleUnlock(){
+  var val = (document.getElementById("pinInput")||{}).value || "";
+  if(val.trim()===String(STATE.config.pin).trim()){
+    TEACHER_UNLOCKED = true; LAST_ERROR = null;
+    try{ sessionStorage.setItem("amadoNervo_teacher","1"); }catch(e){}
+    render();
+  } else {
+    LAST_ERROR = "Código incorrecto. Intenta de nuevo.";
+    render();
+  }
+}
+function persistNav(){
+  try{ sessionStorage.setItem("amadoNervo_view", VIEW); sessionStorage.setItem("amadoNervo_tab", TEACHER_TAB); }catch(e){}
+}
+
+function addGrupoRow(){
+  var list = document.getElementById("gruposList");
+  var idx = list.children.length;
+  var row = document.createElement("div");
+  row.className = "grupo-row"; row.dataset.idx = idx; row.dataset.gid = "";
+  row.innerHTML = '<input type="text" class="grado" placeholder="Grado (1°)">' +
+    '<input type="text" class="grupo" placeholder="Grupo (A)">' +
+    '<span class="grow"></span><label style="font-size:12px; color:var(--muted)">Inscritos</label>' +
+    '<input type="text" inputmode="numeric" class="inscritos" value="0">' +
+    '<button type="button" class="btn btn-danger btn-sm" data-action="rmgrupo" data-idx="'+idx+'">Quitar</button>';
+  list.appendChild(row);
+}
+function removeGrupoRow(idx){
+  var list = document.getElementById("gruposList");
+  var row = list.querySelector('.grupo-row[data-idx="'+idx+'"]');
+  if(row) row.remove();
+}
+
+document.getElementById("app").addEventListener("change", function(e){
+  if(e.target.id==="resultFilter"){ RESULT_FILTER = e.target.value; render(); }
+  if(e.target.id==="resultFilter2"){ RESULT_FILTER = e.target.value; render(); }
+});
+
+document.getElementById("app").addEventListener("focus", function(e){
+  if(e.target.id==="csvText"){ e.target.select(); }
+}, true);
+
+document.getElementById("app").addEventListener("input", function(e){
+  if(e.target.id==="qrUrlInput"){
+    QR_URL = e.target.value.trim();
+    var codeText = document.querySelector("#posterWrap .mono");
+    if(codeText) codeText.textContent = QR_URL || "—";
+    renderQr(QR_URL);
+  }
+});
+
+document.getElementById("app").addEventListener("submit", function(e){
+  if(e.target.id==="gruposForm"){ e.preventDefault(); saveGrupos(); }
+  else if(e.target.id==="metaForm"){ e.preventDefault(); saveMeta(e.target); }
+  else if(e.target.id==="concentradoForm"){ e.preventDefault(); saveConcentrado(e.target); }
+});
+
+/* ================= persistencia (Control Escolar / Apps Script) ================= */
+function showToast(msg){
+  var t = document.createElement("div"); t.className="toast"; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3500);
+}
+
+function guardarConfig(nuevoBlob){
+  apiWrite("set", {key:KEY_CONFIG, value: JSON.stringify(nuevoBlob)}, function(err, json){
+    if(err || !json || !json.ok){
+      LAST_ERROR = "No se pudo guardar. Revisa tu conexión e intenta de nuevo.";
+      render();
+      return;
+    }
+    STATE.meta = nuevoBlob.meta; STATE.config = nuevoBlob.config;
+    LAST_ERROR = null; render(); showToast("Guardado.");
+  });
+}
+
+function saveGrupos(){
+  var rows = document.querySelectorAll("#gruposList .grupo-row");
+  var grupos = [];
+  rows.forEach(function(row){
+    var grado = row.querySelector(".grado").value.trim();
+    var grupo = row.querySelector(".grupo").value.trim();
+    var inscritos = parseInt(row.querySelector(".inscritos").value, 10) || 0;
+    if(!grado && !grupo) return;
+    var existingId = row.dataset.gid || uid();
+    grupos.push({id: existingId, grado: grado||"—", grupo: grupo||"—", inscritos: inscritos});
+  });
+  var nuevoBlob = {meta: STATE.meta, config: Object.assign({}, STATE.config, {grupos: grupos})};
+  guardarConfig(nuevoBlob);
+}
+function saveMeta(form){
+  var fd = new FormData(form);
+  var nuevoBlob = {
+    meta: Object.assign({}, STATE.meta, {
+      cicloEscolar: fd.get("cicloEscolar")||STATE.meta.cicloEscolar,
+      semana: fd.get("semana")||STATE.meta.semana
+    }),
+    config: Object.assign({}, STATE.config, { pin: (fd.get("pin")||STATE.config.pin).toString() })
+  };
+  guardarConfig(nuevoBlob);
+}
+function saveConcentrado(form){
+  var fd = new FormData(form);
+  var key = RESULT_FILTER || "general";
+  var registro = {
+    fortalezas: fd.get("fortalezas")||"", necesidades: fd.get("necesidades")||"",
+    problematicas: fd.get("problematicas")||"", proyectos: fd.get("proyectos")||"",
+    actualizado: todayISO()
+  };
+  apiWrite("set", {key: PREFIX_CONCENTRADO+key, value: JSON.stringify(registro)}, function(err, json){
+    if(err || !json || !json.ok){
+      LAST_ERROR = "No se pudo guardar el concentrado. Intenta de nuevo.";
+      render();
+      return;
+    }
+    STATE.concentrados[key] = registro;
+    LAST_ERROR = null; render(); showToast("Concentrado guardado.");
+  });
+}
+
+function borrarRespuesta(id){
+  apiWrite("borrar", {key: PREFIX_RESPUESTA+id}, function(err, json){
+    if(err || !json || !json.ok){
+      LAST_ERROR = "No se pudo eliminar. Intenta de nuevo.";
+      CONFIRM_DELETE_ID = null; render();
+      return;
+    }
+    STATE.respuestas = STATE.respuestas.filter(function(r){ return r.id!==id; });
+    CONFIRM_DELETE_ID = null; LAST_ERROR = null; render(); showToast("Respuesta eliminada.");
+  });
+}
+
+function onSubmitForm(e){
+  e.preventDefault();
+  if(SUBMITTING) return;
+  var form = e.target;
+  var fd = new FormData(form);
+  var nombre = (fd.get("nombre")||"").toString().trim();
+  var grupoId = fd.get("grupoId");
+  if(!nombre || !grupoId){ LAST_ERROR = "Falta tu nombre o tu grupo."; render(); return; }
+
+  var se=[], ap=[], ac=[];
+  for(var i=0;i<SOCIOEMOCIONAL_ITEMS.length;i++){ var v=fd.get("se_"+i); if(!v){ LAST_ERROR="Responde todas las preguntas de la sección I."; render(); return;} se.push(parseInt(v,10)); }
+  for(i=0;i<APRENDIZAJE_ITEMS.length;i++){ v=fd.get("ap_"+i); if(!v){ LAST_ERROR="Responde todas las preguntas de la sección III."; render(); return;} ap.push(parseInt(v,10)); }
+  for(i=0;i<ACADEMICO_ITEMS.length;i++){ v=fd.get("ac_"+i); if(!v){ LAST_ERROR="Responde todas las preguntas de la sección IV."; render(); return;} ac.push(parseInt(v,10)); }
+
+  var record = {
+    id: uid(), grupoId: grupoId, nombre: nombre, fecha: todayISO(),
+    socioemocional: se, aprendizaje: ap, academico: ac,
+    socioeconomico: {
+      convivencia: fd.get("convivencia")||"", servicios: fd.getAll("servicios"),
+      lugarEstudio: fd.get("lugarEstudio")||"", internetTareas: fd.get("internetTareas")||"",
+      actividadPadres: fd.get("actividadPadres")||"", actividadPadresOtro: (fd.get("actividadPadresOtro")||"").toString().trim()
+    },
+    comunitario: { problemas: (fd.get("problemas")||"").toString().trim(), temas: (fd.get("temas")||"").toString().trim(), propuestas: (fd.get("propuestas")||"").toString().trim() },
+    abiertas: { preocupacion: (fd.get("preocupacion")||"").toString().trim(), felicidad: (fd.get("felicidad")||"").toString().trim(),
+      convivencia: (fd.get("mejorarConvivencia")||"").toString().trim(), proyecto: (fd.get("proyectoDeseado")||"").toString().trim() }
+  };
+  LAST_ERROR = null;
+  PENDING_RECORD = record;
+  submitRespuesta(record);
+}
+
+function handleCopyCsv(){
+  var ta = document.getElementById("csvText");
+  var status = document.getElementById("copyStatus");
+  var text = ta ? ta.value : buildCsv();
+  function showFallback(){
+    if(ta){ ta.focus(); ta.select(); }
+    if(status) status.textContent = "Selecciona el texto y copia con Ctrl+C.";
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      if(status) status.textContent = "Copiado — pégalo en Excel o Sheets.";
+    }).catch(showFallback);
+  } else {
+    showFallback();
+  }
+}
+
+var PENDING_KEY = "amadoNervo_pending_v1";
+
+function submitRespuesta(record){
+  SUBMITTING = true; render();
+  try{ localStorage.setItem(PENDING_KEY, JSON.stringify(record)); }catch(e){}
+  attemptSubmit(record, 0);
+}
+
+function attemptSubmit(record, attempt){
+  apiWrite("set", {key: PREFIX_RESPUESTA+record.id, value: JSON.stringify(record)}, function(err, json){
+    var ok = !err && json && json.ok;
+    if(ok){
+      STATE.respuestas.push(record);
+      try{ localStorage.removeItem(PENDING_KEY); }catch(e){}
+      SUBMITTING = false; THANKS_RECORD = record; PENDING_RECORD = null; VIEW = "thanks"; render();
+      return;
+    }
+    if(attempt < 4){
+      setTimeout(function(){ attemptSubmit(record, attempt+1); }, 700*(attempt+1));
+    } else {
+      SUBMITTING = false;
+      LAST_ERROR = "No se pudo enviar tu diagnóstico. Revisa tu conexión e intenta de nuevo.";
+      render();
+    }
+  });
+}
+
+/* ================= carga inicial ================= */
+function cargarTodo(){
+  var meta = null, config = null, respuestas = [], concentrados = {};
+  var pending = 3, hadError = false;
+
+  function done(){
+    pending--;
+    if(pending>0) return;
+    if(hadError){
+      VIEW = "load-error"; render();
+      return;
+    }
+    STATE = {
+      meta: meta || DEFAULT_CONFIG_BLOB.meta,
+      config: config || DEFAULT_CONFIG_BLOB.config,
+      respuestas: respuestas,
+      concentrados: concentrados
+    };
+    if(!meta || !config){
+      // primera vez: siembra la configuración por defecto en la Hoja
+      apiWrite("set", {key: KEY_CONFIG, value: JSON.stringify({meta: STATE.meta, config: STATE.config})}, function(){});
+    }
+    try{ QR_URL = String(location.href).split(/[?#]/)[0]; }catch(e){ QR_URL = ""; }
+    try{ if(sessionStorage.getItem("amadoNervo_teacher")==="1") TEACHER_UNLOCKED = true; }catch(e){}
+    VIEW = "student";
+    try{
+      if(String(location.hash||"").toLowerCase()==="#docente"){
+        VIEW = "teacher";
+        var savedTab = sessionStorage.getItem("amadoNervo_tab");
+        if(savedTab) TEACHER_TAB = savedTab;
+      }
+    }catch(e){}
+
+    var pendingRaw = null;
+    try{ pendingRaw = localStorage.getItem(PENDING_KEY); }catch(e){}
+    if(pendingRaw){
+      var pend;
+      try{ pend = JSON.parse(pendingRaw); }catch(e){ pend = null; }
+      if(pend){
+        var already = STATE.respuestas.some(function(r){ return r.id===pend.id; });
+        if(already){
+          try{ localStorage.removeItem(PENDING_KEY); }catch(e){}
+          THANKS_RECORD = pend; VIEW = "thanks"; render();
+          return;
+        } else {
+          SUBMITTING = true; PENDING_RECORD = pend; VIEW = "student"; render();
+          attemptSubmit(pend, 0);
+          return;
+        }
+      }
+    }
+    render();
+  }
+
+  apiRead("get", {key: KEY_CONFIG}, function(err, json){
+    if(err || !json || !json.ok){ hadError = true; LOAD_ERROR = "No se pudo conectar con la hoja de la escuela."; done(); return; }
+    if(json.value){
+      try{ var blob = JSON.parse(json.value); meta = blob.meta; config = blob.config; }catch(e){}
+    }
+    done();
+  });
+  apiRead("listar", {prefijo: PREFIX_RESPUESTA}, function(err, json){
+    if(err || !json || !json.ok){ hadError = true; LOAD_ERROR = "No se pudo leer las respuestas guardadas."; done(); return; }
+    (json.filas||[]).forEach(function(fila){
+      try{ respuestas.push(JSON.parse(fila.valor)); }catch(e){}
+    });
+    done();
+  });
+  apiRead("listar", {prefijo: PREFIX_CONCENTRADO}, function(err, json){
+    if(err || !json || !json.ok){ hadError = true; LOAD_ERROR = "No se pudo leer los concentrados guardados."; done(); return; }
+    (json.filas||[]).forEach(function(fila){
+      var key = String(fila.clave).slice(PREFIX_CONCENTRADO.length);
+      try{ concentrados[key] = JSON.parse(fila.valor); }catch(e){}
+    });
+    done();
+  });
+}
+
+window.addEventListener("hashchange", function(){
+  if(String(location.hash||"").toLowerCase()==="#docente" && VIEW!=="teacher" && VIEW!=="thanks" && VIEW!=="loading" && VIEW!=="load-error"){
+    VIEW = "teacher"; LAST_ERROR = null; persistNav(); render();
+  }
+});
+
+render();
+cargarTodo();
+
+})();
+</script>
+</body>
+</html>
