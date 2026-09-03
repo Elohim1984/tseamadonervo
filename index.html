@@ -2688,9 +2688,11 @@ function ReglamentoIncidencias({ reglamento, setReglamento, rolActual, onStamp, 
 }
 
 function contactoParaComite(a) {
-  // Misma prioridad que contactoPrincipal, pero además regresa el domicilio
-  // completo — lo que piden los documentos oficiales de la APF (Acta
-  // Constitutiva, Contraloría Social).
+  // Para el padrón de la APF SOLO se toma en cuenta a quien tenga
+  // "¿Es el tutor?" = Sí activado. Si ningún padre/madre/tutor del alumno
+  // tiene esa bandera marcada, se descarta esa fila del padrón por completo
+  // (no se usa "el que tenga datos" como respaldo, a diferencia del
+  // Directorio general).
   const construir = (prefijo, rol) => {
     const nombre = [a[`${prefijo}NOMBRES`], a[`${prefijo}APELLIDO_PATERNO`], a[`${prefijo}APELLIDO_MATERNO`]].filter((x) => x && x.trim()).join(" ");
     if (!nombre.trim()) return null;
@@ -2704,21 +2706,17 @@ function contactoParaComite(a) {
     return { rol, nombre: nombre.trim(), telefono, domicilio, municipio, cp };
   };
   const seccionesTutor = [
-    { flag: "PADRE_ES_TUTOR", prefijo: "PADRE_", rol: "Padre" },
-    { flag: "MADRE_ES_TUTOR", prefijo: "MADRE_", rol: "Madre" },
+    { flag: "PADRE_ES_TUTOR", prefijo: "PADRE_", rol: "Padre (tutor)" },
+    { flag: "MADRE_ES_TUTOR", prefijo: "MADRE_", rol: "Madre (tutor)" },
     { flag: "TUTOR_ES_TUTOR_LEGAL", prefijo: "TUTOR_", rol: "Tutor" },
   ];
-  for (const { flag, prefijo } of seccionesTutor) {
+  for (const { flag, prefijo, rol } of seccionesTutor) {
     if (a[flag] === "Sí") {
-      const c = construir(prefijo, "Tutor");
+      const c = construir(prefijo, rol);
       if (c) return c;
     }
   }
-  for (const { rol, prefijo } of [{ rol: "Tutor", prefijo: "TUTOR_" }, { rol: "Madre", prefijo: "MADRE_" }, { rol: "Padre", prefijo: "PADRE_" }]) {
-    const c = construir(prefijo, rol);
-    if (c) return c;
-  }
-  return null;
+  return null; // Nadie marcado como tutor para este alumno: se descarta del padrón.
 }
 
 const DOCUMENTOS_APF_OFICIALES = [
@@ -2775,9 +2773,61 @@ function PadronImprimible({ alumnos }) {
   );
 }
 
+function obtenerTutoresUnicos(alumnos) {
+  // Un tutor puede tener más de un hijo en la escuela — aquí se junta en un
+  // solo registro (no se repite), listando a todos sus hijos relacionados.
+  const mapa = new Map();
+  alumnos.forEach((a) => {
+    const c = contactoParaComite(a);
+    if (!c) return;
+    const clave = c.nombre.trim().toLowerCase();
+    if (!mapa.has(clave)) {
+      mapa.set(clave, { ...c, alumnosRelacionados: [] });
+    }
+    mapa.get(clave).alumnosRelacionados.push(`${nombreAlumno(a)} (${a.grado}°)`);
+  });
+  return Array.from(mapa.values()).sort((x, y) => x.nombre.localeCompare(y.nombre, "es"));
+}
+
+function ListaAsistenciaImprimible({ tutores }) {
+  return (
+    <div className="solo-impresion">
+      <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "1rem" }}>
+        <img src={ESCUDO_ESCUELA} alt="" style={{ width: "48px" }} />
+        <div>
+          <div style={{ fontWeight: 800, fontSize: "1rem" }}>Telesecundaria Estatal "Amado Nervo"</div>
+          <div style={{ fontSize: "0.75rem" }}>Xoyatla, Tepeojuma, Puebla · Lista de Asistencia — Asamblea APF</div>
+        </div>
+      </div>
+      <p style={{ fontSize: "0.8rem", marginBottom: "0.8rem" }}>
+        Las Madres, Padres de Familia, tutoras y tutores (o quienes ejerzan la patria potestad) asistentes a la Asamblea de la Asociación de Padres de Familia de la Escuela Telesecundaria "Amado Nervo", efectuada el día ____ de ______________ del 20___.
+      </p>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", borderBottom: "1.5px solid #000", padding: "0.25rem 0.4rem", width: "2rem" }}>#</th>
+            <th style={{ textAlign: "left", borderBottom: "1.5px solid #000", padding: "0.25rem 0.4rem" }}>Nombre</th>
+            <th style={{ textAlign: "left", borderBottom: "1.5px solid #000", padding: "0.25rem 0.4rem" }}>Firma</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tutores.map((t, i) => (
+            <tr key={t.nombre}>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.35rem 0.4rem" }}>{i + 1}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.35rem 0.4rem" }}>{t.nombre}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.35rem 0.4rem" }}>&nbsp;</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function DocumentosDireccion({ alumnos, onStamp }) {
   const [subTab, setSubTab] = useState("apf");
   const grados = [1, 2, 3];
+  const tutores = obtenerTutoresUnicos(alumnos);
 
   const SUBTABS = [
     { id: "apf", label: "APF · Padrón" },
@@ -2796,7 +2846,7 @@ function DocumentosDireccion({ alumnos, onStamp }) {
         <div className="flex flex-col gap-4">
           <div className="card">
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Documentos oficiales de la APF (SICEP Puebla)</div>
-            <p className="text-sm mb-2" style={{ opacity: 0.6 }}>Checklist de referencia — trabajas cada uno en su formato oficial; este padrón te ahorra volver a pedir los datos de las familias.</p>
+            <p className="text-sm mb-2" style={{ opacity: 0.6 }}>Checklist de referencia — trabajas cada uno en su formato oficial.</p>
             <ul className="text-sm flex flex-col gap-1">
               {DOCUMENTOS_APF_OFICIALES.map((d) => (
                 <li key={d} className="flex items-center gap-2"><FileText size={14} color="var(--verde)" /> {d}</li>
@@ -2804,50 +2854,44 @@ function DocumentosDireccion({ alumnos, onStamp }) {
             </ul>
           </div>
 
-          <div className="card flex items-center justify-between">
-            <div className="font-display" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Padrón de Padres de Familia / Tutores</div>
-            <button onClick={() => { onStamp && onStamp("Preparando"); setTimeout(() => window.print(), 100); }} className="btn-primario" style={{ fontSize: "0.75rem" }}>
-              <Download size={14} /> Imprimir / PDF
-            </button>
-          </div>
-
-          {grados.map((g) => {
-            const filas = alumnos.filter((a) => a.grado === g).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b))).map((a) => ({ a, c: contactoParaComite(a) })).filter((x) => x.c);
-            return (
-              <div key={g} className="card">
-                <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>{g}° grado ({filas.length})</div>
-                {filas.length === 0 ? (
-                  <p className="text-sm" style={{ opacity: 0.5 }}>Sin contactos capturados todavía en este grado.</p>
-                ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <thead>
-                        <tr style={{ borderBottom: "1px solid var(--borde)" }}>
-                          {["Nombre completo", "Parentesco", "Alumno(a)", "Domicilio", "Municipio", "C.P.", "Teléfono"].map((h) => (
-                            <th key={h} style={{ textAlign: "left", padding: "4px 6px" }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filas.map(({ a, c }) => (
-                          <tr key={a.id} style={{ borderBottom: "1px solid var(--borde)" }}>
-                            <td style={{ padding: "4px 6px" }}>{c.nombre}</td>
-                            <td style={{ padding: "4px 6px" }}>{c.rol}</td>
-                            <td style={{ padding: "4px 6px" }}>{nombreAlumno(a)}</td>
-                            <td style={{ padding: "4px 6px" }}>{c.domicilio || "—"}</td>
-                            <td style={{ padding: "4px 6px" }}>{c.municipio || "—"}</td>
-                            <td style={{ padding: "4px 6px" }}>{c.cp || "—"}</td>
-                            <td style={{ padding: "4px 6px" }}>{c.telefono || "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+          <div className="card">
+            <div className="flex items-center justify-between mb-1">
+              <div className="font-display" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Lista de Asistencia — Tutores confirmados ({tutores.length})</div>
+              <button onClick={() => { onStamp && onStamp("Preparando"); setTimeout(() => window.print(), 100); }} className="btn-primario" style={{ fontSize: "0.75rem" }}>
+                <Download size={14} /> Imprimir / PDF
+              </button>
+            </div>
+            <p className="text-sm mb-3" style={{ opacity: 0.6 }}>
+              Solo alumnos con "¿Es el tutor?" = Sí confirmado. Si un tutor tiene más de un hijo en la escuela, aparece una sola vez aquí.
+            </p>
+            {tutores.length === 0 ? (
+              <p className="text-sm" style={{ opacity: 0.5 }}>Todavía no hay ningún tutor confirmado en Inscripciones.</p>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+                      <th style={{ textAlign: "left", padding: "4px 6px" }}>#</th>
+                      <th style={{ textAlign: "left", padding: "4px 6px" }}>Nombre</th>
+                      <th style={{ textAlign: "left", padding: "4px 6px" }}>Alumno(a) relacionado</th>
+                      <th style={{ textAlign: "left", padding: "4px 6px" }}>Teléfono</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tutores.map((t, i) => (
+                      <tr key={t.nombre} style={{ borderBottom: "1px solid var(--borde)" }}>
+                        <td style={{ padding: "4px 6px" }}>{i + 1}</td>
+                        <td style={{ padding: "4px 6px" }}>{t.nombre}</td>
+                        <td style={{ padding: "4px 6px" }}>{t.alumnosRelacionados.join(", ")}</td>
+                        <td style={{ padding: "4px 6px" }}>{t.telefono || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            );
-          })}
-          <PadronImprimible alumnos={alumnos} />
+            )}
+          </div>
+          <ListaAsistenciaImprimible tutores={tutores} />
         </div>
       )}
 
