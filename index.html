@@ -2796,6 +2796,182 @@ function obtenerTutoresUnicos(alumnos) {
   return Array.from(mapa.values()).sort((x, y) => x.nombre.localeCompare(y.nombre, "es"));
 }
 
+const PUESTOS_MESA_DIRECTIVA = [
+  { key: "presidente", etiqueta: "Presidente" },
+  { key: "vicepresidente", etiqueta: "Vicepresidente" },
+  { key: "secretario", etiqueta: "Secretario" },
+  { key: "tesorero", etiqueta: "Tesorero" },
+  { key: "vocal1", etiqueta: "Primer Vocal" },
+  { key: "vocal2", etiqueta: "Segundo Vocal" },
+  { key: "vocal3", etiqueta: "Tercer Vocal" },
+  { key: "vocal4", etiqueta: "Cuarto Vocal" },
+  { key: "vocal5", etiqueta: "Quinto Vocal" },
+  { key: "vocal6", etiqueta: "Sexto Vocal" },
+];
+const PUESTOS_CONTRALORIA = [
+  { key: "presidente", etiqueta: "Presidente" },
+  { key: "secretario", etiqueta: "Secretario" },
+  { key: "vocal1", etiqueta: "Primer Vocal" },
+  { key: "vocal2", etiqueta: "Segundo Vocal" },
+];
+
+function buscarTutorPorNombre(tutores, nombre) {
+  return tutores.find((t) => t.nombre === nombre) || null;
+}
+
+function FilaActa({ etiqueta, tutor }) {
+  return (
+    <div style={{ marginBottom: "0.7rem" }}>
+      <div style={{ fontWeight: 700, fontSize: "0.82rem" }}>{etiqueta}:</div>
+      <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #000", padding: "0.2rem 0", fontSize: "0.8rem" }}>
+        <span>{tutor ? tutor.nombre : "\u00A0"}</span>
+        <span style={{ fontStyle: "italic", opacity: 0.6 }}>Firma</span>
+      </div>
+      <div style={{ display: "flex", gap: "1rem", fontSize: "0.72rem", opacity: 0.75, marginTop: "0.15rem" }}>
+        <span>{tutor && tutor.domicilio ? tutor.domicilio : "—"}</span>
+        <span>{tutor && tutor.municipio ? tutor.municipio : "—"}</span>
+        <span>C.P. {tutor && tutor.cp ? tutor.cp : "—"}</span>
+        <span>Tel. {tutor && tutor.telefono ? tutor.telefono : "—"}</span>
+      </div>
+    </div>
+  );
+}
+
+function ActaConstitutivaVista({ mesaDirectiva, contraloria, tutores, imprimible }) {
+  const claseExterna = imprimible ? "solo-impresion" : "card";
+  return (
+    <div className={claseExterna}>
+      {imprimible && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "1rem" }}>
+          <img src={ESCUDO_ESCUELA} alt="" style={{ width: "48px" }} />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: "1rem" }}>Telesecundaria Estatal "Amado Nervo"</div>
+            <div style={{ fontSize: "0.75rem" }}>Xoyatla, Tepeojuma, Puebla · Acta Constitutiva de la APF</div>
+          </div>
+        </div>
+      )}
+      {!imprimible && <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Vista previa — Acta Constitutiva</div>}
+      <div style={{ fontWeight: 700, fontSize: "0.82rem", marginTop: "0.4rem", marginBottom: "0.3rem" }}>Mesa Directiva</div>
+      {PUESTOS_MESA_DIRECTIVA.map((p) => (
+        <FilaActa key={p.key} etiqueta={p.etiqueta} tutor={buscarTutorPorNombre(tutores, mesaDirectiva[p.key])} />
+      ))}
+      <div style={{ fontWeight: 700, fontSize: "0.82rem", marginTop: "0.8rem", marginBottom: "0.3rem" }}>Contraloría Social</div>
+      {PUESTOS_CONTRALORIA.map((p) => (
+        <FilaActa key={p.key} etiqueta={p.etiqueta} tutor={buscarTutorPorNombre(tutores, contraloria[p.key])} />
+      ))}
+      <p style={{ fontSize: "0.72rem", opacity: 0.6, marginTop: "0.8rem" }}>
+        Domicilio y teléfono tomados de lo capturado en Inscripciones. Verifica los datos con cada familia antes de la firma oficial.
+      </p>
+    </div>
+  );
+}
+
+const CHECKLIST_ENTREGA_RECEPCION = [
+  { key: "libroActas", etiqueta: "Libro de Actas y Acuerdos" },
+  { key: "libroIngresos", etiqueta: "Libro de ingresos y egresos" },
+  { key: "libroNotas", etiqueta: "Libro de notas" },
+  { key: "proyectoNecesidades", etiqueta: "Proyecto de Necesidades" },
+  { key: "contratoBancario", etiqueta: "Contrato de Servicios Bancarios" },
+  { key: "estadoCuenta", etiqueta: "Último Estado de cuenta" },
+  { key: "chequera", etiqueta: "Chequera" },
+  { key: "recibos", etiqueta: "Recibos de aportación voluntaria y/o vouchers" },
+  { key: "sello", etiqueta: "Sello" },
+  { key: "saldoCaja", etiqueta: "Saldo existente en caja" },
+];
+
+function ActaEntregaRecepcionVista({ checklist, saliente, entrante, imprimible }) {
+  const claseExterna = imprimible ? "solo-impresion" : "card";
+  return (
+    <div className={claseExterna}>
+      {imprimible && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "1rem" }}>
+          <img src={ESCUDO_ESCUELA} alt="" style={{ width: "48px" }} />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: "1rem" }}>Telesecundaria Estatal "Amado Nervo"</div>
+            <div style={{ fontSize: "0.75rem" }}>Xoyatla, Tepeojuma, Puebla · Acta de Entrega-Recepción · Mesa Directiva APF</div>
+          </div>
+        </div>
+      )}
+      {!imprimible && <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Vista previa — Acta de Entrega-Recepción</div>}
+
+      <div style={{ fontWeight: 700, fontSize: "0.82rem", marginBottom: "0.3rem" }}>Documentación entregada</div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem", marginBottom: "0.8rem" }}>
+        <tbody>
+          {CHECKLIST_ENTREGA_RECEPCION.map((c) => (
+            <tr key={c.key}>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.3rem" }}>{c.etiqueta}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.3rem", textAlign: "right", fontWeight: 600 }}>{checklist[c.key] || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div style={{ display: "flex", gap: "1.5rem" }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: "0.82rem", marginBottom: "0.3rem" }}>Mesa Directiva Saliente</div>
+          {PUESTOS_MESA_DIRECTIVA.map((p) => (
+            <div key={p.key} style={{ marginBottom: "0.5rem" }}>
+              <div style={{ fontSize: "0.72rem", fontWeight: 600 }}>{p.etiqueta}</div>
+              <div style={{ borderBottom: "1px solid #000", fontSize: "0.78rem", padding: "0.1rem 0", display: "flex", justifyContent: "space-between" }}>
+                <span>{saliente[p.key] || "\u00A0"}</span>
+                <span style={{ fontStyle: "italic", opacity: 0.6, fontSize: "0.7rem" }}>Firma</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: "0.82rem", marginBottom: "0.3rem" }}>Mesa Directiva Entrante</div>
+          {PUESTOS_MESA_DIRECTIVA.map((p) => (
+            <div key={p.key} style={{ marginBottom: "0.5rem" }}>
+              <div style={{ fontSize: "0.72rem", fontWeight: 600 }}>{p.etiqueta}</div>
+              <div style={{ borderBottom: "1px solid #000", fontSize: "0.78rem", padding: "0.1rem 0", display: "flex", justifyContent: "space-between" }}>
+                <span>{entrante[p.key] || "\u00A0"}</span>
+                <span style={{ fontStyle: "italic", opacity: 0.6, fontSize: "0.7rem" }}>Firma</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConvocatoriaVista({ datos, imprimible }) {
+  const claseExterna = imprimible ? "solo-impresion" : "card";
+  const d = datos || {};
+  return (
+    <div className={claseExterna}>
+      {imprimible && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "1rem" }}>
+          <img src={ESCUDO_ESCUELA} alt="" style={{ width: "48px" }} />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: "1rem" }}>Telesecundaria Estatal "Amado Nervo"</div>
+            <div style={{ fontSize: "0.75rem" }}>CCT 21ETV0473W · Xoyatla, Tepeojuma, Puebla · C.P. 74394</div>
+          </div>
+        </div>
+      )}
+      {!imprimible && <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Vista previa — Primera Convocatoria</div>}
+      <div style={{ textAlign: "center", fontWeight: 800, fontSize: "1rem", margin: "0.6rem 0 1rem" }}>PRIMERA CONVOCATORIA</div>
+      <p style={{ fontSize: "0.82rem", lineHeight: 1.6 }}>
+        A las Madres y Padres de Familia, Tutoras y Tutores o quienes ejerzan la Patria Potestad de los aprendientes inscritos en esta escuela, para que el día{" "}
+        <b>{d.dia || "____"}</b> el mes de <b>{d.mes || "__________"}</b> del 20<b>{d.anio || "___"}</b> a las <b>{d.hora || "______"}</b> horas, en la propia escuela, constituyan la Asociación de Padres de Familia y elijan su Mesa Directiva, en apego a los Artículos 1, 3, 9, 10 y 11 del Reglamento citado…
+      </p>
+      <div style={{ display: "flex", justifyContent: "space-around", marginTop: "2rem", fontSize: "0.8rem" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ borderTop: "1px solid #000", width: "9rem", paddingTop: "0.3rem" }}>Sello de la escuela</div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ borderTop: "1px solid #000", width: "9rem", paddingTop: "0.3rem" }}>Nombre (Director/a)</div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ borderTop: "1px solid #000", width: "9rem", paddingTop: "0.3rem" }}>Firma</div>
+        </div>
+      </div>
+      <p style={{ fontSize: "0.78rem", marginTop: "1.2rem" }}>Fecha de convocatoria: <b>{d.fechaConvocatoria || "________________"}</b></p>
+    </div>
+  );
+}
+
 function ListaAsistenciaImprimible({ tutores }) {
   return (
     <div className="solo-impresion">
@@ -2835,6 +3011,27 @@ function DocumentosDireccion({ alumnos, onStamp }) {
   const [subTab, setSubTab] = useState("apf");
   const grados = [1, 2, 3];
   const tutores = obtenerTutoresUnicos(alumnos);
+  const [vistaActa, setVistaActa] = useState({ mesaDirectiva: {}, contraloria: {}, saliente: {}, checklist: {}, convocatoria: {}, cargando: true });
+  const [imprimiendo, setImprimiendo] = useState(null); // 'convocatoria' | 'lista' | 'acta' | 'entrega'
+  useEffect(() => {
+    window.onafterprint = () => setImprimiendo(null);
+    return () => { window.onafterprint = null; };
+  }, []);
+  const imprimir = (id) => { setImprimiendo(id); onStamp && onStamp("Preparando"); setTimeout(() => window.print(), 150); };
+
+  const cargarVistaActa = () => {
+    setVistaActa((v) => ({ ...v, cargando: true }));
+    Promise.all([
+      getStorage("apf:mesaDirectiva", {}),
+      getStorage("apf:contraloriaSocial", {}),
+      getStorage("apf:mesaSaliente", {}),
+      getStorage("apf:entregaRecepcionChecklist", {}),
+      getStorage("apf:convocatoria", {}),
+    ]).then(([md, cs, sal, chk, conv]) => {
+      setVistaActa({ mesaDirectiva: md || {}, contraloria: cs || {}, saliente: sal || {}, checklist: chk || {}, convocatoria: conv || {}, cargando: false });
+    });
+  };
+  useEffect(() => { cargarVistaActa(); }, []);
 
   const SUBTABS = [
     { id: "apf", label: "APF · Padrón" },
@@ -2861,10 +3058,37 @@ function DocumentosDireccion({ alumnos, onStamp }) {
             </ul>
           </div>
 
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.5rem" }}>
+            Primera Convocatoria
+          </div>
+          <FormularioAutoguardado
+            claveStorage="apf:convocatoria"
+            ayuda="Fecha y hora en que se realizará la asamblea de constitución de la APF."
+            onStamp={onStamp}
+            campos={[
+              { key: "dia", etiqueta: "Día", tipo: "texto", placeholder: "Ej. 15" },
+              { key: "mes", etiqueta: "Mes", tipo: "texto", placeholder: "Ej. septiembre" },
+              { key: "anio", etiqueta: "Año (los dos últimos dígitos)", tipo: "texto", placeholder: "Ej. 26" },
+              { key: "hora", etiqueta: "Hora", tipo: "texto", placeholder: "Ej. 9:00" },
+              { key: "fechaConvocatoria", etiqueta: "Fecha en que se emite esta convocatoria", tipo: "texto", placeholder: "Ej. 3 de septiembre de 2026" },
+            ]}
+          />
+          <div className="flex items-center justify-end" style={{ marginTop: "-0.5rem" }}>
+            <button onClick={() => imprimir("convocatoria")} className="btn-primario" style={{ fontSize: "0.75rem" }}>
+              <Download size={14} /> Imprimir / PDF
+            </button>
+          </div>
+          {vistaActa.cargando ? (
+            <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>
+          ) : (
+            <ConvocatoriaVista datos={vistaActa.convocatoria} imprimible={false} />
+          )}
+          {imprimiendo === "convocatoria" && <ConvocatoriaVista datos={vistaActa.convocatoria} imprimible={true} />}
+
           <div className="card">
             <div className="flex items-center justify-between mb-1">
               <div className="font-display" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Lista de Asistencia — Tutores confirmados ({tutores.length})</div>
-              <button onClick={() => { onStamp && onStamp("Preparando"); setTimeout(() => window.print(), 100); }} className="btn-primario" style={{ fontSize: "0.75rem" }}>
+              <button onClick={() => imprimir("lista")} className="btn-primario" style={{ fontSize: "0.75rem" }}>
                 <Download size={14} /> Imprimir / PDF
               </button>
             </div>
@@ -2898,7 +3122,7 @@ function DocumentosDireccion({ alumnos, onStamp }) {
               </div>
             )}
           </div>
-          <ListaAsistenciaImprimible tutores={tutores} />
+          {imprimiendo === "lista" && <ListaAsistenciaImprimible tutores={tutores} />}
 
           <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.5rem" }}>
             Asignación de puestos
@@ -2936,6 +3160,60 @@ function DocumentosDireccion({ alumnos, onStamp }) {
               { key: "vocal2", etiqueta: "Vocal 2", tipo: "select", opciones: tutores.map((t) => t.nombre) },
             ]}
           />
+
+          <div className="flex items-center justify-between" style={{ marginTop: "0.5rem" }}>
+            <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem" }}>Vista previa del Acta Constitutiva</div>
+            <div className="flex gap-2">
+              <button onClick={cargarVistaActa} className="btn-secundario" style={{ fontSize: "0.75rem" }}>↻ Actualizar vista</button>
+              <button onClick={() => imprimir("acta")} className="btn-primario" style={{ fontSize: "0.75rem" }}>
+                <Download size={14} /> Imprimir / PDF
+              </button>
+            </div>
+          </div>
+          {vistaActa.cargando ? (
+            <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>
+          ) : (
+            <ActaConstitutivaVista mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} tutores={tutores} imprimible={false} />
+          )}
+          {imprimiendo === "acta" && <ActaConstitutivaVista mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} tutores={tutores} imprimible={true} />}
+
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.8rem" }}>
+            Acta de Entrega-Recepción
+          </div>
+          <p className="text-sm" style={{ opacity: 0.6, marginTop: "-0.5rem" }}>
+            La Mesa Directiva Entrante ya se toma de lo que armaste arriba. Aquí solo captura a la Mesa Saliente (del ciclo anterior) y el checklist de documentos entregados.
+          </p>
+
+          <FormularioAutoguardado
+            claveStorage="apf:mesaSaliente"
+            titulo="Mesa Directiva Saliente (ciclo anterior)"
+            onStamp={onStamp}
+            campos={PUESTOS_MESA_DIRECTIVA.map((p) => ({ key: p.key, etiqueta: p.etiqueta, tipo: "texto" }))}
+          />
+
+          <FormularioAutoguardado
+            claveStorage="apf:entregaRecepcionChecklist"
+            titulo="Documentación entregada"
+            ayuda="Escribe Sí/No, cantidad, o el monto según aplique en cada punto."
+            onStamp={onStamp}
+            campos={CHECKLIST_ENTREGA_RECEPCION.map((c) => ({ key: c.key, etiqueta: c.etiqueta, tipo: "texto" }))}
+          />
+
+          <div className="flex items-center justify-between" style={{ marginTop: "0.5rem" }}>
+            <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem" }}>Vista previa del Acta de Entrega-Recepción</div>
+            <div className="flex gap-2">
+              <button onClick={cargarVistaActa} className="btn-secundario" style={{ fontSize: "0.75rem" }}>↻ Actualizar vista</button>
+              <button onClick={() => imprimir("entrega")} className="btn-primario" style={{ fontSize: "0.75rem" }}>
+                <Download size={14} /> Imprimir / PDF
+              </button>
+            </div>
+          </div>
+          {vistaActa.cargando ? (
+            <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>
+          ) : (
+            <ActaEntregaRecepcionVista checklist={vistaActa.checklist} saliente={vistaActa.saliente} entrante={vistaActa.mesaDirectiva} imprimible={false} />
+          )}
+          {imprimiendo === "entrega" && <ActaEntregaRecepcionVista checklist={vistaActa.checklist} saliente={vistaActa.saliente} entrante={vistaActa.mesaDirectiva} imprimible={true} />}
         </div>
       )}
 
