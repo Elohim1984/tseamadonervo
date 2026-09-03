@@ -64,6 +64,13 @@
   .btn:active{transform:scale(.98);}
   .btn:focus-visible{outline:3px solid var(--brand); outline-offset:2px;}
   .btn-primary{background:var(--brand); color:var(--brand-ink); border-color:var(--brand);}
+  .btn-danger{background:#c0392b; color:#fff; border-color:#c0392b;}
+  .solo-impresion{display:none;}
+  @media print {
+    .no-print{display:none !important;}
+    .solo-impresion{display:block !important;}
+    body{background:#fff;}
+  }
   .btn-primary:hover{filter:brightness(1.06);}
   .btn-primary:disabled{opacity:.55; cursor:not-allowed;}
   .btn-sm{padding:8px 14px; font-size:13px;}
@@ -240,6 +247,22 @@
     return null;
   }
 
+  function deleteRecord(key){
+    return sheetsRequest({action:'borrar', key:key}, 'POST');
+  }
+
+  // Para ordenar por apellido paterno como las listas oficiales de SEP.
+  // Registros viejos (solo "nombre" libre, antes de este cambio) usan ese
+  // texto completo como respaldo para no desaparecer de la lista.
+  function claveOrden(s){
+    if (s.apellidoPaterno) return [s.apellidoPaterno, s.apellidoMaterno||'', s.nombres||''].join(' ').toLowerCase();
+    return String(s.nombre||'').toLowerCase();
+  }
+  function nombreListaOficial(s){
+    if (s.apellidoPaterno) return [s.apellidoPaterno, s.apellidoMaterno, s.nombres].filter(Boolean).join(' ');
+    return s.nombre || '';
+  }
+
   function loadRecords(){
     return sheetsRequest({action:'listar', prefijo: CLAVE_PREFIJO}, 'GET').then(function(res){
       if (!res || res.ok !== true) return res;
@@ -268,9 +291,9 @@
   // ── Estado y utilidades ──
 
   var state = {students: []};
-  var view = {screen:'home', grado:'1', grupo:'', nombre:'', qi:0, answers:[], savedSummary:null,
+  var view = {screen:'home', grado:'1', grupo:'', apellidoPaterno:'', apellidoMaterno:'', nombres:'', qi:0, answers:[], savedSummary:null,
               teacherAuth:false, teacherErr:'', filterGrado:'todos', filterGrupo:'',
-              dashLoading:false, dashError:null, lastLoaded:null};
+              dashLoading:false, dashError:null, lastLoaded:null, editingKey:null, confirmDeleteKey:null};
 
   try{
     if (sessionStorage.getItem('van_teacher_auth') === '1') view.teacherAuth = true;
@@ -375,7 +398,9 @@
       renderHeader(true) +
       '<div class="shell"><div class="card stack">' +
       '<h2 style="margin:0;">Antes de empezar</h2>' +
-      '<div class="field"><label>Nombre completo</label><input type="text" id="f-nombre" value="' + esc(view.nombre) + '" placeholder="Ej. Juan Pérez López"></div>' +
+      '<div class="field"><label>Apellido paterno</label><input type="text" id="f-appat" value="' + esc(view.apellidoPaterno) + '" placeholder="Ej. Pérez"></div>' +
+      '<div class="field"><label>Apellido materno</label><input type="text" id="f-apmat" value="' + esc(view.apellidoMaterno) + '" placeholder="Ej. López"></div>' +
+      '<div class="field"><label>Nombre(s)</label><input type="text" id="f-nombres" value="' + esc(view.nombres) + '" placeholder="Ej. Juan"></div>' +
       '<div class="row">' +
       '<div class="field" style="flex:1;"><label>Grado</label><select id="f-grado">' +
         ['1','2','3'].map(function(g){ return '<option value="'+g+'"'+(view.grado===g?' selected':'')+'>'+g+'°</option>'; }).join('') +
@@ -387,14 +412,17 @@
       '</div></div>'
     );
     root.querySelector('#f-start').addEventListener('click', function(){
-      var nombre = root.querySelector('#f-nombre').value.trim();
+      var apellidoPaterno = root.querySelector('#f-appat').value.trim();
+      var apellidoMaterno = root.querySelector('#f-apmat').value.trim();
+      var nombres = root.querySelector('#f-nombres').value.trim();
       var grupo = root.querySelector('#f-grupo').value.trim();
       var grado = root.querySelector('#f-grado').value;
-      if (!nombre || !grupo){
-        root.querySelector('#f-err').innerHTML = '<div class="msg msg-error">Escribe tu nombre y tu grupo para continuar.</div>';
+      if (!apellidoPaterno || !nombres || !grupo){
+        root.querySelector('#f-err').innerHTML = '<div class="msg msg-error">Escribe tu apellido paterno, tu(s) nombre(s) y tu grupo para continuar.</div>';
         return;
       }
-      view.nombre = nombre; view.grupo = grupo; view.grado = grado;
+      view.apellidoPaterno = apellidoPaterno; view.apellidoMaterno = apellidoMaterno; view.nombres = nombres;
+      view.grupo = grupo; view.grado = grado;
       view.qi = 0; view.answers = []; view.pendingResultKey = null;
       view.screen = 'quiz';
       render();
@@ -442,11 +470,12 @@
     var label = dominantLabel(top);
     var primary = STYLE_INFO[top[0]];
     var isMixed = top.length > 1;
+    var nombreCompleto = [view.apellidoPaterno, view.apellidoMaterno, view.nombres].filter(Boolean).join(' ');
     mount(
       renderHeader(true) +
       '<div class="shell"><div class="card">' +
       '<div class="result-hero"><span class="emoji">' + (isMixed ? '🌈' : primary.emoji) + '</span>' +
-      '<h2>' + esc(view.nombre || 'Tu') + (view.nombre ? ',' : '') + ' tu estilo es <span style="color:' + (isMixed?'var(--brand)':primary.color) + '">' + esc(label) + '</span></h2></div>' +
+      '<h2>' + esc(view.nombres || 'Tu') + (view.nombres ? ',' : '') + ' tu estilo es <span style="color:' + (isMixed?'var(--brand)':primary.color) + '">' + esc(label) + '</span></h2></div>' +
       '<div style="margin:18px 0;">' + styleBars(counts) + '</div>' +
       '<p style="font-size:15px;">' + (isMixed ? 'No tienes un único estilo dominante: combinas dos (o tres) formas de aprender casi por igual. Aprovecha esta ventaja mezclando las técnicas de cada estilo.' : primary.desc) + '</p>' +
       (isMixed ? '' : '<ul class="tips">' + primary.tips.map(function(t){return '<li>'+esc(t)+'</li>';}).join('') + '</ul>') +
@@ -461,7 +490,8 @@
     btn.addEventListener('click', function(){
       btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Guardando…';
       var record = {
-        nombre: view.nombre, grado: view.grado, grupo: view.grupo, ts: Date.now(),
+        nombre: nombreCompleto, apellidoPaterno: view.apellidoPaterno, apellidoMaterno: view.apellidoMaterno, nombres: view.nombres,
+        grado: view.grado, grupo: view.grupo, ts: Date.now(),
         answers: view.answers.slice(), counts: counts, dominant: top
       };
       // Se guarda primero en este dispositivo con la MISMA clave que se va a
@@ -472,7 +502,7 @@
       saveRecord(record, view.pendingResultKey).then(function(res){
         if (res && res.ok){
           clearPending();
-          view.savedSummary = {nombre: view.nombre, counts: counts, label: label, top: top};
+          view.savedSummary = {nombre: nombreCompleto, nombres: view.nombres, counts: counts, label: label, top: top};
           view.screen = 'saved';
           render();
           return;
@@ -490,7 +520,7 @@
       renderHeader(true) +
       '<div class="shell"><div class="card">' +
       '<div class="result-hero"><span class="emoji">✅</span><h2>¡Resultado guardado!</h2>' +
-      '<p class="lead">Gracias' + (s.nombre?(', '+esc(s.nombre)):'') + '. Tu profesor ya puede ver tu diagnóstico.</p></div>' +
+      '<p class="lead">Gracias' + (s.nombres?(', '+esc(s.nombres)):'') + '. Tu profesor ya puede ver tu diagnóstico.</p></div>' +
       '<div style="margin:18px 0;">' + styleBars(s.counts) + '</div>' +
       '<p class="center" style="font-size:15px;">Tu estilo: <strong style="color:' + STYLE_INFO[s.top[0]].color + '">' + esc(s.label) + '</strong></p>' +
       '<button class="btn btn-block" id="go-home" style="margin-top:14px;">Volver al inicio</button>' +
@@ -596,18 +626,69 @@
       return c;
     });
 
-    var rows = students.slice().sort(function(x,y){ return y.ts - x.ts; }).map(function(s){
-      var top = s.dominant || dominant(s.counts);
-      var badgeClass = top.length > 1 ? 'badge-m' : ('badge-'+top[0]);
-      return '<tr><td>' + esc(s.nombre) + '</td><td>' + esc(s.grado) + '°</td><td>' + esc(s.grupo) + '</td>' +
-        '<td><span class="badge ' + badgeClass + '">' + esc(dominantLabel(top)) + '</span></td>' +
-        '<td style="font-variant-numeric:tabular-nums;">' + s.counts.v + '/' + s.counts.a + '/' + s.counts.k + '</td>' +
-        '<td>' + fmtDate(s.ts) + '</td></tr>';
+    var rowsPorGrado = grades.map(function(g){
+      var enGrado = students.filter(function(s){ return s.grado === g; }).sort(function(x,y){ return claveOrden(x).localeCompare(claveOrden(y), 'es'); });
+      var filas = enGrado.map(function(s){
+        var top = s.dominant || dominant(s.counts);
+        var badgeClass = top.length > 1 ? 'badge-m' : ('badge-'+top[0]);
+        if (view.editingKey === s._key){
+          return '<tr data-key="' + esc(s._key) + '"><td colspan="6" style="padding:10px 8px;">' +
+            '<div class="row" style="flex-wrap:wrap;gap:8px;align-items:end;">' +
+            '<div class="field" style="margin:0;min-width:120px;"><label style="font-size:11px;">Apellido paterno</label><input type="text" class="ed-appat" value="' + esc(s.apellidoPaterno||'') + '"></div>' +
+            '<div class="field" style="margin:0;min-width:120px;"><label style="font-size:11px;">Apellido materno</label><input type="text" class="ed-apmat" value="' + esc(s.apellidoMaterno||'') + '"></div>' +
+            '<div class="field" style="margin:0;min-width:120px;"><label style="font-size:11px;">Nombre(s)</label><input type="text" class="ed-nombres" value="' + esc(s.nombres||'') + '"></div>' +
+            '<div class="field" style="margin:0;min-width:70px;"><label style="font-size:11px;">Grado</label><select class="ed-grado">' +
+              ['1','2','3'].map(function(gg){ return '<option value="'+gg+'"'+(s.grado===gg?' selected':'')+'>'+gg+'°</option>'; }).join('') +
+            '</select></div>' +
+            '<div class="field" style="margin:0;min-width:70px;"><label style="font-size:11px;">Grupo</label><input type="text" class="ed-grupo" value="' + esc(s.grupo||'') + '"></div>' +
+            '<button class="btn btn-primary btn-sm ed-save">Guardar</button>' +
+            '<button class="btn btn-sm ed-cancel">Cancelar</button>' +
+            '</div></td></tr>';
+        }
+        if (view.confirmDeleteKey === s._key){
+          return '<tr data-key="' + esc(s._key) + '"><td colspan="6" style="padding:10px 8px;">' +
+            '<div class="row" style="align-items:center;gap:10px;">' +
+            '<span>¿Eliminar el resultado de <strong>' + esc(nombreListaOficial(s)) + '</strong>?</span>' +
+            '<button class="btn btn-danger btn-sm del-confirm">Sí, eliminar</button>' +
+            '<button class="btn btn-sm del-cancel">Cancelar</button>' +
+            '</div></td></tr>';
+        }
+        return '<tr data-key="' + esc(s._key) + '"><td>' + esc(nombreListaOficial(s)) + '</td><td>' + esc(s.grado) + '°</td><td>' + esc(s.grupo) + '</td>' +
+          '<td><span class="badge ' + badgeClass + '">' + esc(dominantLabel(top)) + '</span></td>' +
+          '<td style="font-variant-numeric:tabular-nums;">' + s.counts.v + '/' + s.counts.a + '/' + s.counts.k + '</td>' +
+          '<td>' + fmtDate(s.ts) + '</td>' +
+          '<td style="white-space:nowrap;"><button class="btn btn-sm row-edit">Editar</button> <button class="btn btn-sm row-del">Eliminar</button></td></tr>';
+      }).join('');
+      return { g: g, n: enGrado.length, filas: filas };
+    });
+
+    var rows = rowsPorGrado.map(function(bloque){
+      if (bloque.n === 0) return '';
+      return '<tr><td colspan="7" style="background:#f4f4f8;font-weight:700;padding:8px;">' + bloque.g + '° grado (' + bloque.n + ')</td></tr>' + bloque.filas;
     }).join('');
+
+    var reporteImprimible = '<div class="solo-impresion">' +
+      '<h2 style="margin:0 0 4px;">Diagnóstico VAK — Telesecundaria "Amado Nervo"</h2>' +
+      '<p style="font-size:12px;margin:0 0 14px;">Reporte de resultados · ' + esc(fmtDate(Date.now())) + '</p>' +
+      grades.map(function(g){
+        var enGrado = students.filter(function(s){ return s.grado === g; }).sort(function(x,y){ return claveOrden(x).localeCompare(claveOrden(y), 'es'); });
+        if (enGrado.length === 0) return '';
+        return '<h3 style="font-size:14px;margin:14px 0 6px;">' + g + '° grado (' + enGrado.length + ')</h3>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+          '<thead><tr>' + ['Nombre','Grupo','Estilo','V/A/K','Fecha'].map(function(h){ return '<th style="text-align:left;border-bottom:1.5px solid #000;padding:4px 6px;">'+h+'</th>'; }).join('') + '</tr></thead><tbody>' +
+          enGrado.map(function(s){
+            var top = s.dominant || dominant(s.counts);
+            return '<tr><td style="border-bottom:1px solid #ccc;padding:4px 6px;">' + esc(nombreListaOficial(s)) + '</td>' +
+              '<td style="border-bottom:1px solid #ccc;padding:4px 6px;">' + esc(s.grupo) + '</td>' +
+              '<td style="border-bottom:1px solid #ccc;padding:4px 6px;">' + esc(dominantLabel(top)) + '</td>' +
+              '<td style="border-bottom:1px solid #ccc;padding:4px 6px;">' + s.counts.v+'/'+s.counts.a+'/'+s.counts.k + '</td>' +
+              '<td style="border-bottom:1px solid #ccc;padding:4px 6px;">' + fmtDate(s.ts) + '</td></tr>';
+          }).join('') + '</tbody></table>';
+      }).join('') + '</div>';
 
     var csv = 'nombre,grado,grupo,visual,auditivo,kinestesico,estilo_dominante,fecha\n' + students.map(function(s){
       var top = s.dominant || dominant(s.counts);
-      return [s.nombre, s.grado+'°', s.grupo, s.counts.v, s.counts.a, s.counts.k, dominantLabel(top), fmtDate(s.ts)]
+      return [nombreListaOficial(s), s.grado+'°', s.grupo, s.counts.v, s.counts.a, s.counts.k, dominantLabel(top), fmtDate(s.ts)]
         .map(function(v){ return '"' + String(v).replace(/"/g,'""') + '"'; }).join(',');
     }).join('\n');
 
@@ -618,6 +699,7 @@
       '<h2 style="margin:0;">Panel del docente</h2>' +
       '<div class="row" style="gap:8px;">' +
       '<button class="btn btn-sm" id="t-refresh">↻ Actualizar</button>' +
+      '<button class="btn btn-sm btn-primary" id="t-print">⬇ Imprimir / PDF</button>' +
       '<button class="linkbtn" id="t-logout">Salir</button></div></div>' +
 
       '<p class="muted" style="font-size:12px;margin:-8px 0 0;">Actualizado ' + (view.lastLoaded ? ('a las ' + fmtTime(view.lastLoaded)) : '') + ' · los resultados nuevos requieren pulsar "Actualizar"</p>' +
@@ -646,7 +728,7 @@
       }).join('') + '</div>' +
 
       '<div class="card"><h3 style="margin:0 0 14px;font-size:16px;">Alumnos</h3>' +
-      '<div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Grado</th><th>Grupo</th><th>Estilo</th><th>V/A/K</th><th>Fecha</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' +
+      '<div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Grado</th><th>Grupo</th><th>Estilo</th><th>V/A/K</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' +
 
       '<details class="item-detail" style="padding:16px;"><summary>Detalle por situación (para identificar tendencias del grupo)</summary>' +
       '<div style="margin-top:12px;">' + itemStats.map(function(c, idx){
@@ -655,10 +737,13 @@
 
       '<div class="card"><h3 style="margin:0 0 10px;font-size:16px;">Copiar datos (para Excel)</h3>' +
       '<p class="muted" style="font-size:12.5px;margin:0 0 8px;">Selecciona el texto y cópialo a una hoja de cálculo si lo necesitas.</p>' +
-      '<textarea class="copybox" readonly onclick="this.select()">' + esc(csv) + '</textarea></div>'
+      '<textarea class="copybox" readonly onclick="this.select()">' + esc(csv) + '</textarea></div>' +
+      reporteImprimible
       ) +
       '</div></div>'
     );
+
+    root.querySelector('#t-print').addEventListener('click', function(){ window.print(); });
 
     root.querySelector('#t-refresh').addEventListener('click', enterDashboard);
     root.querySelector('#t-logout').addEventListener('click', function(){
@@ -669,6 +754,60 @@
     root.querySelector('#fl-grado').addEventListener('change', function(e){ view.filterGrado = e.target.value; render(); });
     var fg = root.querySelector('#fl-grupo');
     fg.addEventListener('input', function(e){ view.filterGrupo = e.target.value; render(); });
+
+    var tableWrap = root.querySelector('.table-wrap');
+    if (tableWrap){
+      tableWrap.addEventListener('click', function(e){
+        var tr = e.target.closest('tr[data-key]');
+        if (!tr) return;
+        var key = tr.getAttribute('data-key');
+        if (e.target.classList.contains('row-edit')){ view.editingKey = key; view.confirmDeleteKey = null; render(); return; }
+        if (e.target.classList.contains('row-del')){ view.confirmDeleteKey = key; view.editingKey = null; render(); return; }
+        if (e.target.classList.contains('ed-cancel')){ view.editingKey = null; render(); return; }
+        if (e.target.classList.contains('del-cancel')){ view.confirmDeleteKey = null; render(); return; }
+        if (e.target.classList.contains('del-confirm')){
+          e.target.disabled = true; e.target.textContent = 'Eliminando…';
+          deleteRecord(key).then(function(res){
+            if (res && res.ok){
+              state.students = state.students.filter(function(s){ return s._key !== key; });
+              view.confirmDeleteKey = null; render();
+            } else {
+              alert(errorText(res));
+              view.confirmDeleteKey = null; render();
+            }
+          });
+          return;
+        }
+        if (e.target.classList.contains('ed-save')){
+          var record = state.students.find(function(s){ return s._key === key; });
+          if (!record) return;
+          var apellidoPaterno = tr.querySelector('.ed-appat').value.trim();
+          var apellidoMaterno = tr.querySelector('.ed-apmat').value.trim();
+          var nombres = tr.querySelector('.ed-nombres').value.trim();
+          var grado = tr.querySelector('.ed-grado').value;
+          var grupo = tr.querySelector('.ed-grupo').value.trim();
+          if (!apellidoPaterno || !nombres || !grupo){ alert('Falta el apellido paterno, el nombre o el grupo.'); return; }
+          e.target.disabled = true; e.target.textContent = 'Guardando…';
+          var nuevoRegistro = Object.assign({}, record, {
+            apellidoPaterno: apellidoPaterno, apellidoMaterno: apellidoMaterno, nombres: nombres,
+            nombre: [apellidoPaterno, apellidoMaterno, nombres].filter(Boolean).join(' '),
+            grado: grado, grupo: grupo
+          });
+          delete nuevoRegistro._key;
+          saveRecord(nuevoRegistro, key).then(function(res){
+            if (res && res.ok){
+              nuevoRegistro._key = key;
+              var idx = state.students.findIndex(function(s){ return s._key === key; });
+              if (idx >= 0) state.students[idx] = nuevoRegistro;
+              view.editingKey = null; render();
+            } else {
+              alert(errorText(res));
+              e.target.disabled = false; e.target.textContent = 'Guardar';
+            }
+          });
+        }
+      });
+    }
   }
 
   function retryPendingIfAny(){
