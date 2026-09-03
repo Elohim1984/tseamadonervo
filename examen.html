@@ -60,11 +60,12 @@
   var ui = {
     screen: 'landing', /* landing | alumno | examen | guardando | confirm | error | teacherGate | teacherPanel */
     grado: null,
-    alumno: { nombre: '', grupo: '' },
+    alumno: { nombre: '', grupo: '', alumnoId: '' },
     respuestas: {},   /* clave "campoIdx_reactivoIdx" -> letra */
     lastError: null,
     lastRecord: null,
-    teacherError: null
+    teacherError: null,
+    inscritos: { loading: false, error: null, lista: [] }
   };
 
   /* estado de los resultados del panel docente — vive aparte porque se
@@ -98,6 +99,32 @@
   }
   function totalReactivos(grado) {
     return EXAM[grado].reduce(function (s, c) { return s + c.reactivos.length; }, 0);
+  }
+
+  /* ---------- lee los alumnos ya inscritos en Control Escolar ----------
+     Lee (solo lectura) los mismos registros "alumno:" que ya usa Control
+     Escolar en la misma Hoja de Google — no se toca ni se escribe nada ahí,
+     solo se lee el nombre/grupo para que el alumno elija el suyo en vez de
+     escribirlo libre. */
+  function nombreOficialAlumno(a) {
+    return [a.ALUMNO_APELLIDO_PATERNO, a.ALUMNO_APELLIDO_MATERNO, a.ALUMNO_NOMBRES].filter(function (x) { return x && String(x).trim(); }).join(' ');
+  }
+  function cargarAlumnosInscritos(grado) {
+    ui.inscritos = { loading: true, error: null, lista: [] };
+    sheetsListar('alumno:').then(function (res) {
+      if (!res || !res.ok) throw new Error('respuesta inválida');
+      var lista = (res.filas || []).map(function (f) {
+        try { return JSON.parse(f.valor); } catch (e) { return null; }
+      }).filter(function (a) { return a && String(a.grado) === String(grado); })
+        .map(function (a) { return { id: a.id, nombre: nombreOficialAlumno(a), grupo: a.grupo || a.GRUPO || 'A' }; })
+        .filter(function (a) { return a.nombre.trim(); })
+        .sort(function (x, y) { return x.nombre.localeCompare(y.nombre, 'es'); });
+      ui.inscritos = { loading: false, error: null, lista: lista };
+      if (ui.screen === 'alumno') render();
+    }).catch(function () {
+      ui.inscritos = { loading: false, error: 'No se pudo cargar la lista de alumnos inscritos. Revisa tu conexión.', lista: [] };
+      if (ui.screen === 'alumno') render();
+    });
   }
 
   /* ---------- cálculo de resultados de un envío ---------- */
@@ -274,8 +301,10 @@
         el('div', { class: 'd' }, [totalReactivos(g) + ' reactivos · 4 campos formativos'])
       ]);
       btn.addEventListener('click', function () {
-        ui.grado = g; ui.alumno = { nombre: '', grupo: '' }; ui.respuestas = {};
-        ui.screen = 'alumno'; render();
+        ui.grado = g; ui.alumno = { nombre: '', grupo: '', alumnoId: '' }; ui.respuestas = {};
+        ui.screen = 'alumno';
+        cargarAlumnosInscritos(g);
+        render();
       });
       grid.appendChild(btn);
     });
@@ -293,24 +322,64 @@
     back.addEventListener('click', function () { ui.screen = 'landing'; render(); });
     wrap.appendChild(back);
     wrap.appendChild(el('h1', { style: 'margin-top:14px;' }, ['Examen diagnóstico · ' + ui.grado + '°']));
-    wrap.appendChild(el('div', { class: 'sub' }, ['Antes de comenzar, escribe tu nombre completo y tu grupo.']));
 
-    wrap.appendChild(el('label', {}, ['Nombre completo del alumno(a)']));
-    var nombreInput = el('input', { type: 'text', id: 'inNombre', value: ui.alumno.nombre, placeholder: 'Ej. Juan Pérez López' });
-    wrap.appendChild(nombreInput);
+    if (ui.inscritos.loading) {
+      wrap.appendChild(el('div', { class: 'sub' }, ['Cargando la lista de alumnos inscritos…']));
+      return wrap;
+    }
+    if (ui.inscritos.error) {
+      wrap.appendChild(el('div', { class: 'errbox' }, [ui.inscritos.error]));
+      var retry = el('button', { class: 'btn', style: 'margin-top:14px;' }, ['Reintentar']);
+      retry.addEventListener('click', function () { cargarAlumnosInscritos(ui.grado); render(); });
+      wrap.appendChild(retry);
+      return wrap;
+    }
+    if (ui.inscritos.lista.length === 0) {
+      wrap.appendChild(el('div', { class: 'errbox' }, ['Todavía no hay alumnos inscritos de ' + ui.grado + '° grado en Control Escolar. Pídele a tu director(a) que te inscriba primero.']));
+      return wrap;
+    }
+
+    wrap.appendChild(el('div', { class: 'sub' }, ['Antes de comenzar, elige tu grupo y después tu nombre de la lista.']));
+
+    var grupos = [];
+    ui.inscritos.lista.forEach(function (a) { if (grupos.indexOf(a.grupo) === -1) grupos.push(a.grupo); });
+    grupos.sort();
 
     wrap.appendChild(el('label', {}, ['Grupo']));
-    var grupoInput = el('input', { type: 'text', id: 'inGrupo', value: ui.alumno.grupo, placeholder: 'Ej. A' });
-    wrap.appendChild(grupoInput);
+    var grupoSel = el('select', { id: 'inGrupo' }, [el('option', { value: '' }, ['Selecciona tu grupo…'])].concat(
+      grupos.map(function (g) { return el('option', { value: g }, [g]); })
+    ));
+    if (ui.alumno.grupo) grupoSel.value = ui.alumno.grupo;
+    wrap.appendChild(grupoSel);
 
-    var err = el('div', { class: 'errbox', style: 'display:none;' }, ['Escribe tu nombre y tu grupo para continuar.']);
+    wrap.appendChild(el('label', {}, ['Nombre']));
+    var nombreSel = el('select', { id: 'inNombre' }, [el('option', { value: '' }, ['Primero elige tu grupo…'])]);
+    wrap.appendChild(nombreSel);
+
+    function refrescarNombres() {
+      var g = grupoSel.value;
+      var opciones = ui.inscritos.lista.filter(function (a) { return a.grupo === g; });
+      nombreSel.innerHTML = '';
+      nombreSel.appendChild(el('option', { value: '' }, [g ? 'Selecciona tu nombre…' : 'Primero elige tu grupo…']));
+      opciones.forEach(function (a) {
+        nombreSel.appendChild(el('option', { value: a.id }, [a.nombre]));
+      });
+      nombreSel.disabled = !g;
+    }
+    refrescarNombres();
+    if (ui.alumno.alumnoId) nombreSel.value = ui.alumno.alumnoId;
+    grupoSel.addEventListener('change', refrescarNombres);
+
+    var err = el('div', { class: 'errbox', style: 'display:none;' }, ['Elige tu grupo y tu nombre de la lista para continuar.']);
     wrap.appendChild(err);
 
     var startBtn = el('button', { class: 'btn', style: 'margin-top:20px;' }, ['Comenzar examen']);
     startBtn.addEventListener('click', function () {
-      var nombre = nombreInput.value.trim(), grupo = grupoInput.value.trim();
-      if (!nombre || !grupo) { err.style.display = 'block'; return; }
-      ui.alumno = { nombre: nombre, grupo: grupo };
+      var grupo = grupoSel.value;
+      var alumnoId = nombreSel.value;
+      var opcion = ui.inscritos.lista.find(function (a) { return a.id === alumnoId; });
+      if (!grupo || !alumnoId || !opcion) { err.style.display = 'block'; return; }
+      ui.alumno = { nombre: opcion.nombre, grupo: grupo, alumnoId: alumnoId };
       ui.screen = 'examen'; render();
     });
     wrap.appendChild(startBtn);
