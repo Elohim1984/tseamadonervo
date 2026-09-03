@@ -454,6 +454,7 @@ const ChevronDown = crearIcono('<polyline points="6 9 12 15 18 9"/>');
 const Briefcase = crearIcono('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>');
 const Globe2 = crearIcono('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>');
 const Scale = crearIcono('<path d="M12 3v18"/><path d="M5 8h14"/><path d="M3 8l3-5 3 5-3 4-3-4z"/><path d="M15 8l3-5 3 5-3 4-3-4z"/><path d="M8 21h8"/>');
+const Sprout = crearIcono('<path d="M7 20h10"/><path d="M10 20c0-6-3-8-6-8 0 4 2 7 6 8z"/><path d="M14 20c0-8 4-10 7-10-1 5-3 9-7 10z"/><path d="M12 20V9"/>');
 
 
 /* ---------- estados de México (para campos de entidad) ---------- */
@@ -2065,6 +2066,343 @@ function DiagnosticoTab() {
 }
 
 /* ---------- Reglamento e Incidencias (pestaña propia, fusiona Bitácora) ---------- */
+/* ---------- Programa Analítico y PIC ----------
+   Cada tabla/formulario se guarda en SU PROPIO registro (por grado,
+   campo formativo, trimestre o fase) como un objeto JSON pequeño —
+   nunca todo el documento junto en una sola celda. Así, sin importar
+   cuánto se escriba durante el ciclo escolar, ningún registro se
+   acerca al límite de 50,000 caracteres de Google Sheets.
+   Estructura calcada de Programa_Analitico_2026-2027.docx y
+   PIC_2026-2027.docx para que lo capturado aquí coincida exactamente
+   con esos documentos oficiales. */
+
+const CAMPOS_FORMATIVOS_NEM = [
+  { slug: "lenguajes", nombre: "Lenguajes" },
+  { slug: "saberes", nombre: "Saberes y Pensamiento Científico" },
+  { slug: "etica", nombre: "Ética, Naturaleza y Sociedades" },
+  { slug: "humano", nombre: "De lo Humano y lo Comunitario" },
+];
+const TRIMESTRES = [
+  { slug: "t1", nombre: "Trimestre 1" },
+  { slug: "t2", nombre: "Trimestre 2" },
+  { slug: "t3", nombre: "Trimestre 3" },
+];
+const FASES_CRONOGRAMA_PIC = [
+  { slug: "diagnostico", nombre: "Diagnóstico (ya realizado)" },
+  { slug: "seleccion", nombre: "Selección del problema" },
+  { slug: "planeacion", nombre: "Planeación" },
+  { slug: "desarrollo", nombre: "Desarrollo / trabajo de campo" },
+  { slug: "comunicacion", nombre: "Comunicación de resultados a la comunidad" },
+  { slug: "evaluacion", nombre: "Evaluación y cierre" },
+];
+
+const DIAGNOSTICO_COMUNITARIO_REF = [
+  { problema: "Agua / escasez de agua", total: 10, g1: 1, g2: 2, g3: 7 },
+  { problema: "Manejo de basura y residuos", total: 10, g1: 3, g2: 4, g3: 3 },
+  { problema: "Alumbrado público / electricidad", total: 4, g1: 1, g2: 0, g3: 3 },
+  { problema: "Calles / infraestructura vial", total: 2, g1: 1, g2: 0, g3: 1 },
+  { problema: "Servicios de salud", total: 1, g1: 0, g2: 1, g3: 0 },
+];
+
+/* Formulario genérico de varios campos que se guarda como UN objeto JSON
+   bajo una sola clave — se usa para cada tabla/fase del Programa Analítico
+   y del PIC, siempre autoguardado con botón propio y confirmación visual. */
+function FormularioAutoguardado({ claveStorage, titulo, ayuda, campos, onStamp, compacto }) {
+  const [valores, setValores] = useState({});
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [guardadoOk, setGuardadoOk] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    setCargando(true);
+    setGuardadoOk(false);
+    getStorage(claveStorage, {}).then((v) => { if (vivo) { setValores(v || {}); setCargando(false); } });
+    return () => { vivo = false; };
+  }, [claveStorage]);
+
+  const cambiar = (key, val) => setValores((prev) => ({ ...prev, [key]: val }));
+
+  const guardar = async () => {
+    setGuardando(true);
+    const ok = await setStorage(claveStorage, valores);
+    setGuardando(false);
+    setGuardadoOk(ok);
+    if (ok && onStamp) onStamp("Guardado");
+    setTimeout(() => setGuardadoOk(false), 2500);
+  };
+
+  return (
+    <div className="card">
+      {titulo && <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: compacto ? "0.82rem" : "0.88rem" }}>{titulo}</div>}
+      {ayuda && <p className="text-sm mb-2" style={{ opacity: 0.6 }}>{ayuda}</p>}
+      {cargando ? (
+        <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {campos.map((c) => (
+            <div key={c.key}>
+              <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{c.etiqueta}</label>
+              {c.tipo === "texto" ? (
+                <input className="campo" type="text" value={valores[c.key] || ""} onChange={(e) => cambiar(c.key, e.target.value)} placeholder={c.placeholder || "Escribe aquí…"} />
+              ) : (
+                <textarea className="campo" rows={c.filas || 3} value={valores[c.key] || ""} onChange={(e) => cambiar(c.key, e.target.value)} placeholder={c.placeholder || "Escribe aquí…"} />
+              )}
+            </div>
+          ))}
+          <div className="flex items-center gap-2">
+            <button onClick={guardar} disabled={guardando} className="btn-primario">
+              {guardando ? "Guardando…" : <><Check size={16} /> Guardar</>}
+            </button>
+            {guardadoOk && <span className="text-sm" style={{ color: "var(--verde)" }}>✓ Guardado en tu Hoja</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Lista libre de observaciones (3.4 del Programa Analítico) — mismo patrón
+   de renglón-por-registro que usa Bitácora, para poder agregar cuantas se
+   necesiten durante el ciclo sin riesgo de acumular todo en un solo lugar. */
+function ObservacionesColectivo({ onStamp }) {
+  const [items, setItems] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [form, setForm] = useState({ observacion: "", grados: "", campo: "" });
+
+  const cargar = async () => {
+    setCargando(true);
+    const lista = await listarStorage("progObs:");
+    setItems(lista.sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "")));
+    setCargando(false);
+  };
+  useEffect(() => { cargar(); }, []);
+
+  const agregar = async () => {
+    if (!form.observacion.trim()) return;
+    const id = uid();
+    const item = { id, ...form, fecha: hoyISO() };
+    await setStorage(`progObs:${id}`, item);
+    setForm({ observacion: "", grados: "", campo: "" });
+    onStamp && onStamp("Guardado");
+    cargar();
+  };
+
+  const eliminar = async (id) => {
+    await borrarStorage(`progObs:${id}`);
+    cargar();
+  };
+
+  return (
+    <div className="card">
+      <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>3.4 — Otras observaciones del colectivo</div>
+      <p className="text-sm mb-3" style={{ opacity: 0.6 }}>Espacio libre para agregar observaciones del diagnóstico a lo largo del ciclo, sin límite.</p>
+      <div className="flex flex-col gap-2 mb-3">
+        <textarea className="campo" rows={2} value={form.observacion} onChange={(e) => setForm({ ...form, observacion: e.target.value })} placeholder="Observación…" />
+        <div className="grid grid-cols-2 gap-2">
+          <input className="campo" type="text" value={form.grados} onChange={(e) => setForm({ ...form, grados: e.target.value })} placeholder="Grado(s) que afecta" />
+          <input className="campo" type="text" value={form.campo} onChange={(e) => setForm({ ...form, campo: e.target.value })} placeholder="Campo formativo relacionado" />
+        </div>
+        <button onClick={agregar} className="btn-primario" style={{ alignSelf: "flex-start" }}><Plus size={16} /> Agregar observación</button>
+      </div>
+      {cargando ? (
+        <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm" style={{ opacity: 0.5 }}>Sin observaciones todavía.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {items.map((it) => (
+            <div key={it.id} className="flex items-start gap-2" style={{ borderTop: "1px solid var(--borde)", paddingTop: "0.5rem" }}>
+              <div className="flex-1">
+                <p className="text-sm">{it.observacion}</p>
+                <p className="text-sm" style={{ opacity: 0.5 }}>{[it.grados, it.campo].filter(Boolean).join(" · ")}</p>
+              </div>
+              <button onClick={() => eliminar(it.id)} className="btn-icono" title="Eliminar"><Trash2 size={14} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TablaDiagnosticoRef() {
+  return (
+    <div className="card">
+      <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Diagnóstico comunitario (ya trabajado — referencia)</div>
+      <p className="text-sm mb-3" style={{ opacity: 0.6 }}>Del Diagnóstico Integral aplicado en agosto-septiembre 2026, 28 respuestas de 1°, 2° y 3° grado.</p>
+      <div style={{ overflowX: "auto" }}>
+        <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+              <th style={{ textAlign: "left", padding: "4px 6px" }}>Problemática</th>
+              <th style={{ padding: "4px 6px" }}>Total</th>
+              <th style={{ padding: "4px 6px" }}>1° A</th>
+              <th style={{ padding: "4px 6px" }}>2° A</th>
+              <th style={{ padding: "4px 6px" }}>3° A</th>
+            </tr>
+          </thead>
+          <tbody>
+            {DIAGNOSTICO_COMUNITARIO_REF.map((r) => (
+              <tr key={r.problema} style={{ borderBottom: "1px solid var(--borde)" }}>
+                <td style={{ padding: "4px 6px" }}>{r.problema}</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.total}</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.g1}</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.g2}</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.g3}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ProgramaAnaliticoPIC({ onStamp }) {
+  const [subTab, setSubTab] = useState("analitico");
+  const [grado, setGrado] = useState("1");
+
+  const SUBTABS = [
+    { id: "analitico", label: "Programa Analítico" },
+    { id: "pic", label: "PIC" },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2 flex-wrap">
+        {SUBTABS.map((t) => (
+          <button key={t.id} onClick={() => setSubTab(t.id)} className={`chip-grado ${subTab === t.id ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === "analitico" && (
+        <div className="flex flex-col gap-4">
+          <ObservacionesColectivo onStamp={onStamp} />
+
+          <div className="flex gap-2 flex-wrap">
+            {["1", "2", "3"].map((g) => (
+              <button key={g} onClick={() => setGrado(g)} className={`chip-grado ${grado === g ? "activo" : ""}`}>
+                {g}° grado
+              </button>
+            ))}
+          </div>
+
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.25rem" }}>
+            Plano 2 — Contextualización · {grado}° grado
+          </div>
+          {CAMPOS_FORMATIVOS_NEM.map((c) => (
+            <FormularioAutoguardado
+              key={`${grado}-${c.slug}`}
+              claveStorage={`progAnalitico:${grado}:contextualizacion:${c.slug}`}
+              titulo={c.nombre}
+              onStamp={onStamp}
+              compacto
+              campos={[
+                { key: "contenido", etiqueta: "Contenido(s) contextualizado(s)", tipo: "area", filas: 3 },
+                { key: "eje", etiqueta: "Eje(s) articulador(es)", tipo: "texto" },
+                { key: "vinculo", etiqueta: "Vínculo con el diagnóstico", tipo: "area", filas: 2 },
+              ]}
+            />
+          ))}
+
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.5rem" }}>
+            Plano 3 — Codiseño (secuenciación) · {grado}° grado
+          </div>
+          {TRIMESTRES.map((t) => (
+            <FormularioAutoguardado
+              key={`${grado}-${t.slug}`}
+              claveStorage={`progAnalitico:${grado}:codiseno:${t.slug}`}
+              titulo={t.nombre}
+              onStamp={onStamp}
+              compacto
+              campos={[
+                { key: "contenidosPDA", etiqueta: "Contenidos y PDA a trabajar", tipo: "area", filas: 3 },
+                { key: "metodologia", etiqueta: "Metodología / vinculación con PIC", tipo: "area", filas: 3 },
+                { key: "fechaCierre", etiqueta: "Fecha de cierre", tipo: "texto" },
+              ]}
+            />
+          ))}
+        </div>
+      )}
+
+      {subTab === "pic" && (
+        <div className="flex flex-col gap-4">
+          <TablaDiagnosticoRef />
+
+          <div className="flex gap-2 flex-wrap">
+            {["1", "2", "3"].map((g) => (
+              <button key={g} onClick={() => setGrado(g)} className={`chip-grado ${grado === g ? "activo" : ""}`}>
+                {g}° grado
+              </button>
+            ))}
+          </div>
+
+          <FormularioAutoguardado
+            key={`sel-${grado}`}
+            claveStorage={`pic:${grado}:seleccion`}
+            titulo={`Fase 2 — Selección y planteamiento del problema · ${grado}° grado`}
+            onStamp={onStamp}
+            campos={[
+              { key: "problema", etiqueta: "Problema priorizado", tipo: "area", filas: 2 },
+              { key: "porQue", etiqueta: "¿Por qué este y no otro?", tipo: "area", filas: 2 },
+              { key: "aQuienAfecta", etiqueta: "¿A quién afecta en la comunidad?", tipo: "area", filas: 2 },
+              { key: "preguntaGuia", etiqueta: "Pregunta guía del proyecto", tipo: "area", filas: 2 },
+            ]}
+          />
+
+          <FormularioAutoguardado
+            key={`plan-${grado}`}
+            claveStorage={`pic:${grado}:planeacion`}
+            titulo={`Fase 3 — Planeación de la propuesta · ${grado}° grado`}
+            onStamp={onStamp}
+            campos={[
+              { key: "nombreProyecto", etiqueta: "Nombre del proyecto", tipo: "texto" },
+              { key: "objetivo", etiqueta: "Objetivo general", tipo: "area", filas: 2 },
+              { key: "camposFormativos", etiqueta: "Campo(s) formativo(s) vinculado(s)", tipo: "texto" },
+              { key: "ejesArticuladores", etiqueta: "Eje(s) articulador(es)", tipo: "texto" },
+              { key: "metodologia", etiqueta: "Metodología / actividades principales", tipo: "area", filas: 3 },
+              { key: "recursos", etiqueta: "Recursos necesarios (materiales, apoyo comunitario)", tipo: "area", filas: 2 },
+              { key: "productoFinal", etiqueta: "Producto final esperado", tipo: "area", filas: 2 },
+              { key: "aliados", etiqueta: "Aliados de la comunidad (padres, autoridades, otros)", tipo: "area", filas: 2 },
+            ]}
+          />
+
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.25rem" }}>
+            Cronograma (compartido, no varía por grado)
+          </div>
+          {FASES_CRONOGRAMA_PIC.map((f) => (
+            <FormularioAutoguardado
+              key={f.slug}
+              claveStorage={`pic:cronograma:${f.slug}`}
+              titulo={f.nombre}
+              onStamp={onStamp}
+              compacto
+              campos={[
+                { key: "actividad", etiqueta: "Actividad principal", tipo: "area", filas: 2 },
+                { key: "periodo", etiqueta: "Periodo (trimestre)", tipo: "texto" },
+                { key: "responsable", etiqueta: "Responsable", tipo: "texto" },
+              ]}
+            />
+          ))}
+
+          <FormularioAutoguardado
+            claveStorage="pic:evaluacionDifusion"
+            titulo="Fase 5 — Evaluación y difusión (compartido)"
+            onStamp={onStamp}
+            campos={[
+              { key: "comoPresentar", etiqueta: "¿Cómo se presentará el resultado a la comunidad?", tipo: "area", filas: 3 },
+              { key: "criterios", etiqueta: "Criterios de evaluación", tipo: "area", filas: 3 },
+            ]}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ReglamentoIncidencias({ reglamento, setReglamento, rolActual, onStamp, alumnos, casos, setCasos, gradosPermitidos, usuario }) {
   const [subTab, setSubTab] = useState("reglamento");
   const [texto, setTexto] = useState(reglamento);
@@ -2777,6 +3115,7 @@ function App() {
     { id: "calendario", label: "Calendario", icon: CalendarDays },
     { id: "cte", label: "CTE", icon: Landmark },
     { id: "reglamento", label: "Reglamento", icon: Scale },
+    { id: "pic", label: "Programa Analítico y PIC", icon: Sprout },
     { id: "recursos", label: "Recursos", icon: FileText },
   ];
 
@@ -2853,6 +3192,7 @@ function App() {
             usuario={usuario.nombre}
           />
         )}
+        {tab === "pic" && <ProgramaAnaliticoPIC onStamp={fireStamp} />}
         {tab === "recursos" && (
           <Recursos
             rolActual={rol}
