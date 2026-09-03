@@ -2370,6 +2370,13 @@ function FormularioAutoguardado({ claveStorage, titulo, ayuda, campos, onStamp, 
               <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{c.etiqueta}</label>
               {c.tipo === "texto" ? (
                 <input className="campo" type="text" value={valores[c.key] || ""} onChange={(e) => cambiar(c.key, e.target.value)} placeholder={c.placeholder || "Escribe aquí…"} />
+              ) : c.tipo === "select" ? (
+                <select className="campo" value={valores[c.key] || ""} onChange={(e) => cambiar(c.key, e.target.value)}>
+                  <option value="">Selecciona…</option>
+                  {(c.opciones || []).map((op) => (
+                    <option key={op} value={op}>{op}</option>
+                  ))}
+                </select>
               ) : (
                 <textarea className="campo" rows={c.filas || 3} value={valores[c.key] || ""} onChange={(e) => cambiar(c.key, e.target.value)} placeholder={c.placeholder || "Escribe aquí…"} />
               )}
@@ -2892,6 +2899,43 @@ function DocumentosDireccion({ alumnos, onStamp }) {
             )}
           </div>
           <ListaAsistenciaImprimible tutores={tutores} />
+
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.5rem" }}>
+            Asignación de puestos
+          </div>
+          <p className="text-sm" style={{ opacity: 0.6, marginTop: "-0.5rem" }}>
+            Elige de la lista de tutores confirmados quién ocupa cada puesto. Como son pocos padres, la misma persona puede quedar asignada a más de un puesto sin problema.
+          </p>
+
+          <FormularioAutoguardado
+            claveStorage="apf:mesaDirectiva"
+            titulo="Mesa Directiva (Acta Constitutiva)"
+            onStamp={onStamp}
+            campos={[
+              { key: "presidente", etiqueta: "Presidente", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "vicepresidente", etiqueta: "Vicepresidente", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "secretario", etiqueta: "Secretario", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "tesorero", etiqueta: "Tesorero", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "vocal1", etiqueta: "Vocal 1", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "vocal2", etiqueta: "Vocal 2", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "vocal3", etiqueta: "Vocal 3", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "vocal4", etiqueta: "Vocal 4", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "vocal5", etiqueta: "Vocal 5", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "vocal6", etiqueta: "Vocal 6", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+            ]}
+          />
+
+          <FormularioAutoguardado
+            claveStorage="apf:contraloriaSocial"
+            titulo="Contraloría Social"
+            onStamp={onStamp}
+            campos={[
+              { key: "presidente", etiqueta: "Presidente", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "secretario", etiqueta: "Secretario", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "vocal1", etiqueta: "Vocal 1", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+              { key: "vocal2", etiqueta: "Vocal 2", tipo: "select", opciones: tutores.map((t) => t.nombre) },
+            ]}
+          />
         </div>
       )}
 
