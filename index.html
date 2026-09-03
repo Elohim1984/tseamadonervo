@@ -447,6 +447,7 @@ const ExternalLink = crearIcono('<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2
 const FileText = crearIcono('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>');
 const Landmark = crearIcono('<line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 21 8 3 8"/>');
 const Download = crearIcono('<path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M4 19h16"/>');
+const Pencil = crearIcono('<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/>');
 const Cloud = crearIcono('<path d="M17.5 19H8a5 5 0 1 1 1.3-9.8A6 6 0 0 1 21 11.5 4.5 4.5 0 0 1 17.5 19z"/>');
 const CheckCircle2 = crearIcono('<circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/>');
 const ChevronUp = crearIcono('<polyline points="6 15 12 9 18 15"/>');
@@ -1345,13 +1346,164 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp }) 
 }
 
 /* ---------- Asistencia ---------- */
+const CICLO_INICIO = "2026-08-31";
+const CICLO_FIN = "2027-07-09";
+const MOTIVOS_JUSTIFICACION = ["Receta médica", "Cita médica", "Trámite familiar", "Otro"];
+
+function inicioSemana(fechaISO) {
+  const d = new Date(fechaISO + "T00:00:00");
+  const dia = d.getDay(); // 0=domingo
+  const diff = dia === 0 ? -6 : 1 - dia; // retrocede al lunes
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+function finSemana(fechaISO) {
+  const d = new Date(inicioSemana(fechaISO) + "T00:00:00");
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().slice(0, 10);
+}
+function inicioMes(fechaISO) { return fechaISO.slice(0, 7) + "-01"; }
+function finMes(fechaISO) {
+  const [a, m] = fechaISO.split("-").map(Number);
+  const ultimo = new Date(a, m, 0).getDate();
+  return `${fechaISO.slice(0, 7)}-${String(ultimo).padStart(2, "0")}`;
+}
+
+function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
+  const [periodo, setPeriodo] = useState("semanal");
+  const [fechaRef, setFechaRef] = useState(hoyISO());
+
+  let desde, hasta, etiquetaPeriodo;
+  if (periodo === "semanal") { desde = inicioSemana(fechaRef); hasta = finSemana(fechaRef); etiquetaPeriodo = `Semana del ${desde} al ${hasta}`; }
+  else if (periodo === "mensual") { desde = inicioMes(fechaRef); hasta = finMes(fechaRef); etiquetaPeriodo = `Mes de ${fechaRef.slice(0, 7)}`; }
+  else { desde = CICLO_INICIO; hasta = CICLO_FIN; etiquetaPeriodo = "Ciclo escolar 2026-2027 completo"; }
+
+  const listaGrado = alumnos.filter((a) => a.grado === grado).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
+
+  const filas = listaGrado.map((a) => {
+    const c = { presente: 0, retardo: 0, falta: 0, falta_justificada: 0, diasRegistrados: 0 };
+    Object.keys(asistencia).forEach((clave) => {
+      const [g, f] = clave.split("_");
+      if (g !== String(grado) || f < desde || f > hasta) return;
+      const estado = asistencia[clave][a.id];
+      if (estado) { c[estado] = (c[estado] || 0) + 1; c.diasRegistrados++; }
+    });
+    const asistidos = c.presente + c.retardo;
+    const pct = c.diasRegistrados > 0 ? Math.round((asistidos / c.diasRegistrados) * 100) : null;
+    return { alumno: a, ...c, pct };
+  });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2 flex-wrap">
+        {[["semanal", "Semanal"], ["mensual", "Mensual"], ["anual", "Ciclo completo"]].map(([id, label]) => (
+          <button key={id} onClick={() => setPeriodo(id)} className={`chip-grado ${periodo === id ? "activo" : ""}`}>{label}</button>
+        ))}
+      </div>
+      {periodo !== "anual" && (
+        <div className="card flex items-center justify-between">
+          <label className="font-mono" style={{ fontSize: "0.7rem", opacity: 0.6 }}>FECHA DE REFERENCIA</label>
+          <input className="campo" style={{ maxWidth: "10rem" }} type="date" value={fechaRef} onChange={(e) => setFechaRef(e.target.value)} />
+        </div>
+      )}
+      <div className="card">
+        <div className="flex items-center justify-between mb-2">
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.85rem" }}>{etiquetaPeriodo} · {grado}° grado</div>
+          <button onClick={() => onImprimir({ filas, etiquetaPeriodo, grado })} className="btn-primario" style={{ fontSize: "0.75rem" }}>
+            <Download size={14} /> Imprimir / PDF
+          </button>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+                <th style={{ textAlign: "left", padding: "4px 6px" }}>Alumno</th>
+                <th style={{ padding: "4px 6px" }}>Presente</th>
+                <th style={{ padding: "4px 6px" }}>Retardo</th>
+                <th style={{ padding: "4px 6px" }}>Falta</th>
+                <th style={{ padding: "4px 6px" }}>Justificada</th>
+                <th style={{ padding: "4px 6px" }}>% Asistencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((r) => (
+                <tr key={r.alumno.id} style={{ borderBottom: "1px solid var(--borde)" }}>
+                  <td style={{ padding: "4px 6px" }}>{nombreAlumno(r.alumno)}</td>
+                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.presente}</td>
+                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.retardo}</td>
+                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.falta}</td>
+                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.falta_justificada}</td>
+                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.pct === null ? "—" : `${r.pct}%`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InformeAsistenciaImprimible({ datos }) {
+  if (!datos) return null;
+  const { filas, etiquetaPeriodo, grado } = datos;
+  return (
+    <div className="solo-impresion">
+      <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "1rem" }}>
+        <img src={ESCUDO_ESCUELA} alt="" style={{ width: "48px" }} />
+        <div>
+          <div style={{ fontWeight: 800, fontSize: "1rem" }}>Telesecundaria Estatal "Amado Nervo"</div>
+          <div style={{ fontSize: "0.75rem" }}>Xoyatla, Tepeojuma, Puebla · Informe de asistencia</div>
+        </div>
+      </div>
+      <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.5rem" }}>{etiquetaPeriodo} · {grado}° grado</div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+        <thead>
+          <tr>
+            {["Alumno", "Presente", "Retardo", "Falta", "Justificada", "% Asistencia"].map((h) => (
+              <th key={h} style={{ textAlign: "left", borderBottom: "1.5px solid #000", padding: "0.25rem 0.4rem" }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map((r) => (
+            <tr key={r.alumno.id}>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.4rem" }}>{nombreAlumno(r.alumno)}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.4rem" }}>{r.presente}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.4rem" }}>{r.retardo}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.4rem" }}>{r.falta}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.4rem" }}>{r.falta_justificada}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.4rem" }}>{r.pct === null ? "—" : `${r.pct}%`}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function Asistencia({ alumnos, asistencia, setAsistencia, gradosPermitidos, onStamp }) {
+  const [subTab, setSubTab] = useState("registro");
   const [grado, setGrado] = useState(gradosPermitidos[0]);
   const [fecha, setFecha] = useState(hoyISO());
+  const [justificaciones, setJustificaciones] = useState({});
+  const [editandoJustificacion, setEditandoJustificacion] = useState(null);
+  const [datosInforme, setDatosInforme] = useState(null);
 
   const clave = `${grado}_${fecha}`;
   const registro = asistencia[clave] || {};
   const listaGrado = alumnos.filter((a) => a.grado === grado).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
+
+  useEffect(() => {
+    let vivo = true;
+    listarStorage(`asistJustifica:${grado}_${fecha}_`).then((lista) => {
+      if (!vivo) return;
+      const mapa = {};
+      lista.forEach((j) => { mapa[j.alumnoId] = j; });
+      setJustificaciones(mapa);
+    });
+    return () => { vivo = false; };
+  }, [grado, fecha]);
 
   const marcar = (alumnoId) => {
     const actual = registro[alumnoId];
@@ -1360,53 +1512,125 @@ function Asistencia({ alumnos, asistencia, setAsistencia, gradosPermitidos, onSt
     const nuevoRegistro = { ...registro, [alumnoId]: siguiente };
     const nuevaAsistencia = { ...asistencia, [clave]: nuevoRegistro };
     setAsistencia(nuevaAsistencia);
-
+    if (siguiente !== "falta") {
+      borrarStorage(`asistJustifica:${grado}_${fecha}_${alumnoId}`);
+      setJustificaciones((prev) => { const c = { ...prev }; delete c[alumnoId]; return c; });
+    }
     const todosMarcados = listaGrado.every((a) => nuevoRegistro[a.id]);
     if (todosMarcados && listaGrado.length > 0) onStamp("Registrado");
   };
 
-  const contador = { presente: 0, retardo: 0, falta: 0 };
-  Object.values(registro).forEach((v) => { if (v) contador[v]++; });
+  const guardarJustificacion = async (alumnoId, tipo, detalle) => {
+    const item = { alumnoId, tipo, detalle, fecha, grado };
+    await setStorage(`asistJustifica:${grado}_${fecha}_${alumnoId}`, item);
+    setJustificaciones((prev) => ({ ...prev, [alumnoId]: item }));
+    const nuevoRegistro = { ...registro, [alumnoId]: "falta_justificada" };
+    setAsistencia({ ...asistencia, [clave]: nuevoRegistro });
+    setEditandoJustificacion(null);
+    onStamp("Guardado");
+  };
+
+  const contador = { presente: 0, retardo: 0, falta: 0, falta_justificada: 0 };
+  Object.values(registro).forEach((v) => { if (v && contador[v] !== undefined) contador[v]++; });
+
+  const SUBTABS = [
+    { id: "registro", label: "Registro diario" },
+    { id: "resumen", label: "Resumen e informes" },
+  ];
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex gap-2 flex-wrap">
+        {SUBTABS.map((t) => (
+          <button key={t.id} onClick={() => setSubTab(t.id)} className={`chip-grado ${subTab === t.id ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>{t.label}</button>
+        ))}
+      </div>
+
       <SelectorGrado grados={gradosPermitidos} valor={grado} onCambia={setGrado} />
 
-      <div className="card flex items-center justify-between">
-        <label className="font-mono" style={{ fontSize: "0.7rem", opacity: 0.6 }}>FECHA</label>
-        <input className="campo" style={{ maxWidth: "10rem" }} type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-      </div>
+      {subTab === "registro" && (
+        <>
+          <div className="card flex items-center justify-between">
+            <label className="font-mono" style={{ fontSize: "0.7rem", opacity: 0.6 }}>FECHA</label>
+            <input className="campo" style={{ maxWidth: "10rem" }} type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+          </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <ResumenChip color="var(--verde)" label="Presente" valor={contador.presente} />
-        <ResumenChip color="var(--amarillo)" label="Retardo" valor={contador.retardo} />
-        <ResumenChip color="var(--rojo)" label="Falta" valor={contador.falta} />
-      </div>
+          <div className="grid grid-cols-4 gap-2">
+            <ResumenChip color="var(--verde)" label="Presente" valor={contador.presente} />
+            <ResumenChip color="var(--amarillo)" label="Retardo" valor={contador.retardo} />
+            <ResumenChip color="var(--rojo)" label="Falta" valor={contador.falta} />
+            <ResumenChip color="var(--azul)" label="Justificada" valor={contador.falta_justificada} />
+          </div>
 
-      <div className="flex flex-col gap-2">
-        {listaGrado.length === 0 && (
-          <p className="text-sm text-center py-6" style={{ opacity: 0.55 }}>No hay alumnos inscritos en {grado}° grado todavía. Ve a Inscripciones para agregarlos.</p>
-        )}
-        {listaGrado.map((a) => {
-          const estado = registro[a.id];
-          return (
-            <button key={a.id} onClick={() => marcar(a.id)} className="card flex items-center justify-between w-full text-left estado-btn">
-              <span className="text-sm font-medium">{nombreAlumno(a)}</span>
-              <span className={`pastilla ${estado || "vacio"}`}>
-                {estado === "presente" && <Check size={13} />}
-                {estado === "retardo" && <Clock size={13} />}
-                {estado === "falta" && <X size={13} />}
-                {estado ? ESTADO_LABEL[estado] : "Toca para marcar"}
-              </span>
-            </button>
-          );
-        })}
+          <div className="flex flex-col gap-2">
+            {listaGrado.length === 0 && (
+              <p className="text-sm text-center py-6" style={{ opacity: 0.55 }}>No hay alumnos inscritos en {grado}° grado todavía. Ve a Inscripciones para agregarlos.</p>
+            )}
+            {listaGrado.map((a) => {
+              const estado = registro[a.id];
+              const j = justificaciones[a.id];
+              return (
+                <div key={a.id} className="card">
+                  <button onClick={() => marcar(a.id)} className="flex items-center justify-between w-full text-left estado-btn" style={{ background: "none", border: "none", padding: 0 }}>
+                    <span className="text-sm font-medium">{nombreAlumno(a)}</span>
+                    <span className={`pastilla ${estado || "vacio"}`}>
+                      {estado === "presente" && <Check size={13} />}
+                      {estado === "retardo" && <Clock size={13} />}
+                      {(estado === "falta" || estado === "falta_justificada") && <X size={13} />}
+                      {estado === "falta_justificada" ? "Falta justificada" : estado ? ESTADO_LABEL[estado] : "Toca para marcar"}
+                    </span>
+                  </button>
+                  {estado === "falta" && editandoJustificacion !== a.id && (
+                    <button onClick={() => setEditandoJustificacion(a.id)} className="text-sm mt-2" style={{ color: "var(--azul)" }}>+ Justificar falta</button>
+                  )}
+                  {(estado === "falta" || estado === "falta_justificada") && j && editandoJustificacion !== a.id && (
+                    <div className="text-sm mt-2 flex items-center justify-between" style={{ opacity: 0.7 }}>
+                      <span>{j.tipo}{j.detalle ? ` — ${j.detalle}` : ""}</span>
+                      <button onClick={() => setEditandoJustificacion(a.id)} className="btn-icono" title="Editar"><Pencil size={13} /></button>
+                    </div>
+                  )}
+                  {editandoJustificacion === a.id && (
+                    <FormJustificacion
+                      inicial={j}
+                      onGuardar={(tipo, detalle) => guardarJustificacion(a.id, tipo, detalle)}
+                      onCancelar={() => setEditandoJustificacion(null)}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {subTab === "resumen" && (
+        <ResumenAsistencia alumnos={alumnos} asistencia={asistencia} grado={grado} onImprimir={(d) => { setDatosInforme(d); setTimeout(() => window.print(), 100); }} />
+      )}
+
+      <InformeAsistenciaImprimible datos={datosInforme} />
+    </div>
+  );
+}
+
+function FormJustificacion({ inicial, onGuardar, onCancelar }) {
+  const [tipo, setTipo] = useState((inicial && inicial.tipo) || MOTIVOS_JUSTIFICACION[0]);
+  const [detalle, setDetalle] = useState((inicial && inicial.detalle) || "");
+  return (
+    <div className="flex flex-col gap-2 mt-2" style={{ borderTop: "1px solid var(--borde)", paddingTop: "0.5rem" }}>
+      <select className="campo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
+        {MOTIVOS_JUSTIFICACION.map((m) => <option key={m} value={m}>{m}</option>)}
+      </select>
+      <input className="campo" type="text" value={detalle} onChange={(e) => setDetalle(e.target.value)} placeholder="Detalle (opcional)" />
+      <div className="flex gap-2">
+        <button onClick={() => onGuardar(tipo, detalle)} className="btn-primario" style={{ fontSize: "0.78rem" }}><Check size={14} /> Guardar</button>
+        <button onClick={onCancelar} className="btn-secundario" style={{ fontSize: "0.78rem" }}>Cancelar</button>
       </div>
     </div>
   );
 }
 
 function ResumenChip({ color, label, valor }) {
+
   return (
     <div className="card text-center py-2">
       <div className="font-display" style={{ fontSize: "1.3rem", fontWeight: 800, color }}>{valor}</div>
@@ -2748,6 +2972,24 @@ function ListaPorOcupacion({ alumnosVisibles }) {
 }
 
 function contactoPrincipal(a) {
+  // Si alguna sección (Padre, Madre o Tutor) está marcada como "¿Es el tutor?" = Sí,
+  // se muestra SOLO esa persona, con rol "Tutor" — aunque también haya datos de las
+  // otras secciones capturados.
+  const seccionesTutor = [
+    { flag: "PADRE_ES_TUTOR", prefijo: "PADRE_" },
+    { flag: "MADRE_ES_TUTOR", prefijo: "MADRE_" },
+    { flag: "TUTOR_ES_TUTOR_LEGAL", prefijo: "TUTOR_" },
+  ];
+  for (const { flag, prefijo } of seccionesTutor) {
+    if (a[flag] === "Sí") {
+      const nombre = [a[`${prefijo}NOMBRES`], a[`${prefijo}APELLIDO_PATERNO`], a[`${prefijo}APELLIDO_MATERNO`]].filter((x) => x && x.trim()).join(" ");
+      if (nombre.trim()) {
+        const telefono = a[`${prefijo}CELULAR`] || a[`${prefijo}TELEFONO_FIJO`] || "";
+        return { rol: "Tutor", nombre: nombre.trim(), telefono };
+      }
+    }
+  }
+  // Si nadie quedó marcado como tutor, se usa el orden de siempre: Tutor, Madre, Padre.
   const opciones = [
     { rol: "Tutor", prefijo: "TUTOR_" },
     { rol: "Madre", prefijo: "MADRE_" },
