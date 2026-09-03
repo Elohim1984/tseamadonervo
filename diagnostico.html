@@ -362,6 +362,7 @@ var THANKS_RECORD = null;
 var PENDING_RECORD = null;
 var QR_URL = "";
 var CONFIRM_DELETE_ID = null;
+var EDITING_ID = null;
 var LOAD_ERROR = null;
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
@@ -371,6 +372,19 @@ function todayISO(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMo
 function fmtDate(iso){ if(!iso) return ""; var p=iso.split("-"); return p.length===3 ? (p[2]+"/"+p[1]+"/"+p[0]) : iso; }
 function grupoLabel(g){ return g ? (g.grado+" "+g.grupo) : "—"; }
 function findGrupo(id){ return (STATE.config.grupos||[]).find(function(g){ return g.id===id; }); }
+
+// Para ordenar por apellido paterno como las listas oficiales de SEP.
+// Los registros nuevos ya traen apellidoPaterno/Materno/nombres por separado;
+// para registros viejos (solo "nombre" libre) se usa ese texto completo como
+// respaldo, para que no se pierdan de la lista aunque no ordenen perfecto.
+function claveOrden(r){
+  if(r.apellidoPaterno) return [r.apellidoPaterno, r.apellidoMaterno||"", r.nombres||""].join(" ").toLowerCase();
+  return String(r.nombre||"").toLowerCase();
+}
+function nombreListaOficial(r){
+  if(r.apellidoPaterno) return [r.apellidoPaterno, r.apellidoMaterno, r.nombres].filter(Boolean).join(" ");
+  return r.nombre||"";
+}
 function avg(nums){ if(!nums.length) return 0; return nums.reduce(function(a,b){return a+b;},0)/nums.length; }
 
 /* ---------- keyword frequency for open text ---------- */
@@ -488,8 +502,12 @@ function renderStudent(){
   '</div>' +
   '<form id="diagForm">' +
   '<div class="card">' +
-    '<label class="field"><span class="field-label">Nombre del alumno</span>' +
-      '<input type="text" name="nombre" required placeholder="Nombre completo" autocomplete="name"></label>' +
+    '<label class="field"><span class="field-label">Apellido paterno</span>' +
+      '<input type="text" name="apellidoPaterno" required placeholder="Ej. Pérez" autocomplete="family-name"></label>' +
+    '<label class="field"><span class="field-label">Apellido materno</span>' +
+      '<input type="text" name="apellidoMaterno" placeholder="Ej. López" autocomplete="additional-name"></label>' +
+    '<label class="field"><span class="field-label">Nombre(s)</span>' +
+      '<input type="text" name="nombres" required placeholder="Ej. Juan" autocomplete="given-name"></label>' +
     '<label class="field"><span class="field-label">Grado y grupo</span>' +
       '<select name="grupoId" required>' +
         '<option value="" disabled selected>Selecciona tu grupo</option>' +
@@ -573,7 +591,7 @@ function renderThanks(){
   var g = THANKS_RECORD ? findGrupo(THANKS_RECORD.grupoId) : null;
   return '<div class="thanks">' +
     '<div class="mark">✓</div>' +
-    '<h1 style="font-size:22px">¡Gracias' + (THANKS_RECORD? ", "+esc(THANKS_RECORD.nombre.split(" ")[0]) : "") + '!</h1>' +
+    '<h1 style="font-size:22px">¡Gracias' + (THANKS_RECORD? ", "+esc((THANKS_RECORD.nombres||THANKS_RECORD.nombre.split(" ")[0]).split(" ")[0]) : "") + '!</h1>' +
     '<p style="color:var(--ink-soft); margin-top:8px">Tu diagnóstico quedó registrado' + (g? " para "+esc(grupoLabel(g)) : "") + '. Gracias por responder con honestidad — esto ayuda a tu docente a preparar mejores proyectos para tu grupo.</p>' +
     '<button class="btn btn-primary" style="margin-top:20px" data-action="nav" data-view="student">Volver al inicio</button>' +
   '</div>';
@@ -662,18 +680,32 @@ function renderResultados(){
   out += '<div class="card"><h2 style="font-size:15px; margin-bottom:10px">Respuestas registradas ('+resp.length+')</h2>' +
     '<div class="no-print" style="overflow-x:auto"><table style="width:100%; border-collapse:collapse; font-size:13px">' +
     '<thead><tr><th style="text-align:left; padding:6px 8px">Nombre</th><th style="text-align:left; padding:6px 8px">Grupo</th><th style="text-align:left; padding:6px 8px">Fecha</th><th style="padding:6px 8px"></th></tr></thead><tbody>' +
-    resp.slice().sort(function(a,b){ return String(b.fecha||"").localeCompare(String(a.fecha||"")); }).map(function(r){
+    resp.slice().sort(function(a,b){ return claveOrden(a).localeCompare(claveOrden(b), "es"); }).map(function(r){
       var g = findGrupo(r.grupoId);
       var armado = CONFIRM_DELETE_ID===r.id;
+      if(EDITING_ID===r.id){
+        return '<tr style="border-top:1px solid var(--border)"><td colspan="4" style="padding:10px 8px">' +
+          '<form data-action="guardar-edicion" data-id="'+esc(r.id)+'" style="display:flex; flex-wrap:wrap; gap:8px; align-items:end">' +
+          '<label class="field" style="margin-bottom:0; min-width:140px"><span class="field-label">Apellido paterno</span><input type="text" name="apellidoPaterno" value="'+esc(r.apellidoPaterno||"")+'" required></label>' +
+          '<label class="field" style="margin-bottom:0; min-width:140px"><span class="field-label">Apellido materno</span><input type="text" name="apellidoMaterno" value="'+esc(r.apellidoMaterno||"")+'"></label>' +
+          '<label class="field" style="margin-bottom:0; min-width:140px"><span class="field-label">Nombre(s)</span><input type="text" name="nombres" value="'+esc(r.nombres||"")+'" required></label>' +
+          '<label class="field" style="margin-bottom:0; min-width:140px"><span class="field-label">Grupo</span><select name="grupoId">' +
+            grupos.map(function(gg){ return '<option value="'+esc(gg.id)+'"'+(r.grupoId===gg.id?" selected":"")+'>'+esc(grupoLabel(gg))+'</option>'; }).join("") +
+          '</select></label>' +
+          '<button type="submit" class="btn btn-primary btn-sm">Guardar</button> ' +
+          '<button type="button" class="btn btn-sm" data-action="cancelar-edicion">Cancelar</button>' +
+          '</form></td></tr>';
+      }
       return '<tr style="border-top:1px solid var(--border)">' +
-        '<td style="padding:6px 8px">'+esc(r.nombre)+'</td>' +
+        '<td style="padding:6px 8px">'+esc(nombreListaOficial(r))+'</td>' +
         '<td style="padding:6px 8px">'+esc(grupoLabel(g))+'</td>' +
         '<td style="padding:6px 8px">'+esc(fmtDate(r.fecha))+'</td>' +
         '<td style="padding:6px 8px; text-align:right; white-space:nowrap">' +
         (armado ?
           '<button type="button" class="btn btn-danger btn-sm" data-action="confirmar-borrado" data-id="'+esc(r.id)+'">¿Seguro? Borrar</button> ' +
           '<button type="button" class="btn btn-sm" data-action="cancelar-borrado">Cancelar</button>'
-          : '<button type="button" class="btn btn-sm" data-action="pedir-borrado" data-id="'+esc(r.id)+'">Eliminar</button>') +
+          : '<button type="button" class="btn btn-sm" data-action="pedir-edicion" data-id="'+esc(r.id)+'">Editar</button> ' +
+            '<button type="button" class="btn btn-sm" data-action="pedir-borrado" data-id="'+esc(r.id)+'">Eliminar</button>') +
         '</td></tr>';
     }).join("") +
     '</tbody></table></div></div>';
@@ -921,6 +953,8 @@ document.getElementById("app").addEventListener("click", function(e){
   else if(action==="pedir-borrado"){ CONFIRM_DELETE_ID = el.dataset.id; render(); }
   else if(action==="cancelar-borrado"){ CONFIRM_DELETE_ID = null; render(); }
   else if(action==="confirmar-borrado"){ borrarRespuesta(el.dataset.id); }
+  else if(action==="pedir-edicion"){ EDITING_ID = el.dataset.id; CONFIRM_DELETE_ID = null; render(); }
+  else if(action==="cancelar-edicion"){ EDITING_ID = null; render(); }
   else if(action==="reload"){ VIEW="loading"; render(); cargarTodo(); }
 });
 
@@ -979,7 +1013,33 @@ document.getElementById("app").addEventListener("submit", function(e){
   if(e.target.id==="gruposForm"){ e.preventDefault(); saveGrupos(); }
   else if(e.target.id==="metaForm"){ e.preventDefault(); saveMeta(e.target); }
   else if(e.target.id==="concentradoForm"){ e.preventDefault(); saveConcentrado(e.target); }
+  else if(e.target.dataset && e.target.dataset.action==="guardar-edicion"){ e.preventDefault(); guardarEdicionRespuesta(e.target); }
 });
+
+function guardarEdicionRespuesta(form){
+  var id = form.dataset.id;
+  var record = STATE.respuestas.find(function(r){ return r.id===id; });
+  if(!record) return;
+  var fd = new FormData(form);
+  var apellidoPaterno = (fd.get("apellidoPaterno")||"").toString().trim();
+  var apellidoMaterno = (fd.get("apellidoMaterno")||"").toString().trim();
+  var nombres = (fd.get("nombres")||"").toString().trim();
+  var grupoId = fd.get("grupoId");
+  if(!apellidoPaterno || !nombres){ return; }
+  record.apellidoPaterno = apellidoPaterno;
+  record.apellidoMaterno = apellidoMaterno;
+  record.nombres = nombres;
+  record.nombre = [apellidoPaterno, apellidoMaterno, nombres].filter(Boolean).join(" ");
+  record.grupoId = grupoId;
+  apiWrite("set", {key: PREFIX_RESPUESTA+id, value: JSON.stringify(record)}, function(err, json){
+    if(err || !json || !json.ok){
+      LAST_ERROR = "No se pudo guardar la corrección. Revisa tu conexión e intenta de nuevo.";
+      render();
+      return;
+    }
+    EDITING_ID = null; LAST_ERROR = null; render(); showToast("Corregido.");
+  });
+}
 
 /* ================= persistencia (Control Escolar / Apps Script) ================= */
 function showToast(msg){
@@ -1061,9 +1121,12 @@ function onSubmitForm(e){
   if(SUBMITTING) return;
   var form = e.target;
   var fd = new FormData(form);
-  var nombre = (fd.get("nombre")||"").toString().trim();
+  var apellidoPaterno = (fd.get("apellidoPaterno")||"").toString().trim();
+  var apellidoMaterno = (fd.get("apellidoMaterno")||"").toString().trim();
+  var nombres = (fd.get("nombres")||"").toString().trim();
   var grupoId = fd.get("grupoId");
-  if(!nombre || !grupoId){ LAST_ERROR = "Falta tu nombre o tu grupo."; render(); return; }
+  if(!apellidoPaterno || !nombres || !grupoId){ LAST_ERROR = "Falta tu apellido paterno, tu(s) nombre(s) o tu grupo."; render(); return; }
+  var nombre = [apellidoPaterno, apellidoMaterno, nombres].filter(Boolean).join(" ");
 
   var se=[], ap=[], ac=[];
   for(var i=0;i<SOCIOEMOCIONAL_ITEMS.length;i++){ var v=fd.get("se_"+i); if(!v){ LAST_ERROR="Responde todas las preguntas de la sección I."; render(); return;} se.push(parseInt(v,10)); }
@@ -1071,7 +1134,9 @@ function onSubmitForm(e){
   for(i=0;i<ACADEMICO_ITEMS.length;i++){ v=fd.get("ac_"+i); if(!v){ LAST_ERROR="Responde todas las preguntas de la sección IV."; render(); return;} ac.push(parseInt(v,10)); }
 
   var record = {
-    id: uid(), grupoId: grupoId, nombre: nombre, fecha: todayISO(),
+    id: uid(), grupoId: grupoId, nombre: nombre,
+    apellidoPaterno: apellidoPaterno, apellidoMaterno: apellidoMaterno, nombres: nombres,
+    fecha: todayISO(),
     socioemocional: se, aprendizaje: ap, academico: ac,
     socioeconomico: {
       convivencia: fd.get("convivencia")||"", servicios: fd.getAll("servicios"),
