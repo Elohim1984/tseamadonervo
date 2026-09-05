@@ -3151,6 +3151,42 @@ function InformeBimestral({ onStamp }) {
   );
 }
 
+function ConstanciaRegistroVista({ datos, imprimible }) {
+  const claseExterna = imprimible ? "solo-impresion" : "card";
+  const d = datos || {};
+  return (
+    <div className={claseExterna}>
+      {imprimible && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "1rem" }}>
+          <img src={ESCUDO_ESCUELA} alt="" style={{ width: "48px" }} />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: "1rem" }}>Telesecundaria Estatal "Amado Nervo"</div>
+            <div style={{ fontSize: "0.75rem" }}>CCT 21ETV0473W · Xoyatla, Tepeojuma, Puebla · C.P. 74394</div>
+          </div>
+        </div>
+      )}
+      {!imprimible && <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Vista previa — Constancia de Registro</div>}
+      <div style={{ textAlign: "center", fontWeight: 800, fontSize: "0.92rem", margin: "0.6rem 0 1rem", lineHeight: 1.4 }}>
+        CONSTANCIA DE REGISTRO DEL ACTA DE LA MESA DIRECTIVA DE<br />LA ASOCIACIÓN DE PADRES DE FAMILIA Y CONTRALORÍA SOCIAL
+      </div>
+      <p style={{ fontSize: "0.82rem", marginBottom: "0.4rem" }}><b>Registro:</b> {d.registro || "________________"}</p>
+      <p style={{ fontSize: "0.82rem", marginBottom: "0.4rem" }}><b>Nombre de la Escuela:</b> Telesecundaria Estatal "Amado Nervo"</p>
+      <p style={{ fontSize: "0.82rem", marginBottom: "0.8rem" }}><b>Clave de Centro de Trabajo:</b> 21ETV0473W</p>
+      <p style={{ fontSize: "0.82rem", lineHeight: 1.6 }}>
+        Con fecha <b>{d.dia || "____"}</b> de <b>{d.mes || "__________"}</b> del 202<b>{d.anio || "_"}</b> quedó registrada en el archivo de la Unidad de Atención a Padres de Familia de la Coordinación de Desarrollo Educativo <b>{d.corde || "________________"}</b>, dependiente de la Dirección General de Promoción al Derecho Educativo, la Mesa Directiva y Contraloría Social de la Asociación de Padres de Familia de la escuela a que se refiere la presente Acta.
+      </p>
+      <div style={{ display: "flex", justifyContent: "space-around", marginTop: "2.2rem", fontSize: "0.8rem" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ borderTop: "1px solid #000", width: "9rem", paddingTop: "0.3rem" }}>Sello</div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ borderTop: "1px solid #000", width: "12rem", paddingTop: "0.3rem" }}>Nombre y firma — Enlace de la U.A.P.F.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ConvocatoriaVista({ datos, imprimible }) {
   const claseExterna = imprimible ? "solo-impresion" : "card";
   const d = datos || {};
@@ -3226,8 +3262,8 @@ function DocumentosDireccion({ alumnos, onStamp }) {
   const [subTab, setSubTab] = useState("apf");
   const grados = [1, 2, 3];
   const tutores = obtenerTutoresUnicos(alumnos);
-  const [vistaActa, setVistaActa] = useState({ mesaDirectiva: {}, contraloria: {}, saliente: {}, checklist: {}, convocatoria: {}, cargando: true });
-  const [imprimiendo, setImprimiendo] = useState(null); // 'convocatoria' | 'lista' | 'acta' | 'entrega'
+  const [vistaActa, setVistaActa] = useState({ mesaDirectiva: {}, contraloria: {}, saliente: {}, checklist: {}, convocatoria: {}, constancia: {}, cargando: true });
+  const [imprimiendo, setImprimiendo] = useState(null); // 'convocatoria' | 'lista' | 'acta' | 'entrega' | 'constancia'
   useEffect(() => {
     window.onafterprint = () => setImprimiendo(null);
     return () => { window.onafterprint = null; };
@@ -3242,11 +3278,43 @@ function DocumentosDireccion({ alumnos, onStamp }) {
       getStorage("apf:mesaSaliente", {}),
       getStorage("apf:entregaRecepcionChecklist", {}),
       getStorage("apf:convocatoria", {}),
-    ]).then(([md, cs, sal, chk, conv]) => {
-      setVistaActa({ mesaDirectiva: md || {}, contraloria: cs || {}, saliente: sal || {}, checklist: chk || {}, convocatoria: conv || {}, cargando: false });
+      getStorage("apf:constanciaRegistro", {}),
+    ]).then(([md, cs, sal, chk, conv, cons]) => {
+      setVistaActa({ mesaDirectiva: md || {}, contraloria: cs || {}, saliente: sal || {}, checklist: chk || {}, convocatoria: conv || {}, constancia: cons || {}, cargando: false });
     });
   };
   useEffect(() => { cargarVistaActa(); }, []);
+
+  const [exportando, setExportando] = useState(false);
+  const exportarDatosParaPDFs = async () => {
+    setExportando(true);
+    const bimestres = {};
+    for (const b of ["1", "2", "3", "4", "5", "6"]) {
+      const v = await getStorage(`apf:informeBimestral:${b}`, null);
+      if (v && v.filas && v.filas.length) bimestres[b] = v;
+    }
+    const paquete = {
+      convocatoria: vistaActa.convocatoria,
+      constancia: vistaActa.constancia,
+      tutores: tutores,
+      mesaDirectiva: vistaActa.mesaDirectiva,
+      contraloria: vistaActa.contraloria,
+      mesaSaliente: vistaActa.saliente,
+      checklist: vistaActa.checklist,
+      informeBimestral: bimestres,
+    };
+    const blob = new Blob([JSON.stringify(paquete, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `datos_apf_${hoyISO()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setExportando(false);
+    onStamp && onStamp("Exportado");
+  };
 
   const SUBTABS = [
     { id: "apf", label: "APF · Padrón" },
@@ -3256,6 +3324,16 @@ function DocumentosDireccion({ alumnos, onStamp }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="card flex items-center justify-between">
+        <div>
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Exportar datos para los PDFs oficiales</div>
+          <p className="text-sm" style={{ opacity: 0.6 }}>Descarga un archivo con todo lo capturado aquí — súbelo al chat de Claude para generar los 6 PDFs oficiales ya rellenados con el diseño y membrete real.</p>
+        </div>
+        <button onClick={exportarDatosParaPDFs} disabled={exportando} className="btn-primario" style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}>
+          <Download size={14} /> {exportando ? "Preparando…" : "Exportar datos"}
+        </button>
+      </div>
+
       <div className="flex gap-2 flex-wrap">
         {SUBTABS.map((t) => (
           <button key={t.id} onClick={() => setSubTab(t.id)} className={`chip-grado ${subTab === t.id ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>{t.label}</button>
@@ -3430,6 +3508,33 @@ function DocumentosDireccion({ alumnos, onStamp }) {
             <ActaEntregaRecepcionVista checklist={vistaActa.checklist} saliente={vistaActa.saliente} entrante={vistaActa.mesaDirectiva} imprimible={false} />
           )}
           {imprimiendo === "entrega" && <ActaEntregaRecepcionVista checklist={vistaActa.checklist} saliente={vistaActa.saliente} entrante={vistaActa.mesaDirectiva} imprimible={true} />}
+
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.8rem" }}>
+            Constancia de Registro del Acta
+          </div>
+          <FormularioAutoguardado
+            claveStorage="apf:constanciaRegistro"
+            ayuda="Datos del registro del Acta ante la Coordinación de Desarrollo Educativo (CORDE)."
+            onStamp={onStamp}
+            campos={[
+              { key: "registro", etiqueta: "Número de registro", tipo: "texto", placeholder: "Ej. 052-APF-001" },
+              { key: "dia", etiqueta: "Día", tipo: "texto", placeholder: "Ej. 20" },
+              { key: "mes", etiqueta: "Mes", tipo: "texto", placeholder: "Ej. septiembre" },
+              { key: "anio", etiqueta: "Año (los dos últimos dígitos)", tipo: "texto", placeholder: "Ej. 26" },
+              { key: "corde", etiqueta: "Coordinación de Desarrollo Educativo", tipo: "texto", placeholder: "Ej. Zona 052" },
+            ]}
+          />
+          <div className="flex items-center justify-end" style={{ marginTop: "-0.5rem" }}>
+            <button onClick={() => imprimir("constancia")} className="btn-primario" style={{ fontSize: "0.75rem" }}>
+              <Download size={14} /> Imprimir / PDF
+            </button>
+          </div>
+          {vistaActa.cargando ? (
+            <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>
+          ) : (
+            <ConstanciaRegistroVista datos={vistaActa.constancia} imprimible={false} />
+          )}
+          {imprimiendo === "constancia" && <ConstanciaRegistroVista datos={vistaActa.constancia} imprimible={true} />}
         </div>
       )}
 
