@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-:root{--paper:#FBF3E7;--paper-alt:#F1E4CB;--ink:#2A2118;--ink-soft:#766a56;--line:#E1D0AC;--clay:#8B3A1E;--clay-soft:#F3DFCF;--pine:#2C6B3D;--pine-soft:#DCEBDD;--dusk:#2C4A7C;--dusk-soft:#DDE6F3;--warn:#B5501B;--warn-soft:#F7E1CE;--bad:#A8341F;--bad-soft:#F6DAD3;--good:#2C6B3D;--good-soft:#DCEBDD;}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#1C1712;--paper-alt:#241E17;--ink:#F1E6D4;--ink-soft:#B8A98D;--line:#3B3020;--clay:#E08956;--clay-soft:#3A281E;--pine:#7BC98B;--pine-soft:#1E3324;--dusk:#8FB0E6;--dusk-soft:#1E2B42;--warn:#E0A15E;--warn-soft:#3A2A16;--bad:#E27E6C;--bad-soft:#3A1F19;--good:#7BC98B;--good-soft:#1E3324;}}:root[data-theme="dark"]{--paper:#1C1712;--paper-alt:#241E17;--ink:#F1E6D4;--ink-soft:#B8A98D;--line:#3B3020;--clay:#E08956;--clay-soft:#3A281E;--pine:#7BC98B;--pine-soft:#1E3324;--dusk:#8FB0E6;--dusk-soft:#1E2B42;--warn:#E0A15E;--warn-soft:#3A2A16;--bad:#E27E6C;--bad-soft:#3A1F19;--good:#7BC98B;--good-soft:#1E3324;}*{box-sizing:border-box;}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Public Sans",-apple-system,Arial,sans-serif;line-height:1.5;}h1,h2,h3{font-family:"Fraunces",Georgia,serif;font-weight:600;text-wrap:balance;color:var(--ink);margin:0 0 6px;}.tabular{font-variant-numeric:tabular-nums;font-family:"JetBrains Mono",monospace;}.wrap{max-width:760px;margin:0 auto;padding:32px 20px 80px;}.eyebrow{text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--clay);font-weight:600;margin-bottom:8px;}.sub{color:var(--ink-soft);font-size:15px;margin-bottom:22px;}.grade-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:22px;}.grade-card{background:var(--paper-alt);border:1px solid var(--line);border-left:4px solid var(--dusk);border-radius:6px;padding:22px 18px;text-align:left;cursor:pointer;font-family:inherit;color:var(--ink);}.grade-card:hover{background:var(--dusk-soft);}.grade-card.g1{border-left-color:var(--clay);} .grade-card.g2{border-left-color:var(--pine);} .grade-card.g3{border-left-color:var(--dusk);}.grade-card .n{font-family:"Fraunces",serif;font-size:34px;font-weight:600;}.grade-card .d{font-size:13px;color:var(--ink-soft);margin-top:4px;}label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin:16px 0 6px;}input[type=text]{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);}input[type=text]:focus{outline:2px solid var(--clay);outline-offset:1px;}.btn{display:inline-flex;align-items:center;gap:8px;font:inherit;font-size:14px;font-weight:600;padding:11px 20px;border-radius:5px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;}.btn:hover{opacity:.88;} .btn:disabled{opacity:.4;cursor:not-allowed;}.btn.secondary{background:transparent;color:var(--ink);}.btn.small{padding:6px 12px;font-size:12px;}.linklike{background:none;border:none;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:13px;cursor:pointer;padding:0;}.progress{position:sticky;top:0;background:var(--paper);padding:10px 0;border-bottom:1px solid var(--line);z-index:5;}.progress .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px;}.progress .fill{height:100%;background:var(--pine);}.campo-band{background:var(--ink);color:var(--paper);font-weight:600;font-size:14px;padding:10px 14px;border-radius:5px;margin:26px 0 14px;}.q{margin-bottom:20px;padding-bottom:18px;border-bottom:1px dashed var(--line);}.q .qtext{font-weight:600;font-size:15px;margin-bottom:10px;}.opt{display:flex;align-items:flex-start;gap:9px;padding:7px 8px;border-radius:5px;cursor:pointer;font-size:14px;}.opt:hover{background:var(--paper-alt);}.opt input{margin-top:3px;}.card{background:var(--paper-alt);border:1px solid var(--line);border-radius:6px;padding:16px 18px;margin:14px 0;}.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:4px;}.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}.pill.good{background:var(--good-soft);color:var(--good);} .pill.warn{background:var(--warn-soft);color:var(--warn);} .pill.bad{background:var(--bad-soft);color:var(--bad);}table{border-collapse:collapse;width:100%;font-size:13px;margin:10px 0;}th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;}th{background:var(--paper-alt);}pre.copy{background:var(--paper-alt);border:1px solid var(--line);border-radius:5px;padding:12px;font-family:"JetBrains Mono",monospace;font-size:12px;overflow-x:auto;white-space:pre;user-select:all;}details{margin:14px 0;} summary{cursor:pointer;font-weight:600;padding:6px 0;}.errbox{background:var(--bad-soft);color:var(--bad);border-radius:5px;padding:12px 14px;font-size:14px;margin:14px 0;}footer.foot{max-width:760px;margin:40px auto 0;padding:0 20px;font-size:12px;color:var(--ink-soft);}
+:root{--paper:#FBF3E7;--paper-alt:#F1E4CB;--ink:#2A2118;--ink-soft:#766a56;--line:#E1D0AC;--clay:#8B3A1E;--clay-soft:#F3DFCF;--pine:#2C6B3D;--pine-soft:#DCEBDD;--dusk:#2C4A7C;--dusk-soft:#DDE6F3;--warn:#B5501B;--warn-soft:#F7E1CE;--bad:#A8341F;--bad-soft:#F6DAD3;--good:#2C6B3D;--good-soft:#DCEBDD;}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#1C1712;--paper-alt:#241E17;--ink:#F1E6D4;--ink-soft:#B8A98D;--line:#3B3020;--clay:#E08956;--clay-soft:#3A281E;--pine:#7BC98B;--pine-soft:#1E3324;--dusk:#8FB0E6;--dusk-soft:#1E2B42;--warn:#E0A15E;--warn-soft:#3A2A16;--bad:#E27E6C;--bad-soft:#3A1F19;--good:#7BC98B;--good-soft:#1E3324;}}:root[data-theme="dark"]{--paper:#1C1712;--paper-alt:#241E17;--ink:#F1E6D4;--ink-soft:#B8A98D;--line:#3B3020;--clay:#E08956;--clay-soft:#3A281E;--pine:#7BC98B;--pine-soft:#1E3324;--dusk:#8FB0E6;--dusk-soft:#1E2B42;--warn:#E0A15E;--warn-soft:#3A2A16;--bad:#E27E6C;--bad-soft:#3A1F19;--good:#7BC98B;--good-soft:#1E3324;}*{box-sizing:border-box;}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Public Sans",-apple-system,Arial,sans-serif;line-height:1.5;}h1,h2,h3{font-family:"Fraunces",Georgia,serif;font-weight:600;text-wrap:balance;color:var(--ink);margin:0 0 6px;}.tabular{font-variant-numeric:tabular-nums;font-family:"JetBrains Mono",monospace;}.wrap{max-width:760px;margin:0 auto;padding:32px 20px 80px;}.eyebrow{text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--clay);font-weight:600;margin-bottom:8px;}.sub{color:var(--ink-soft);font-size:15px;margin-bottom:22px;}.grade-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:22px;}.grade-card{background:var(--paper-alt);border:1px solid var(--line);border-left:4px solid var(--dusk);border-radius:6px;padding:22px 18px;text-align:left;cursor:pointer;font-family:inherit;color:var(--ink);}.grade-card:hover{background:var(--dusk-soft);}.grade-card.g1{border-left-color:var(--clay);} .grade-card.g2{border-left-color:var(--pine);} .grade-card.g3{border-left-color:var(--dusk);}.grade-card .n{font-family:"Fraunces",serif;font-size:34px;font-weight:600;}.grade-card .d{font-size:13px;color:var(--ink-soft);margin-top:4px;}label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin:16px 0 6px;}input[type=text]{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);}input[type=text]:focus{outline:2px solid var(--clay);outline-offset:1px;}.btn{display:inline-flex;align-items:center;gap:8px;font:inherit;font-size:14px;font-weight:600;padding:11px 20px;border-radius:5px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;}.btn:hover{opacity:.88;} .btn:disabled{opacity:.4;cursor:not-allowed;}.btn.secondary{background:transparent;color:var(--ink);}.btn.small{padding:6px 12px;font-size:12px;}.linklike{background:none;border:none;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:13px;cursor:pointer;padding:0;}.progress{position:sticky;top:0;background:var(--paper);padding:10px 0;border-bottom:1px solid var(--line);z-index:5;}.progress .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px;}.progress .fill{height:100%;background:var(--pine);}.campo-band{background:var(--ink);color:var(--paper);font-weight:600;font-size:14px;padding:10px 14px;border-radius:5px;margin:26px 0 14px;}.q{margin-bottom:20px;padding-bottom:18px;border-bottom:1px dashed var(--line);}.q .qtext{font-weight:600;font-size:15px;margin-bottom:10px;}.opt{display:flex;align-items:flex-start;gap:9px;padding:7px 8px;border-radius:5px;cursor:pointer;font-size:14px;}.opt:hover{background:var(--paper-alt);}.opt input{margin-top:3px;}.card{background:var(--paper-alt);border:1px solid var(--line);border-radius:6px;padding:16px 18px;margin:14px 0;}.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:4px;}.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}.pill.good{background:var(--good-soft);color:var(--good);} .pill.warn{background:var(--warn-soft);color:var(--warn);} .pill.bad{background:var(--bad-soft);color:var(--bad);}table{border-collapse:collapse;width:100%;font-size:13px;margin:10px 0;}th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;}th{background:var(--paper-alt);}pre.copy{background:var(--paper-alt);border:1px solid var(--line);border-radius:5px;padding:12px;font-family:"JetBrains Mono",monospace;font-size:12px;overflow-x:auto;white-space:pre;user-select:all;}details{margin:14px 0;} summary{cursor:pointer;font-weight:600;padding:6px 0;}.errbox{background:var(--bad-soft);color:var(--bad);border-radius:5px;padding:12px 14px;font-size:14px;margin:14px 0;}.print-header{display:none;}@media print{.no-print{display:none !important;}}@media print{.print-header{display:block !important;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #000;}}@media print{.print-header h1{font-family:"Fraunces",Georgia,serif;font-size:19px;margin:0 0 4px;color:#000;}}@media print{.print-header .meta{font-size:12px;color:#333;}}@media print{body{background:#fff;color:#000;}}@media print{.wrap{max-width:100%;padding:0;}}@media print{table{font-size:11px;}}@media print{th{background:#eee !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}}@media print{table,.card,details{break-inside:avoid;page-break-inside:avoid;}}@media print{h2{break-after:avoid;page-break-after:avoid;margin-top:18px;}}@media print{details>summary{list-style:none;}}footer.foot{max-width:760px;margin:40px auto 0;padding:0 20px;font-size:12px;color:var(--ink-soft);}
 </style>
 </head>
 <body>
@@ -99,6 +99,11 @@
   }
   function totalReactivos(grado) {
     return EXAM[grado].reduce(function (s, c) { return s + c.reactivos.length; }, 0);
+  }
+  function fechaHoyTexto() {
+    var meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    var d = new Date();
+    return d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
   }
 
   /* ---------- lee los alumnos ya inscritos en Control Escolar ----------
@@ -523,7 +528,7 @@
   }
 
   function selectAllBtn(preId) {
-    var b = el('button', { class: 'btn small secondary', style: 'margin:6px 0 16px;' }, ['Seleccionar todo']);
+    var b = el('button', { class: 'btn small secondary no-print', style: 'margin:6px 0 16px;' }, ['Seleccionar todo']);
     b.addEventListener('click', function () {
       var node = document.getElementById(preId);
       var range = document.createRange();
@@ -537,16 +542,43 @@
 
   function buildTeacherPanel() {
     var wrap = el('div', { class: 'wrap' });
-    var topBar = el('div', {});
+
+    /* encabezado limpio: invisible en pantalla, solo aparece al imprimir */
+    wrap.appendChild(el('div', { class: 'print-header' }, [
+      el('h1', {}, [SCHOOL.nombre]),
+      el('div', { class: 'meta' }, ['Panel del docente — Examen diagnóstico · Ciclo escolar ' + SCHOOL.ciclo]),
+      el('div', { class: 'meta' }, ['Grado / grupo: todos · Fecha de impresión: ' + fechaHoyTexto()])
+    ]));
+
+    var topBar = el('div', { class: 'no-print' });
     var back = el('button', { class: 'linklike' }, ['← Volver al inicio']);
     back.addEventListener('click', function () { try { sessionStorage.removeItem('diag_teacher_v1'); } catch (e) {} ui.screen = 'landing'; render(); });
     topBar.appendChild(back);
     var refresh = el('button', { class: 'linklike', style: 'margin-left:18px;' }, ['↻ Actualizar resultados']);
     refresh.addEventListener('click', function () { cargarResultadosDocente(); });
     topBar.appendChild(refresh);
+    var printBtn = el('button', { class: 'linklike', style: 'margin-left:18px;' }, ['🖨️ Imprimir / PDF']);
+    printBtn.addEventListener('click', function () {
+      var detailsEls = Array.prototype.slice.call(document.querySelectorAll('#app details'));
+      var prevOpen = detailsEls.map(function (d) { return d.open; });
+      detailsEls.forEach(function (d) { d.open = true; });
+      var restored = false;
+      function restore() {
+        if (restored) return;
+        restored = true;
+        detailsEls.forEach(function (d, i) { d.open = prevOpen[i]; });
+        window.removeEventListener('afterprint', restore);
+      }
+      window.addEventListener('afterprint', restore);
+      window.print();
+      /* respaldo por si el navegador no dispara "afterprint" (algunos
+         navegadores móviles): restaura de todas formas tras un momento. */
+      setTimeout(restore, 3000);
+    });
+    topBar.appendChild(printBtn);
     wrap.appendChild(topBar);
-    wrap.appendChild(el('h1', { style: 'margin-top:14px;' }, ['Panel del docente']));
-    wrap.appendChild(el('div', { class: 'sub' }, [SCHOOL.nombre + ' · Ciclo ' + SCHOOL.ciclo]));
+    wrap.appendChild(el('h1', { class: 'no-print', style: 'margin-top:14px;' }, ['Panel del docente']));
+    wrap.appendChild(el('div', { class: 'sub no-print' }, [SCHOOL.nombre + ' · Ciclo ' + SCHOOL.ciclo]));
 
     if (teacherData.loading && !teacherData.loadedOnce) {
       wrap.appendChild(el('div', { class: 'card' }, ['Cargando resultados desde la Hoja de Google…']));

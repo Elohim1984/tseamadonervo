@@ -260,6 +260,14 @@
     .app{background:#fff; color:#000; padding-bottom:0;}
     .card{box-shadow:none; border:1px solid #ccc;}
   }
+  .print-header{display:none;}
+  @media print{
+    .print-header{
+      display:block; margin-bottom:18px; padding-bottom:12px; border-bottom:2px solid #000;
+    }
+    .print-header .ph-escuela{font-family:'Fraunces',serif; font-weight:700; font-size:18px;}
+    .print-header .ph-linea{font-size:12.5px; color:#333; margin-top:4px;}
+  }
   @media print{
     body.print-poster-mode .card:not(#posterCard){display:none!important;}
     body.print-poster-mode .container{max-width:100%; padding:0;}
@@ -282,12 +290,72 @@ var API_URL = "https://script.google.com/macros/s/AKfycbzyP65kGWIq6Ury8VO7eLpAa4
 var KEY_CONFIG = "diagConfig:main";
 var PREFIX_RESPUESTA = "diagRespuesta:";
 var PREFIX_CONCENTRADO = "diagConcentrado:";
+var PREFIX_ALUMNO = "alumno:"; // datos de Control Escolar — solo lectura, nunca se escribe aquí
 
 var DEFAULT_CONFIG_BLOB = {
   meta:{escuela:"Telesecundaria Amado Nervo", programa:"Programa Analítico, PIC y Proyectos Comunitarios", cicloEscolar:"2026-2027", semana:"Semana 1 de inscripción"},
-  config:{pin:"2026", likertScale:["Nunca","Casi nunca","Ocasionalmente","Casi siempre","Siempre"],
-    grupos:[{id:"g1",grado:"1°",grupo:"A",inscritos:0},{id:"g2",grado:"2°",grupo:"A",inscritos:0},{id:"g3",grado:"3°",grupo:"A",inscritos:0}]}
+  config:{pin:"2026", likertScale:["Nunca","Casi nunca","Ocasionalmente","Casi siempre","Siempre"], grupos:[]}
 };
+
+/* ================= lectura de alumnos inscritos desde Control Escolar =================
+   IMPORTANTE — AJUSTA AQUÍ SI HACE FALTA: no se pudo confirmar contra el código real de
+   examen.html el nombre exacto de los campos que usa Control Escolar dentro del JSON de
+   cada "alumno:<id>". Se intentan varios nombres comunes (español/inglés, con/sin acento,
+   "1°"/"1", combinado "1°A"). Si el conteo de abajo no coincide con la lista real de
+   Control Escolar, este es el único lugar que hay que corregir — cambia o agrega los
+   nombres de campo que sí usa tu Hoja real. */
+function normalizarGrado(v){
+  if(v==null) return null;
+  var m = String(v).trim().match(/(\d+)/);
+  return m ? (m[1] + "°") : null;
+}
+function normalizarGrupoLetra(v){
+  if(v==null) return null;
+  var s = String(v).trim().toUpperCase();
+  var m = s.match(/([A-ZÑ])/);
+  return m ? m[1] : (s || null);
+}
+function leerGradoGrupoDeAlumno(obj){
+  var grado = obj.grado || obj.Grado || obj.grade || obj.nivelGrado || obj.gradoAlumno || null;
+  var grupo = obj.grupo || obj.Grupo || obj.group || obj.nivelGrupo || obj.grupoAlumno || null;
+  if((!grado || !grupo)){
+    var combo = obj.gradoGrupo || obj.grado_grupo || obj.gradogrupo || obj.gradoYgrupo || null;
+    if(combo){
+      var m = String(combo).match(/(\d+)\D*([A-Za-zÑñ])/);
+      if(m){ grado = grado || m[1]; grupo = grupo || m[2]; }
+    }
+  }
+  return { grado: normalizarGrado(grado), grupo: normalizarGrupoLetra(grupo) };
+}
+function nombreDeAlumno(obj){
+  if(obj.nombre) return obj.nombre;
+  if(obj.Nombre) return obj.Nombre;
+  if(obj.nombreCompleto) return obj.nombreCompleto;
+  if(obj.nombres) return (obj.nombres + " " + (obj.apellidos||obj.apellido||"")).trim();
+  return null;
+}
+function slugGrupo(grado, grupo){
+  return String(grado).replace(/[^0-9]/g,"") + String(grupo).toUpperCase();
+}
+function construirRosterDesdeAlumnos(filas){
+  var porGrupo = {}, sinIdentificar = [];
+  (filas||[]).forEach(function(fila){
+    var obj = null;
+    try{ obj = JSON.parse(fila.valor); }catch(e){}
+    if(!obj || typeof obj !== "object"){ sinIdentificar.push({clave: fila.clave, nombre:null}); return; }
+    var gg = leerGradoGrupoDeAlumno(obj);
+    if(!gg.grado || !gg.grupo){ sinIdentificar.push({clave: fila.clave, nombre: nombreDeAlumno(obj)}); return; }
+    var key = gg.grado + "|" + gg.grupo;
+    if(!porGrupo[key]) porGrupo[key] = {grado: gg.grado, grupo: gg.grupo, count: 0};
+    porGrupo[key].count++;
+  });
+  var grupos = Object.keys(porGrupo).map(function(key){
+    var g = porGrupo[key];
+    return { id: slugGrupo(g.grado, g.grupo), grado: g.grado, grupo: g.grupo, inscritos: g.count };
+  });
+  grupos.sort(function(a,b){ return a.grado.localeCompare(b.grado) || a.grupo.localeCompare(b.grupo); });
+  return { grupos: grupos, sinIdentificar: sinIdentificar, totalFilas: (filas||[]).length };
+}
 
 function qs(params){
   return Object.keys(params).map(function(k){
@@ -373,9 +441,6 @@ function fmtDate(iso){ if(!iso) return ""; var p=iso.split("-"); return p.length
 function grupoLabel(g){ return g ? (g.grado+" "+g.grupo) : "—"; }
 
 // Para ordenar por apellido paterno como las listas oficiales de SEP.
-// Los registros nuevos ya traen apellidoPaterno/Materno/nombres por separado;
-// para registros viejos (solo "nombre" libre) se usa ese texto completo como
-// respaldo, para que no se pierdan de la lista aunque no ordenen perfecto.
 function claveOrden(r){
   if(r.apellidoPaterno) return [r.apellidoPaterno, r.apellidoMaterno||"", r.nombres||""].join(" ").toLowerCase();
   return String(r.nombre||"").toLowerCase();
@@ -513,7 +578,7 @@ function renderStudent(){
         '<option value="" disabled selected>Selecciona tu grupo</option>' +
         grupos.map(function(g){ return '<option value="'+esc(g.id)+'">'+esc(grupoLabel(g))+'</option>'; }).join("") +
       '</select>' +
-      (grupos.length===0 ? '<div class="field-hint">Tu docente aún no ha configurado los grupos. Avísale antes de continuar.</div>' : '') +
+      (grupos.length===0 ? '<div class="field-hint">Todavía no hay grupos inscritos en Control Escolar. Avísale a tu docente antes de continuar.</div>' : '') +
     '</label>' +
   '</div>' +
 
@@ -601,8 +666,11 @@ function renderThanks(){
 function renderTeacher(){
   if(!TEACHER_UNLOCKED){ return renderGate(); }
   var tabs = [["resumen","Resumen"],["resultados","Resultados"],["comunitario","Comunitario"],["config","Configuración"],["exportar","Exportar"]];
-  var out = '<div class="hero no-print"><div class="eyebrow">' + esc(STATE.meta.semana) + '</div><h1>Panel del docente</h1>' +
+  var out = renderPrintHeader();
+  out += '<div class="hero no-print"><div class="eyebrow">' + esc(STATE.meta.semana) + '</div><h1>Panel del docente</h1>' +
     '<p>Sigue el avance de aplicación por grupo y revisa los resultados para construir el Programa Analítico, el PIC y los proyectos comunitarios.</p></div>';
+  out += '<div class="no-print" style="display:flex; justify-content:flex-end; margin-bottom:10px">' +
+    '<button class="btn btn-ghost btn-sm" data-action="printpanel">🖨️ Imprimir / PDF</button></div>';
   out += '<div class="tabbar no-print">' + tabs.map(function(t){
     return '<button data-action="tteab" data-tab="'+t[0]+'" class="'+(TEACHER_TAB===t[0]?"active":"")+'">'+t[1]+'</button>';
   }).join("") + '</div>';
@@ -612,6 +680,20 @@ function renderTeacher(){
   else if(TEACHER_TAB==="config") out += renderConfig();
   else if(TEACHER_TAB==="exportar") out += renderExportar();
   return out;
+}
+
+function renderPrintHeader(){
+  var tabLabels = {resumen:"Resumen", resultados:"Resultados", comunitario:"Comunitario", config:"Configuración", exportar:"Exportar"};
+  var grupoLinea = "Todos los grupos";
+  if((TEACHER_TAB==="resultados" || TEACHER_TAB==="comunitario") && RESULT_FILTER){
+    grupoLinea = grupoLabel(findGrupo(RESULT_FILTER));
+  }
+  var hoy = fmtDate(todayISO());
+  return '<div class="print-header">' +
+    '<div class="ph-escuela">' + esc(STATE.meta.escuela) + '</div>' +
+    '<div class="ph-linea">' + esc(STATE.meta.programa) + ' — Ciclo escolar ' + esc(STATE.meta.cicloEscolar) + '</div>' +
+    '<div class="ph-linea">Panel del docente — ' + esc(tabLabels[TEACHER_TAB]||"") + ' · Grupo: ' + esc(grupoLinea) + ' · Fecha de impresión: ' + esc(hoy) + '</div>' +
+  '</div>';
 }
 
 function renderGate(){
@@ -637,7 +719,7 @@ function renderResumen(){
   '</div>';
   out += '<div class="card"><h2 style="font-size:15px; margin-bottom:14px">Avance por grupo — aplicar en la primera semana</h2>';
   if(grupos.length===0){
-    out += '<div class="empty-state">Aún no hay grupos configurados. Ve a la pestaña Configuración para crearlos.</div>';
+    out += '<div class="empty-state">Aún no hay alumnos inscritos en Control Escolar. Revisa la pestaña Configuración.</div>';
   } else {
     grupos.forEach(function(g){
       var n = STATE.respuestas.filter(function(r){return r.grupoId===g.id;}).length;
@@ -848,27 +930,25 @@ function openList(title, resp, group, field2){
 
 function renderConfig(){
   var grupos = STATE.config.grupos||[];
-  var out = '<div class="card"><h2 style="font-size:15px; margin-bottom:4px">Grupos y alumnos inscritos</h2>' +
-    '<div class="section-sub" style="margin-left:0">Define aquí cuántos alumnos hay inscritos por grupo para poder medir el avance de aplicación en la Semana 1.</div>' +
-    '<form id="gruposForm">' +
-    '<div id="gruposList">' + grupos.map(function(g,idx){
-      return '<div class="grupo-row" data-idx="'+idx+'" data-gid="'+esc(g.id)+'">' +
-        '<input type="text" class="grado" value="'+esc(g.grado)+'" placeholder="Grado (1°)">' +
-        '<input type="text" class="grupo" value="'+esc(g.grupo)+'" placeholder="Grupo (A)">' +
-        '<span class="grow"></span>' +
-        '<label style="font-size:12px; color:var(--muted)">Inscritos</label>' +
-        '<input type="text" inputmode="numeric" class="inscritos" value="'+(g.inscritos||0)+'">' +
-        '<button type="button" class="btn btn-danger btn-sm" data-action="rmgrupo" data-idx="'+idx+'">Quitar</button>' +
-      '</div>';
-    }).join("") + '</div>' +
-    '<div class="form-actions">' +
-      '<button type="button" class="btn btn-ghost btn-sm" data-action="addgrupo">+ Agregar grupo</button>' +
+  var roster = STATE.rosterInfo || {sinIdentificar:[], totalFilas:0};
+  var out = '<div class="card"><div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:4px">' +
+      '<h2 style="font-size:15px; margin:0">Grupos y alumnos inscritos</h2>' +
+      '<button type="button" class="btn btn-ghost btn-sm no-print" data-action="refrescar-alumnos">🔄 Actualizar desde Control Escolar</button>' +
     '</div>' +
-    '<div class="form-actions">' +
-      '<button type="submit" class="btn btn-primary">Guardar grupos</button>' +
-      '<span class="status-line'+(LAST_ERROR?" err":"")+'">'+(LAST_ERROR?esc(LAST_ERROR):"")+'</span>' +
-    '</div>' +
-    '</form></div>';
+    '<div class="section-sub" style="margin-left:0">Se lee automáticamente de los alumnos ya inscritos en Control Escolar — no se captura aquí. Si falta un alumno o un grupo, regístralo en Control Escolar y toca "Actualizar".</div>';
+  if(roster.error){
+    out += '<div class="empty-state" style="color:var(--critical)">No se pudo leer la lista de alumnos de Control Escolar ahorita (problema de conexión). Toca "Actualizar" para reintentar.</div>';
+  } else if(grupos.length===0){
+    out += '<div class="empty-state">No se encontraron alumnos inscritos todavía en Control Escolar. Registra alumnos ahí (pestaña de Inscripciones) y vuelve a esta pestaña, o toca "Actualizar".</div>';
+  } else {
+    out += '<div class="table-scroll"><table class="data-table"><thead><tr><th>Grado</th><th>Grupo</th><th>Alumnos inscritos</th></tr></thead><tbody>' +
+      grupos.map(function(g){ return '<tr><td>'+esc(g.grado)+'</td><td>'+esc(g.grupo)+'</td><td class="mono">'+g.inscritos+'</td></tr>'; }).join("") +
+    '</tbody></table></div>';
+  }
+  if(roster.sinIdentificar && roster.sinIdentificar.length){
+    out += '<div class="field-hint" style="margin-top:10px; color:var(--warning)">⚠️ '+roster.sinIdentificar.length+' registro(s) de alumno en Control Escolar no se pudieron agrupar por grado/grupo (formato no reconocido) y no se cuentan arriba — si el número no coincide con Control Escolar, avísale a Claude para ajustar la lectura.</div>';
+  }
+  out += '</div>';
 
   out += '<div class="card"><h2 style="font-size:15px; margin-bottom:4px">Datos generales</h2>' +
     '<form id="metaForm">' +
@@ -880,7 +960,7 @@ function renderConfig(){
 
   out += '<div class="card no-print"><h2 style="font-size:15px; margin-bottom:10px">Cómo aplicar en la Semana 1</h2>' +
     '<ul class="checklist">' +
-      checklistItem(1, "Antes de clases", "Configura aquí los grupos con su número real de alumnos inscritos.") +
+      checklistItem(1, "Antes de clases", "Verifica que los alumnos ya estén inscritos en Control Escolar — aquí se leen solos, no hay que capturarlos dos veces.") +
       checklistItem(2, "Día 1–2", "Comparte el enlace de este diagnóstico con cada grupo (proyector, teléfono o laboratorio de cómputo). Cada alumno elige su grado/grupo y responde una sola vez.") +
       checklistItem(3, "Sin conexión", "Para alumnos sin internet en casa, resuélvelo en horario de clase o usa la versión impresa como respaldo y captúrala tú después.") +
       checklistItem(4, "Día 3–4", "Revisa la pestaña Resumen para ver qué grupos van atrasados y aplícalo con ellos.") +
@@ -938,10 +1018,10 @@ document.getElementById("app").addEventListener("click", function(e){
   }
   else if(action==="tteab"){ TEACHER_TAB = el.dataset.tab; LAST_ERROR=null; persistNav(); render(); }
   else if(action==="unlock"){ handleUnlock(); }
-  else if(action==="addgrupo"){ addGrupoRow(); }
-  else if(action==="rmgrupo"){ removeGrupoRow(el.dataset.idx); }
+  else if(action==="refrescar-alumnos"){ refrescarAlumnos(); }
   else if(action==="copycsv"){ handleCopyCsv(); }
   else if(action==="printpage"){ window.print(); }
+  else if(action==="printpanel"){ window.print(); }
   else if(action==="printposter"){
     document.body.classList.add("print-poster-mode");
     window.print();
@@ -952,9 +1032,9 @@ document.getElementById("app").addEventListener("click", function(e){
   }
   else if(action==="pedir-borrado"){ CONFIRM_DELETE_ID = el.dataset.id; render(); }
   else if(action==="cancelar-borrado"){ CONFIRM_DELETE_ID = null; render(); }
-  else if(action==="confirmar-borrado"){ borrarRespuesta(el.dataset.id); }
   else if(action==="pedir-edicion"){ EDITING_ID = el.dataset.id; CONFIRM_DELETE_ID = null; render(); }
   else if(action==="cancelar-edicion"){ EDITING_ID = null; render(); }
+  else if(action==="confirmar-borrado"){ borrarRespuesta(el.dataset.id); }
   else if(action==="reload"){ VIEW="loading"; render(); cargarTodo(); }
 });
 
@@ -973,22 +1053,20 @@ function persistNav(){
   try{ sessionStorage.setItem("amadoNervo_view", VIEW); sessionStorage.setItem("amadoNervo_tab", TEACHER_TAB); }catch(e){}
 }
 
-function addGrupoRow(){
-  var list = document.getElementById("gruposList");
-  var idx = list.children.length;
-  var row = document.createElement("div");
-  row.className = "grupo-row"; row.dataset.idx = idx; row.dataset.gid = "";
-  row.innerHTML = '<input type="text" class="grado" placeholder="Grado (1°)">' +
-    '<input type="text" class="grupo" placeholder="Grupo (A)">' +
-    '<span class="grow"></span><label style="font-size:12px; color:var(--muted)">Inscritos</label>' +
-    '<input type="text" inputmode="numeric" class="inscritos" value="0">' +
-    '<button type="button" class="btn btn-danger btn-sm" data-action="rmgrupo" data-idx="'+idx+'">Quitar</button>';
-  list.appendChild(row);
-}
-function removeGrupoRow(idx){
-  var list = document.getElementById("gruposList");
-  var row = list.querySelector('.grupo-row[data-idx="'+idx+'"]');
-  if(row) row.remove();
+function refrescarAlumnos(){
+  apiRead("listar", {prefijo: PREFIX_ALUMNO}, function(err, json){
+    if(err || !json || !json.ok){
+      STATE.rosterInfo = Object.assign({}, STATE.rosterInfo, {error: true});
+      render();
+      showToast("No se pudo actualizar la lista de alumnos.");
+      return;
+    }
+    var roster = construirRosterDesdeAlumnos(json.filas||[]);
+    STATE.config.grupos = roster.grupos;
+    STATE.rosterInfo = { sinIdentificar: roster.sinIdentificar, totalFilas: roster.totalFilas, error: false };
+    render();
+    showToast("Lista de alumnos actualizada.");
+  });
 }
 
 document.getElementById("app").addEventListener("change", function(e){
@@ -1010,8 +1088,7 @@ document.getElementById("app").addEventListener("input", function(e){
 });
 
 document.getElementById("app").addEventListener("submit", function(e){
-  if(e.target.id==="gruposForm"){ e.preventDefault(); saveGrupos(); }
-  else if(e.target.id==="metaForm"){ e.preventDefault(); saveMeta(e.target); }
+  if(e.target.id==="metaForm"){ e.preventDefault(); saveMeta(e.target); }
   else if(e.target.id==="concentradoForm"){ e.preventDefault(); saveConcentrado(e.target); }
   else if(e.target.dataset && e.target.dataset.action==="guardar-edicion"){ e.preventDefault(); guardarEdicionRespuesta(e.target); }
 });
@@ -1049,31 +1126,22 @@ function showToast(msg){
 }
 
 function guardarConfig(nuevoBlob){
-  apiWrite("set", {key:KEY_CONFIG, value: JSON.stringify(nuevoBlob)}, function(err, json){
+  // Los "grupos" NUNCA se guardan aquí — siempre vienen en vivo del roster de
+  // Control Escolar (alumno:), así que se excluyen de lo que se manda a la Hoja.
+  var paraGuardar = { meta: nuevoBlob.meta, config: Object.assign({}, nuevoBlob.config, {grupos: []}) };
+  apiWrite("set", {key:KEY_CONFIG, value: JSON.stringify(paraGuardar)}, function(err, json){
     if(err || !json || !json.ok){
       LAST_ERROR = "No se pudo guardar. Revisa tu conexión e intenta de nuevo.";
       render();
       return;
     }
-    STATE.meta = nuevoBlob.meta; STATE.config = nuevoBlob.config;
+    var gruposActuales = STATE.config.grupos;
+    STATE.meta = nuevoBlob.meta;
+    STATE.config = Object.assign({}, nuevoBlob.config, {grupos: gruposActuales});
     LAST_ERROR = null; render(); showToast("Guardado.");
   });
 }
 
-function saveGrupos(){
-  var rows = document.querySelectorAll("#gruposList .grupo-row");
-  var grupos = [];
-  rows.forEach(function(row){
-    var grado = row.querySelector(".grado").value.trim();
-    var grupo = row.querySelector(".grupo").value.trim();
-    var inscritos = parseInt(row.querySelector(".inscritos").value, 10) || 0;
-    if(!grado && !grupo) return;
-    var existingId = row.dataset.gid || uid();
-    grupos.push({id: existingId, grado: grado||"—", grupo: grupo||"—", inscritos: inscritos});
-  });
-  var nuevoBlob = {meta: STATE.meta, config: Object.assign({}, STATE.config, {grupos: grupos})};
-  guardarConfig(nuevoBlob);
-}
 function saveMeta(form){
   var fd = new FormData(form);
   var nuevoBlob = {
@@ -1199,7 +1267,8 @@ function attemptSubmit(record, attempt){
 /* ================= carga inicial ================= */
 function cargarTodo(){
   var meta = null, config = null, respuestas = [], concentrados = {};
-  var pending = 3, hadError = false;
+  var rosterResult = null, rosterLoadError = false;
+  var pending = 4, hadError = false;
 
   function done(){
     pending--;
@@ -1209,11 +1278,20 @@ function cargarTodo(){
       return;
     }
     STATE = {
-      meta: meta || DEFAULT_CONFIG_BLOB.meta,
-      config: config || DEFAULT_CONFIG_BLOB.config,
+      meta: Object.assign({}, DEFAULT_CONFIG_BLOB.meta, meta || {}),
+      config: Object.assign({}, DEFAULT_CONFIG_BLOB.config, config || {}),
       respuestas: respuestas,
       concentrados: concentrados
     };
+    // Los grupos SIEMPRE vienen del roster en vivo de Control Escolar (alumno:),
+    // nunca de lo guardado en diagConfig:main — así nunca se desincronizan.
+    if(rosterResult){
+      STATE.config.grupos = rosterResult.grupos;
+      STATE.rosterInfo = { sinIdentificar: rosterResult.sinIdentificar, totalFilas: rosterResult.totalFilas, error: false };
+    } else {
+      STATE.config.grupos = [];
+      STATE.rosterInfo = { sinIdentificar: [], totalFilas: 0, error: rosterLoadError };
+    }
     if(!meta || !config){
       // primera vez: siembra la configuración por defecto en la Hoja
       apiWrite("set", {key: KEY_CONFIG, value: JSON.stringify({meta: STATE.meta, config: STATE.config})}, function(){});
@@ -1270,6 +1348,13 @@ function cargarTodo(){
       var key = String(fila.clave).slice(PREFIX_CONCENTRADO.length);
       try{ concentrados[key] = JSON.parse(fila.valor); }catch(e){}
     });
+    done();
+  });
+  // Roster de alumnos de Control Escolar — si falla, no se bloquea el resto de la
+  // herramienta (el alumno igual puede responder); solo se avisa en Configuración.
+  apiRead("listar", {prefijo: PREFIX_ALUMNO}, function(err, json){
+    if(err || !json || !json.ok){ rosterLoadError = true; done(); return; }
+    rosterResult = construirRosterDesdeAlumnos(json.filas||[]);
     done();
   });
 }
