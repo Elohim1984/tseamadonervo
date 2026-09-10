@@ -316,8 +316,8 @@ function normalizarGrupoLetra(v){
   return m ? m[1] : (s || null);
 }
 function leerGradoGrupoDeAlumno(obj){
-  var grado = obj.grado || obj.Grado || obj.grade || obj.nivelGrado || obj.gradoAlumno || null;
-  var grupo = obj.grupo || obj.Grupo || obj.group || obj.nivelGrupo || obj.grupoAlumno || null;
+  var grado = obj.grado || obj.Grado || obj.grade || obj.nivelGrado || obj.gradoAlumno || obj.ESCUELA_GRADO || null;
+  var grupo = obj.grupo || obj.Grupo || obj.group || obj.nivelGrupo || obj.grupoAlumno || obj.ESCUELA_GRUPO || null;
   if((!grado || !grupo)){
     var combo = obj.gradoGrupo || obj.grado_grupo || obj.gradogrupo || obj.gradoYgrupo || null;
     if(combo){
@@ -332,6 +332,7 @@ function nombreDeAlumno(obj){
   if(obj.Nombre) return obj.Nombre;
   if(obj.nombreCompleto) return obj.nombreCompleto;
   if(obj.nombres) return (obj.nombres + " " + (obj.apellidos||obj.apellido||"")).trim();
+  if(obj.ALUMNO_NOMBRES) return [obj.ALUMNO_APELLIDO_PATERNO, obj.ALUMNO_APELLIDO_MATERNO, obj.ALUMNO_NOMBRES].filter(Boolean).join(" ");
   return null;
 }
 function slugGrupo(grado, grupo){

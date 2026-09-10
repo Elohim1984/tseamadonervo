@@ -2523,6 +2523,12 @@ function TablaDiagnosticoRef() {
   );
 }
 
+const DOCUMENTOS_PLANEACION_COMPLETOS = [
+  { emoji: "📘", titulo: "PIC 2026-2027", descripcion: "Proyecto de Integración Comunitaria — Fase 2", url: "https://claude.ai/code/artifact/3af23b7f-49d4-426a-a330-b8aac7f75919" },
+  { emoji: "📗", titulo: "Programa Analítico", descripcion: "Diagnóstico y Programa por Campos Formativos", url: "https://claude.ai/code/artifact/8dfdbee9-a4db-46cf-9f50-356117008378" },
+  { emoji: "📙", titulo: "PEMC 2026-2027", descripcion: "Programa Escolar de Mejora Continua", url: "https://claude.ai/code/artifact/744da3d1-1885-49ba-846f-304bd5a5fcbd" },
+];
+
 function ProgramaAnaliticoPIC({ onStamp }) {
   const [subTab, setSubTab] = useState("analitico");
   const [grado, setGrado] = useState("1");
@@ -2534,6 +2540,26 @@ function ProgramaAnaliticoPIC({ onStamp }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="card">
+        <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Documentos completos para consulta (borrador en revisión)</div>
+        <p className="text-sm mb-3" style={{ opacity: 0.6 }}>Versión completa de cada documento, para revisar en CTE. Se abren en una pestaña nueva.</p>
+        <div className="flex flex-wrap gap-2.5">
+          {DOCUMENTOS_PLANEACION_COMPLETOS.map((d) => (
+            <a key={d.titulo} href={d.url} target="_blank" rel="noopener noreferrer"
+               className="flex-1" style={{ minWidth: "180px", textDecoration: "none" }}>
+              <div className="flex items-start gap-2.5" style={{ border: "1px solid var(--linea)", borderRadius: "0.6rem", padding: "0.7rem" }}>
+                <span style={{ fontSize: "1.1rem" }}>{d.emoji}</span>
+                <div className="flex-1">
+                  <div className="text-sm font-medium" style={{ color: "var(--maroon)" }}>{d.titulo}</div>
+                  <div className="text-sm" style={{ opacity: 0.6, fontSize: "0.72rem" }}>{d.descripcion}</div>
+                </div>
+                <ExternalLink size={13} style={{ opacity: 0.4, marginTop: "3px", flexShrink: 0 }} />
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+
       <div className="flex gap-2 flex-wrap">
         {SUBTABS.map((t) => (
           <button key={t.id} onClick={() => setSubTab(t.id)} className={`chip-grado ${subTab === t.id ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>
