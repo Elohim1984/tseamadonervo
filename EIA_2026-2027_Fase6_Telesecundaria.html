@@ -61,8 +61,8 @@
 // ---------------------------------------------------------------------------
 // CONFIGURACION — cambia esto cuando fusiones con tu Control Escolar real
 // ---------------------------------------------------------------------------
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyP65kGWIq6Ury8VO7eLpAa4q9v91kDUL1gcw0fX4-aMuiEYqaurAIbz3J6R9oKj1sHA/exec";
-const CODIGO_ACCESO = "CONTROL2026"; // mismo candado que Control Escolar
+const APPS_SCRIPT_URL = ""; // <-- pega aquí la URL de tu Web App de Apps Script
+const CODIGO_ACCESO = "CONTROL2026"; // mismo candado que Control Escolar (quítalo si ya vas a entrar detrás de ese candado)
 
 const EIA_DATA = JSON.parse(document.getElementById("eia-data").textContent);
 const EIA_IMAGES = JSON.parse(document.getElementById("eia-images").textContent);
@@ -77,87 +77,88 @@ const NIVEL_NOMBRE = {
 };
 
 // ---------------------------------------------------------------------------
-// Almacenamiento: usa las MISMAS 4 acciones genéricas (get/set/listar/borrar)
-// que ya usan Control Escolar, Examen, VAK y Diagnóstico Integral — sobre la
-// misma Hoja de Google, con su propio prefijo de clave ("eia:") para no
-// chocar con nada. No hace falta tocar el Apps Script para nada de esto.
+// Almacenamiento: intenta Apps Script primero; si no hay URL o falla, usa
+// localStorage como respaldo (para poder probar el módulo hoy mismo).
 // ---------------------------------------------------------------------------
-function qsEIA(params) {
-  return Object.keys(params).map((k) => encodeURIComponent(k) + "=" + encodeURIComponent(params[k] == null ? "" : params[k])).join("&");
-}
-async function apiGet(key, fallback) {
+function lsGet(key, fallback) {
   try {
-    const r = await fetch(APPS_SCRIPT_URL + "?" + qsEIA({ action: "get", key }));
-    const j = await r.json();
-    if (j && j.ok && j.value != null) return JSON.parse(j.value);
-  } catch (e) { console.warn("apiGet falló:", e); }
-  return fallback;
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
 }
-async function apiSet(key, value) {
+function lsSet(key, value) {
   try {
-    const r = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: qsEIA({ action: "set", key, value: JSON.stringify(value) }),
-    });
-    const j = await r.json();
-    return !!(j && j.ok);
-  } catch (e) { console.warn("apiSet falló:", e); return false; }
-}
-async function apiListar(prefijo) {
-  try {
-    const r = await fetch(APPS_SCRIPT_URL + "?" + qsEIA({ action: "listar", prefijo }));
-    const j = await r.json();
-    if (j && j.ok) return (j.filas || []).map((f) => { try { return JSON.parse(f.valor); } catch (e) { return null; } }).filter(Boolean);
-  } catch (e) { console.warn("apiListar falló:", e); }
-  return [];
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {}
 }
 
-// ----- Alumnos: se leen DIRECTO de Control Escolar (solo lectura) -----------
-// No se guarda ni se vuelve a capturar nada aquí — si falta un alumno,
-// se agrega en Control Escolar → Inscripciones, no en este módulo.
-function nombreOficialAlumnoEIA(a) {
-  return [a.ALUMNO_APELLIDO_PATERNO, a.ALUMNO_APELLIDO_MATERNO, a.ALUMNO_NOMBRES].filter((x) => x && String(x).trim()).join(" ");
+async function apiCall(action, payload) {
+  if (APPS_SCRIPT_URL) {
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action, ...payload }),
+      });
+      const data = await res.json();
+      return data;
+    } catch (e) {
+      console.warn("Apps Script no disponible, usando almacenamiento local:", e);
+    }
+  }
+  return null; // el llamador decide el respaldo local
 }
+
+// ----- Alumnos (roster propio del módulo EIA) -------------------------------
 async function cargarAlumnos() {
-  const filas = await apiListar("alumno:");
-  return filas
-    .map((a) => ({ id: a.id, nombre: nombreOficialAlumnoEIA(a), grado: String(a.grado || a.ESCUELA_GRADO || ""), grupo: a.ESCUELA_GRUPO || a.grupo || "" }))
-    .filter((a) => a.nombre.trim())
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  const remoto = await apiCall("listarAlumnosEIA", {});
+  if (remoto && remoto.ok) return remoto.alumnos;
+  return lsGet("eia_alumnos", []);
+}
+async function guardarAlumno(alumno) {
+  const remoto = await apiCall("guardarAlumnoEIA", { alumno });
+  const lista = lsGet("eia_alumnos", []);
+  const idx = lista.findIndex((a) => a.id === alumno.id);
+  if (idx >= 0) lista[idx] = alumno;
+  else lista.push(alumno);
+  lsSet("eia_alumnos", lista);
+  return remoto && remoto.ok ? remoto.alumnos : lista;
 }
 
 // ----- Respuestas de alumnos --------------------------------------------------
 async function cargarRespuestas() {
-  return apiListar("eia:respuesta:");
+  const remoto = await apiCall("listarRespuestasEIA", {});
+  if (remoto && remoto.ok) return remoto.respuestas;
+  return lsGet("eia_respuestas", []);
 }
 async function guardarRespuesta(resp) {
-  const clave = "eia:respuesta:" + resp.alumno_id + ":" + resp.eia_id;
-  await apiSet(clave, resp);
-  return cargarRespuestas();
+  const remoto = await apiCall("guardarRespuestaEIA", { respuesta: resp });
+  const lista = lsGet("eia_respuestas", []);
+  const idx = lista.findIndex((r) => r.alumno_id === resp.alumno_id && r.eia_id === resp.eia_id);
+  if (idx >= 0) lista[idx] = resp;
+  else lista.push(resp);
+  lsSet("eia_respuestas", lista);
+  return remoto && remoto.ok ? remoto.respuestas : lista;
 }
 
 // ----- Valoraciones del docente ----------------------------------------------
-// Se agrupan TODOS los criterios de un alumno+EIA en un solo registro (no uno
-// por criterio), para mantener cada registro pequeño y evitar acumular
-// demasiadas filas sueltas en la Hoja a lo largo del ciclo.
 async function cargarValoraciones() {
-  const filas = await apiListar("eia:valoracion:");
-  const aplanadas = [];
-  filas.forEach((registro) => {
-    Object.keys(registro.criterios || {}).forEach((criterio) => {
-      aplanadas.push({ alumno_id: registro.alumno_id, eia_id: registro.eia_id, criterio, nivel: registro.criterios[criterio] });
-    });
-  });
-  return aplanadas;
+  const remoto = await apiCall("listarValoracionesEIA", {});
+  if (remoto && remoto.ok) return remoto.valoraciones;
+  return lsGet("eia_valoraciones", []);
 }
 async function guardarValoracion(val) {
-  const clave = "eia:valoracion:" + val.alumno_id + ":" + val.eia_id;
-  const existente = (await apiGet(clave, { alumno_id: val.alumno_id, eia_id: val.eia_id, criterios: {} }));
-  existente.criterios = existente.criterios || {};
-  existente.criterios[val.criterio] = val.nivel;
-  await apiSet(clave, existente);
-  return cargarValoraciones();
+  const remoto = await apiCall("guardarValoracionEIA", { valoracion: val });
+  const lista = lsGet("eia_valoraciones", []);
+  const idx = lista.findIndex(
+    (v) => v.alumno_id === val.alumno_id && v.eia_id === val.eia_id && v.criterio === val.criterio
+  );
+  if (idx >= 0) lista[idx] = val;
+  else lista.push(val);
+  lsSet("eia_valoraciones", lista);
+  return remoto && remoto.ok ? remoto.valoraciones : lista;
 }
 
 function uid() {
@@ -470,6 +471,9 @@ function EntradaConsigna({ consigna, valor, onChange, soloLectura }) {
 // ---------------------------------------------------------------------------
 function VistaAplicar({ alumnos, setAlumnos, respuestas, setRespuestas, volver }) {
   const [alumnoId, setAlumnoId] = React.useState("");
+  const [nuevoNombre, setNuevoNombre] = React.useState("");
+  const [nuevoGrado, setNuevoGrado] = React.useState("1");
+  const [nuevoGrupo, setNuevoGrupo] = React.useState("A");
   const [eiaId, setEiaId] = React.useState("");
   const [respuestasLocal, setRespuestasLocal] = React.useState({});
   const [enviado, setEnviado] = React.useState(false);
@@ -485,6 +489,15 @@ function VistaAplicar({ alumnos, setAlumnos, respuestas, setRespuestas, volver }
       setEnviado(existente ? existente.estado === "entregado" : false);
     }
   }, [alumno, eiaId]);
+
+  async function agregarAlumno() {
+    if (!nuevoNombre.trim()) return;
+    const a = { id: uid(), nombre: nuevoNombre.trim(), grado: nuevoGrado, grupo: nuevoGrupo };
+    const lista = await guardarAlumno(a);
+    setAlumnos(lista);
+    setAlumnoId(a.id);
+    setNuevoNombre("");
+  }
 
   async function enviar() {
     setGuardando(true);
@@ -552,11 +565,31 @@ function VistaAplicar({ alumnos, setAlumnos, respuestas, setRespuestas, volver }
               </option>
             ))}
           </select>
-          {alumnos.length === 0 && (
-            <p className="text-sm text-gray-500">
-              Todavía no hay alumnos inscritos en Control Escolar. Pídele a tu director(a) que te inscriba primero.
-            </p>
-          )}
+          <details>
+            <summary className="text-sm text-gray-500 cursor-pointer">¿No apareces en la lista? Agrégate</summary>
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-4 gap-2">
+              <input
+                className="border rounded px-2 py-1 sm:col-span-2"
+                placeholder="Tu nombre completo"
+                value={nuevoNombre}
+                onChange={(e) => setNuevoNombre(e.target.value)}
+              />
+              <select className="border rounded px-2 py-1" value={nuevoGrado} onChange={(e) => setNuevoGrado(e.target.value)}>
+                <option value="1">1°</option>
+                <option value="2">2°</option>
+                <option value="3">3°</option>
+              </select>
+              <input
+                className="border rounded px-2 py-1"
+                placeholder="Grupo (A, B...)"
+                value={nuevoGrupo}
+                onChange={(e) => setNuevoGrupo(e.target.value)}
+              />
+            </div>
+            <button className="btn-primary rounded-lg px-3 py-1 text-sm mt-2" onClick={agregarAlumno}>
+              Agregar
+            </button>
+          </details>
         </div>
       )}
 
@@ -1021,6 +1054,12 @@ function App() {
               <div className="text-xs text-gray-500 mt-1">Tabla lista para copiar</div>
             </button>
           </div>
+          {!APPS_SCRIPT_URL && (
+            <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 text-xs mt-6">
+              ⚠️ Todavía no está conectado a Google Sheets: por ahora los datos se guardan solo en este navegador
+              (localStorage). Configura <code>APPS_SCRIPT_URL</code> arriba en el código para guardar en la nube.
+            </div>
+          )}
         </div>
       )}
 
