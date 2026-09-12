@@ -39,29 +39,20 @@
    MODULO EIA 2026-2027 · Fase 6 Telesecundaria (1°, 2° y 3°)
    Tse. Amado Nervo — CCT 21ETV0473W
 
-   COMO INTEGRAR ESTO A "CONTROL ESCOLAR":
-   1) Este archivo funciona SOLO (puedes abrirlo tal cual en el navegador para
-      probarlo). Mientras no configures la liga de Apps Script de abajo,
-      guarda todo en el propio navegador (localStorage) para que puedas
-      probarlo hoy mismo sin depender de internet.
-   2) Para fusionarlo dentro de tu index.html real de Control Escolar:
-        a. Copia el bloque <style> de aquí dentro del <style> que ya tienes
-           (o ignóralo si ya tienes clases equivalentes).
-        b. Copia las dos etiquetas <script type="application/json"> (eia-data
-           y eia-images) justo antes de tu <script type="text/babel">.
-        c. Copia TODO este archivo (app.jsx) dentro de tu <script type="text/babel">,
-           por ejemplo como un componente <ModuloEIA/> más, y agrega un botón/pestaña
-           nueva en tu menú principal que muestre <ModuloEIA/>.
-        d. Cambia la constante APPS_SCRIPT_URL de abajo por la URL de tu Apps
-           Script YA EXISTENTE (la misma que usa Control Escolar), y pega en
-           tu Code.gs las funciones doPost nuevas que están al final de este
-           archivo (sección "APPS SCRIPT - PEGAR EN Code.gs").
+   CONEXIÓN CON LA HOJA COMPARTIDA (corregido 12 sept 2026):
+   Este módulo usa la MISMA Hoja de Google y el MISMO Apps Script que ya usan
+   Control Escolar y el Examen Diagnóstico — nunca una base propia. Solo usa
+   las 4 acciones genéricas del script (get/set/listar/borrar), con sus
+   propios prefijos de clave ("eia:respuesta:" y "eia:valoracion:"), y LEE
+   (sin escribir nunca) los registros "alumno:" para tomar el roster real de
+   alumnos inscritos en Control Escolar. No se debe agregar ninguna acción
+   nueva al Apps Script para este módulo — es una regla fija del proyecto.
    ========================================================================= */
 
 // ---------------------------------------------------------------------------
-// CONFIGURACION — cambia esto cuando fusiones con tu Control Escolar real
+// CONFIGURACION
 // ---------------------------------------------------------------------------
-const APPS_SCRIPT_URL = ""; // <-- pega aquí la URL de tu Web App de Apps Script
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyP65kGWIq6Ury8VO7eLpAa4q9v91kDUL1gcw0fX4-aMuiEYqaurAIbz3J6R9oKj1sHA/exec';
 const CODIGO_ACCESO = "CONTROL2026"; // mismo candado que Control Escolar (quítalo si ya vas a entrar detrás de ese candado)
 
 const EIA_DATA = JSON.parse(document.getElementById("eia-data").textContent);
@@ -77,88 +68,84 @@ const NIVEL_NOMBRE = {
 };
 
 // ---------------------------------------------------------------------------
-// Almacenamiento: intenta Apps Script primero; si no hay URL o falla, usa
-// localStorage como respaldo (para poder probar el módulo hoy mismo).
+// Conexión con la Hoja compartida — mismas 4 acciones genéricas que ya usan
+// Control Escolar y el Examen Diagnóstico (get/set/listar/borrar). Se manda
+// como application/x-www-form-urlencoded (URLSearchParams) para que el
+// navegador NO dispare una petición de "preflight" (OPTIONS), que Apps
+// Script no maneja bien — igual que ya lo hacen esas dos herramientas.
 // ---------------------------------------------------------------------------
-function lsGet(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch (e) {
-    return fallback;
-  }
+const PREFIX_ALUMNO = "alumno:"; // datos de Control Escolar — SOLO LECTURA, nunca se escribe aquí
+const PREFIX_RESPUESTA = "eia:respuesta:";
+const PREFIX_VALORACION = "eia:valoracion:";
+
+function sheetsSet(key, valueObj) {
+  const body = new URLSearchParams();
+  body.set("action", "set");
+  body.set("key", key);
+  body.set("value", JSON.stringify(valueObj));
+  return fetch(APPS_SCRIPT_URL, { method: "POST", body }).then((r) => r.json());
 }
-function lsSet(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {}
+function sheetsListar(prefijo) {
+  const url = APPS_SCRIPT_URL + "?action=listar&prefijo=" + encodeURIComponent(prefijo);
+  return fetch(url).then((r) => r.json());
+}
+function filasA(prefijo, res) {
+  if (!res || !res.ok || !Array.isArray(res.filas)) return [];
+  return res.filas
+    .map((f) => { try { return JSON.parse(f.valor); } catch (e) { return null; } })
+    .filter(Boolean);
 }
 
-async function apiCall(action, payload) {
-  if (APPS_SCRIPT_URL) {
-    try {
-      const res = await fetch(APPS_SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action, ...payload }),
-      });
-      const data = await res.json();
-      return data;
-    } catch (e) {
-      console.warn("Apps Script no disponible, usando almacenamiento local:", e);
-    }
-  }
-  return null; // el llamador decide el respaldo local
+// ----- Alumnos: se leen (solo lectura) del roster real de Control Escolar --
+function nombreOficialAlumno(a) {
+  return [a.ALUMNO_APELLIDO_PATERNO, a.ALUMNO_APELLIDO_MATERNO, a.ALUMNO_NOMBRES]
+    .filter((x) => x && String(x).trim()).join(" ");
 }
-
-// ----- Alumnos (roster propio del módulo EIA) -------------------------------
 async function cargarAlumnos() {
-  const remoto = await apiCall("listarAlumnosEIA", {});
-  if (remoto && remoto.ok) return remoto.alumnos;
-  return lsGet("eia_alumnos", []);
-}
-async function guardarAlumno(alumno) {
-  const remoto = await apiCall("guardarAlumnoEIA", { alumno });
-  const lista = lsGet("eia_alumnos", []);
-  const idx = lista.findIndex((a) => a.id === alumno.id);
-  if (idx >= 0) lista[idx] = alumno;
-  else lista.push(alumno);
-  lsSet("eia_alumnos", lista);
-  return remoto && remoto.ok ? remoto.alumnos : lista;
+  try {
+    const res = await sheetsListar(PREFIX_ALUMNO);
+    return filasA(PREFIX_ALUMNO, res)
+      .map((a) => ({ id: a.id, nombre: nombreOficialAlumno(a), grado: String(a.grado || ""), grupo: a.ESCUELA_GRUPO || "A" }))
+      .filter((a) => a.nombre.trim())
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  } catch (e) {
+    console.warn("EIA: no se pudo cargar el roster de Control Escolar:", e);
+    return [];
+  }
 }
 
 // ----- Respuestas de alumnos --------------------------------------------------
 async function cargarRespuestas() {
-  const remoto = await apiCall("listarRespuestasEIA", {});
-  if (remoto && remoto.ok) return remoto.respuestas;
-  return lsGet("eia_respuestas", []);
+  try {
+    const res = await sheetsListar(PREFIX_RESPUESTA);
+    return filasA(PREFIX_RESPUESTA, res);
+  } catch (e) {
+    console.warn("EIA: no se pudieron cargar las respuestas guardadas:", e);
+    return [];
+  }
 }
 async function guardarRespuesta(resp) {
-  const remoto = await apiCall("guardarRespuestaEIA", { respuesta: resp });
-  const lista = lsGet("eia_respuestas", []);
-  const idx = lista.findIndex((r) => r.alumno_id === resp.alumno_id && r.eia_id === resp.eia_id);
-  if (idx >= 0) lista[idx] = resp;
-  else lista.push(resp);
-  lsSet("eia_respuestas", lista);
-  return remoto && remoto.ok ? remoto.respuestas : lista;
+  const key = PREFIX_RESPUESTA + resp.alumno_id + "_" + resp.eia_id;
+  const r = await sheetsSet(key, resp);
+  if (!r || r.ok !== true) throw new Error((r && r.error) || "No se pudo guardar en la Hoja.");
+  return resp;
 }
 
 // ----- Valoraciones del docente ----------------------------------------------
 async function cargarValoraciones() {
-  const remoto = await apiCall("listarValoracionesEIA", {});
-  if (remoto && remoto.ok) return remoto.valoraciones;
-  return lsGet("eia_valoraciones", []);
+  try {
+    const res = await sheetsListar(PREFIX_VALORACION);
+    return filasA(PREFIX_VALORACION, res);
+  } catch (e) {
+    console.warn("EIA: no se pudieron cargar las valoraciones guardadas:", e);
+    return [];
+  }
 }
 async function guardarValoracion(val) {
-  const remoto = await apiCall("guardarValoracionEIA", { valoracion: val });
-  const lista = lsGet("eia_valoraciones", []);
-  const idx = lista.findIndex(
-    (v) => v.alumno_id === val.alumno_id && v.eia_id === val.eia_id && v.criterio === val.criterio
-  );
-  if (idx >= 0) lista[idx] = val;
-  else lista.push(val);
-  lsSet("eia_valoraciones", lista);
-  return remoto && remoto.ok ? remoto.valoraciones : lista;
+  const key = PREFIX_VALORACION + val.alumno_id + "_" + val.eia_id + "_" + val.criterio;
+  const r = await sheetsSet(key, val);
+  if (!r || r.ok !== true) throw new Error((r && r.error) || "No se pudo guardar en la Hoja.");
+  return val;
 }
 
 function uid() {
@@ -469,15 +456,13 @@ function EntradaConsigna({ consigna, valor, onChange, soloLectura }) {
 // ---------------------------------------------------------------------------
 // Vista: Aplicar (alumno responde su EIA)
 // ---------------------------------------------------------------------------
-function VistaAplicar({ alumnos, setAlumnos, respuestas, setRespuestas, volver }) {
+function VistaAplicar({ alumnos, respuestas, setRespuestas, volver }) {
   const [alumnoId, setAlumnoId] = React.useState("");
-  const [nuevoNombre, setNuevoNombre] = React.useState("");
-  const [nuevoGrado, setNuevoGrado] = React.useState("1");
-  const [nuevoGrupo, setNuevoGrupo] = React.useState("A");
   const [eiaId, setEiaId] = React.useState("");
   const [respuestasLocal, setRespuestasLocal] = React.useState({});
   const [enviado, setEnviado] = React.useState(false);
   const [guardando, setGuardando] = React.useState(false);
+  const [errorGuardado, setErrorGuardado] = React.useState("");
 
   const alumno = alumnos.find((a) => a.id === alumnoId);
   const eia = eiaId ? EIA_DATA[eiaId] : null;
@@ -490,17 +475,15 @@ function VistaAplicar({ alumnos, setAlumnos, respuestas, setRespuestas, volver }
     }
   }, [alumno, eiaId]);
 
-  async function agregarAlumno() {
-    if (!nuevoNombre.trim()) return;
-    const a = { id: uid(), nombre: nuevoNombre.trim(), grado: nuevoGrado, grupo: nuevoGrupo };
-    const lista = await guardarAlumno(a);
-    setAlumnos(lista);
-    setAlumnoId(a.id);
-    setNuevoNombre("");
+  function fusionarRespuesta(lista, resp) {
+    const idx = lista.findIndex((r) => r.alumno_id === resp.alumno_id && r.eia_id === resp.eia_id);
+    if (idx >= 0) { const copia = lista.slice(); copia[idx] = resp; return copia; }
+    return [...lista, resp];
   }
 
   async function enviar() {
     setGuardando(true);
+    setErrorGuardado("");
     const resp = {
       alumno_id: alumno.id,
       alumno_nombre: alumno.nombre,
@@ -511,9 +494,13 @@ function VistaAplicar({ alumnos, setAlumnos, respuestas, setRespuestas, volver }
       estado: "entregado",
       fecha: new Date().toISOString(),
     };
-    const lista = await guardarRespuesta(resp);
-    setRespuestas(lista);
-    setEnviado(true);
+    try {
+      await guardarRespuesta(resp);
+      setRespuestas(fusionarRespuesta(respuestas, resp));
+      setEnviado(true);
+    } catch (e) {
+      setErrorGuardado("No se pudo guardar en la Hoja. Revisa tu conexión e inténtalo de nuevo.");
+    }
     setGuardando(false);
   }
 
@@ -529,8 +516,12 @@ function VistaAplicar({ alumnos, setAlumnos, respuestas, setRespuestas, volver }
       estado: "pendiente",
       fecha: new Date().toISOString(),
     };
-    const lista = await guardarRespuesta(resp);
-    setRespuestas(lista);
+    try {
+      await guardarRespuesta(resp);
+      setRespuestas(fusionarRespuesta(respuestas, resp));
+    } catch (e) {
+      console.warn("EIA: no se pudo guardar el borrador en la Hoja:", e);
+    }
   }
 
   // autoguardado cada vez que cambian respuestas (borrador)
@@ -565,31 +556,15 @@ function VistaAplicar({ alumnos, setAlumnos, respuestas, setRespuestas, volver }
               </option>
             ))}
           </select>
-          <details>
-            <summary className="text-sm text-gray-500 cursor-pointer">¿No apareces en la lista? Agrégate</summary>
-            <div className="mt-2 grid grid-cols-1 sm:grid-cols-4 gap-2">
-              <input
-                className="border rounded px-2 py-1 sm:col-span-2"
-                placeholder="Tu nombre completo"
-                value={nuevoNombre}
-                onChange={(e) => setNuevoNombre(e.target.value)}
-              />
-              <select className="border rounded px-2 py-1" value={nuevoGrado} onChange={(e) => setNuevoGrado(e.target.value)}>
-                <option value="1">1°</option>
-                <option value="2">2°</option>
-                <option value="3">3°</option>
-              </select>
-              <input
-                className="border rounded px-2 py-1"
-                placeholder="Grupo (A, B...)"
-                value={nuevoGrupo}
-                onChange={(e) => setNuevoGrupo(e.target.value)}
-              />
-            </div>
-            <button className="btn-primary rounded-lg px-3 py-1 text-sm mt-2" onClick={agregarAlumno}>
-              Agregar
-            </button>
-          </details>
+          {alumnos.length === 0 && (
+            <p className="text-xs text-gray-500">
+              Todavía no hay alumnos inscritos en Control Escolar, o no se pudo conectar con la Hoja. Revisa tu conexión.
+            </p>
+          )}
+          <p className="text-xs text-gray-500 mt-2">
+            ¿No apareces en la lista? Pídele a tu director(a) que te inscriba primero en Control Escolar — de ahí toma
+            este módulo la lista de alumnos, para que todo quede guardado en el mismo lugar.
+          </p>
         </div>
       )}
 
@@ -647,6 +622,9 @@ function VistaAplicar({ alumnos, setAlumnos, respuestas, setRespuestas, volver }
             />
           ))}
 
+          {errorGuardado && (
+            <p className="text-sm text-red-600 mb-2">{errorGuardado}</p>
+          )}
           {!enviado && (
             <button
               disabled={guardando}
@@ -754,8 +732,22 @@ function VistaValorar({ alumnos, respuestas, valoraciones, setValoraciones, volv
   const [alumnoSel, setAlumnoSel] = React.useState(null);
 
   async function onGuardarValoracion(val) {
-    const lista = await guardarValoracion(val);
-    setValoraciones(lista);
+    try {
+      await guardarValoracion(val);
+      const idx = valoraciones.findIndex(
+        (v) => v.alumno_id === val.alumno_id && v.eia_id === val.eia_id && v.criterio === val.criterio
+      );
+      if (idx >= 0) {
+        const copia = valoraciones.slice();
+        copia[idx] = val;
+        setValoraciones(copia);
+      } else {
+        setValoraciones([...valoraciones, val]);
+      }
+    } catch (e) {
+      console.warn("EIA: no se pudo guardar la valoración en la Hoja:", e);
+      alert("No se pudo guardar en la Hoja. Revisa tu conexión e inténtalo de nuevo.");
+    }
   }
 
   if (alumnoSel) {
@@ -1066,7 +1058,6 @@ function App() {
       {vista === "aplicar" && (
         <VistaAplicar
           alumnos={alumnos}
-          setAlumnos={setAlumnos}
           respuestas={respuestas}
           setRespuestas={setRespuestas}
           volver={() => setVista("inicio")}
@@ -1093,84 +1084,13 @@ function App() {
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 /* ============================================================================
-   APPS SCRIPT — PEGAR EN Code.gs (junto a las funciones que ya tiene Control
-   Escolar). Agrega estos "case" dentro de tu doPost existente, y crea 3 hojas
-   nuevas en tu Google Sheet: "EIA_Alumnos", "EIA_Respuestas", "EIA_Valoraciones".
-
-   function doPost(e) {
-     var body = JSON.parse(e.postData.contents);
-     var ss = SpreadsheetApp.getActiveSpreadsheet();
-     var out;
-     switch (body.action) {
-       case "listarAlumnosEIA":
-         out = { ok: true, alumnos: leerHojaComoObjetos_(ss, "EIA_Alumnos") };
-         break;
-       case "guardarAlumnoEIA":
-         upsertFila_(ss, "EIA_Alumnos", ["id","nombre","grado","grupo"], body.alumno, "id");
-         out = { ok: true, alumnos: leerHojaComoObjetos_(ss, "EIA_Alumnos") };
-         break;
-       case "listarRespuestasEIA":
-         out = { ok: true, respuestas: leerHojaComoObjetos_(ss, "EIA_Respuestas", true) };
-         break;
-       case "guardarRespuestaEIA":
-         var r = body.respuesta;
-         r.respuestas = JSON.stringify(r.respuestas); // se guarda como texto JSON en una sola celda
-         upsertFila_(ss, "EIA_Respuestas",
-           ["alumno_id","alumno_nombre","grado","grupo","eia_id","respuestas","estado","fecha"],
-           r, ["alumno_id","eia_id"]);
-         out = { ok: true, respuestas: leerHojaComoObjetos_(ss, "EIA_Respuestas", true) };
-         break;
-       case "listarValoracionesEIA":
-         out = { ok: true, valoraciones: leerHojaComoObjetos_(ss, "EIA_Valoraciones") };
-         break;
-       case "guardarValoracionEIA":
-         upsertFila_(ss, "EIA_Valoraciones",
-           ["alumno_id","alumno_nombre","eia_id","criterio","nivel","fecha"],
-           body.valoracion, ["alumno_id","eia_id","criterio"]);
-         out = { ok: true, valoraciones: leerHojaComoObjetos_(ss, "EIA_Valoraciones") };
-         break;
-       // ... conserva aquí tus demás "case" de Control Escolar ...
-       default:
-         out = { ok: false, error: "accion desconocida: " + body.action };
-     }
-     return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
-   }
-
-   // Funciones auxiliares (agrégalas si no las tienes ya con otro nombre):
-   function obtenerOCrearHoja_(ss, nombre, encabezados) {
-     var hoja = ss.getSheetByName(nombre);
-     if (!hoja) { hoja = ss.insertSheet(nombre); hoja.appendRow(encabezados); }
-     return hoja;
-   }
-   function leerHojaComoObjetos_(ss, nombre, parsearRespuestasJSON) {
-     var hoja = ss.getSheetByName(nombre);
-     if (!hoja) return [];
-     var datos = hoja.getDataRange().getValues();
-     var encabezados = datos.shift();
-     return datos.map(function (fila) {
-       var obj = {};
-       encabezados.forEach(function (h, i) { obj[h] = fila[i]; });
-       if (parsearRespuestasJSON && obj.respuestas) {
-         try { obj.respuestas = JSON.parse(obj.respuestas); } catch (e) {}
-       }
-       return obj;
-     });
-   }
-   function upsertFila_(ss, nombre, encabezados, objeto, clavesId) {
-     var hoja = obtenerOCrearHoja_(ss, nombre, encabezados);
-     var claves = Array.isArray(clavesId) ? clavesId : [clavesId];
-     var datos = hoja.getDataRange().getValues();
-     var idxClaves = claves.map(function (c) { return encabezados.indexOf(c); });
-     for (var i = 1; i < datos.length; i++) {
-       var coincide = idxClaves.every(function (idx, k) { return datos[i][idx] == objeto[claves[k]]; });
-       if (coincide) {
-         var fila = encabezados.map(function (h) { return objeto[h] !== undefined ? objeto[h] : datos[i][encabezados.indexOf(h)]; });
-         hoja.getRange(i + 1, 1, 1, fila.length).setValues([fila]);
-         return;
-       }
-     }
-     hoja.appendRow(encabezados.map(function (h) { return objeto[h] !== undefined ? objeto[h] : ""; }));
-   }
+   NOTA (corregido 12 sept 2026): este módulo YA NO necesita nada nuevo en
+   Code.gs. Usa las mismas 4 acciones genéricas (get/set/listar/borrar) que ya
+   existen para Control Escolar y el Examen Diagnóstico, con sus propios
+   prefijos de clave ("eia:respuesta:", "eia:valoracion:") y leyendo (solo
+   lectura) los registros "alumno:" ya existentes. No se crean hojas nuevas ni
+   se agregan "case" nuevos al backend — esa era la versión anterior de este
+   archivo, antes de adaptarlo a la arquitectura fija del proyecto.
    ============================================================================ */
 
 </script>

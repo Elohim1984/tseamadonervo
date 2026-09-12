@@ -121,7 +121,7 @@
       var lista = (res.filas || []).map(function (f) {
         try { return JSON.parse(f.valor); } catch (e) { return null; }
       }).filter(function (a) { return a && String(a.grado) === String(grado); })
-        .map(function (a) { return { id: a.id, nombre: nombreOficialAlumno(a), grupo: a.grupo || a.GRUPO || 'A' }; })
+        .map(function (a) { return { id: a.id, nombre: nombreOficialAlumno(a), grupo: a.ESCUELA_GRUPO || 'A' }; })
         .filter(function (a) { return a.nombre.trim(); })
         .sort(function (x, y) { return x.nombre.localeCompare(y.nombre, 'es'); });
       ui.inscritos = { loading: false, error: null, lista: lista };
