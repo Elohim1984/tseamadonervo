@@ -65,7 +65,9 @@
     lastError: null,
     lastRecord: null,
     teacherError: null,
-    inscritos: { loading: false, error: null, lista: [] }
+    inscritos: { loading: false, error: null, lista: [] },
+    teacherFiltroGrado: '',  /* '' = todos los grados */
+    teacherFiltroGrupo: ''   /* '' = todos los grupos */
   };
 
   /* estado de los resultados del panel docente — vive aparte porque se
@@ -543,11 +545,14 @@
   function buildTeacherPanel() {
     var wrap = el('div', { class: 'wrap' });
 
+    var filtroTexto = (ui.teacherFiltroGrado ? ui.teacherFiltroGrado + '°' : 'todos los grados') +
+      (ui.teacherFiltroGrado && ui.teacherFiltroGrupo ? ' ' + ui.teacherFiltroGrupo : (ui.teacherFiltroGrado ? ' (todos los grupos)' : ''));
+
     /* encabezado limpio: invisible en pantalla, solo aparece al imprimir */
     wrap.appendChild(el('div', { class: 'print-header' }, [
       el('h1', {}, [SCHOOL.nombre]),
       el('div', { class: 'meta' }, ['Panel del docente — Examen diagnóstico · Ciclo escolar ' + SCHOOL.ciclo]),
-      el('div', { class: 'meta' }, ['Grado / grupo: todos · Fecha de impresión: ' + fechaHoyTexto()])
+      el('div', { class: 'meta' }, ['Grado / grupo: ' + filtroTexto + ' · Fecha de impresión: ' + fechaHoyTexto()])
     ]));
 
     var topBar = el('div', { class: 'no-print' });
@@ -599,12 +604,46 @@
     var byGrade = { '1': [], '2': [], '3': [] };
     subsAll.forEach(function (s) { if (byGrade[s.grado]) byGrade[s.grado].push(s); });
 
+    /* --- filtro de grado/grupo para imprimir solo una parte --- */
+    var gradosAMostrar = ui.teacherFiltroGrado ? [ui.teacherFiltroGrado] : ['1', '2', '3'];
+    var filtroWrap = el('div', { class: 'no-print', style: 'margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;' });
+    filtroWrap.appendChild(el('span', { style: 'font-size:12px;color:var(--ink-soft);' }, ['Imprimir solo:']));
+
+    var selGrado = el('select', { style: 'font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);' },
+      [el('option', { value: '' }, ['Todos los grados'])].concat(
+        ['1', '2', '3'].map(function (g) { return el('option', { value: g }, [g + '°']); })
+      ));
+    selGrado.value = ui.teacherFiltroGrado;
+    selGrado.addEventListener('change', function () {
+      ui.teacherFiltroGrado = selGrado.value;
+      ui.teacherFiltroGrupo = ''; /* al cambiar de grado, reinicia el grupo elegido */
+      render();
+    });
+    filtroWrap.appendChild(selGrado);
+
+    var gruposDelGrado = ui.teacherFiltroGrado
+      ? Array.from(new Set(byGrade[ui.teacherFiltroGrado].map(function (s) { return s.grupo || 'Sin grupo'; }))).sort()
+      : [];
+    var selGrupoAttrs = { style: 'font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);' };
+    if (!ui.teacherFiltroGrado) selGrupoAttrs.disabled = 'disabled';
+    var selGrupo = el('select', selGrupoAttrs,
+      [el('option', { value: '' }, [ui.teacherFiltroGrado ? 'Todos los grupos' : 'primero elige grado'])].concat(
+        gruposDelGrado.map(function (gr) { return el('option', { value: gr }, [gr]); })
+      ));
+    selGrupo.value = ui.teacherFiltroGrupo;
+    selGrupo.addEventListener('change', function () {
+      ui.teacherFiltroGrupo = selGrupo.value;
+      render();
+    });
+    filtroWrap.appendChild(selGrupo);
+    wrap.appendChild(filtroWrap);
+
     /* --- avance de aplicación --- */
     wrap.appendChild(el('h2', { style: 'margin-top:26px;' }, ['Avance de aplicación']));
     var advTable = el('table');
     advTable.appendChild(el('tr', {}, [el('th', {}, ['Grado']), el('th', {}, ['Alumnos capturados']), el('th', {}, ['Por grupo'])]));
-    ['1', '2', '3'].forEach(function (g) {
-      var subs = byGrade[g];
+    gradosAMostrar.forEach(function (g) {
+      var subs = ui.teacherFiltroGrupo ? byGrade[g].filter(function (s) { return (s.grupo || 'Sin grupo') === ui.teacherFiltroGrupo; }) : byGrade[g];
       var groups = {};
       subs.forEach(function (s) { var k = s.grupo || 'Sin grupo'; groups[k] = (groups[k] || 0) + 1; });
       var groupTxt = Object.keys(groups).sort().map(function (k) { return k + ': ' + groups[k]; }).join(', ') || '—';
@@ -614,8 +653,8 @@
 
     var campoAverages = {}; /* campoAverages[g] = [{nombre, avg, n}] */
 
-    ['1', '2', '3'].forEach(function (g) {
-      var subs = byGrade[g];
+    gradosAMostrar.forEach(function (g) {
+      var subs = ui.teacherFiltroGrupo ? byGrade[g].filter(function (s) { return (s.grupo || 'Sin grupo') === ui.teacherFiltroGrupo; }) : byGrade[g];
       var campos = EXAM[g];
       var scored = subs.map(scoreRecord);
       var avgs = campos.map(function (campo, ci) {
@@ -663,35 +702,38 @@
       wrap.appendChild(det2);
     });
 
-    /* --- comparación entre los tres grados --- */
-    wrap.appendChild(el('h2', { style: 'margin-top:30px;' }, ['Comparación entre grados']));
-    var campoNombres = EXAM['1'].map(function (c) { return c.nombre; });
-    var cmpRows = [['Campo formativo', '1°', '2°', '3°']];
-    campoNombres.forEach(function (nombre, ci) {
-      cmpRows.push([nombre,
-        campoAverages['1'][ci].avg == null ? '—' : String(campoAverages['1'][ci].avg),
-        campoAverages['2'][ci].avg == null ? '—' : String(campoAverages['2'][ci].avg),
-        campoAverages['3'][ci].avg == null ? '—' : String(campoAverages['3'][ci].avg)
-      ]);
-    });
-    var cmpTable = el('table');
-    cmpRows.forEach(function (r, i) {
-      var tr = el('tr', {});
-      r.forEach(function (cell) { tr.appendChild(el(i === 0 ? 'th' : 'td', {}, [cell])); });
-      cmpTable.appendChild(tr);
-    });
-    wrap.appendChild(cmpTable);
+    /* --- comparación entre los tres grados: solo tiene sentido cuando se
+       están mostrando los tres a la vez (sin filtro de grado) --- */
+    if (!ui.teacherFiltroGrado) {
+      wrap.appendChild(el('h2', { style: 'margin-top:30px;' }, ['Comparación entre grados']));
+      var campoNombres = EXAM['1'].map(function (c) { return c.nombre; });
+      var cmpRows = [['Campo formativo', '1°', '2°', '3°']];
+      campoNombres.forEach(function (nombre, ci) {
+        cmpRows.push([nombre,
+          campoAverages['1'][ci].avg == null ? '—' : String(campoAverages['1'][ci].avg),
+          campoAverages['2'][ci].avg == null ? '—' : String(campoAverages['2'][ci].avg),
+          campoAverages['3'][ci].avg == null ? '—' : String(campoAverages['3'][ci].avg)
+        ]);
+      });
+      var cmpTable = el('table');
+      cmpRows.forEach(function (r, i) {
+        var tr = el('tr', {});
+        r.forEach(function (cell) { tr.appendChild(el(i === 0 ? 'th' : 'td', {}, [cell])); });
+        cmpTable.appendChild(tr);
+      });
+      wrap.appendChild(cmpTable);
 
-    ['1', '2', '3'].forEach(function (g) {
-      var avgs = campoAverages[g].filter(function (a) { return a.avg != null; });
-      if (!avgs.length) return;
-      var min = avgs.reduce(function (a, b) { return b.avg < a.avg ? b : a; });
-      wrap.appendChild(el('div', { class: 'sub' }, ['Área a reforzar en ' + g + '°: ' + min.nombre + ' (' + min.avg + ')']));
-    });
+      ['1', '2', '3'].forEach(function (g) {
+        var avgs = campoAverages[g].filter(function (a) { return a.avg != null; });
+        if (!avgs.length) return;
+        var min = avgs.reduce(function (a, b) { return b.avg < a.avg ? b : a; });
+        wrap.appendChild(el('div', { class: 'sub' }, ['Área a reforzar en ' + g + '°: ' + min.nombre + ' (' + min.avg + ')']));
+      });
 
-    var preCmpId = 'pre_cmp';
-    wrap.appendChild(el('pre', { class: 'copy', id: preCmpId }, [tsvBlock(cmpRows)]));
-    wrap.appendChild(selectAllBtn(preCmpId));
+      var preCmpId = 'pre_cmp';
+      wrap.appendChild(el('pre', { class: 'copy', id: preCmpId }, [tsvBlock(cmpRows)]));
+      wrap.appendChild(selectAllBtn(preCmpId));
+    }
 
     return wrap;
   }
