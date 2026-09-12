@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vista previa — Bitácora de Incidencias</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+:root {
+  --papel: #FAF6EC; --azul: #7A1613; --azul-profundo: #4A0D0B;
+  --amarillo: #F5B343; --verde: #3D7A0A; --rojo: #A82A1F;
+  --tinta: #221E1F; --linea: #E9DFC7; --ambar: #C58233;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--papel); font-family: 'Public Sans', sans-serif; color: var(--tinta); }
+.font-display { font-family: 'Fraunces', Georgia, serif; }
+.font-mono { font-family: 'IBM Plex Mono', monospace; }
+
+/* --- banner de aviso de vista previa --- */
+.banner-preview { background: var(--amarillo); color: var(--azul-profundo); font-weight: 700; font-size: 0.82rem; text-align: center; padding: 0.55rem 1rem; }
+.banner-preview span { font-weight: 500; opacity: 0.85; }
+
+/* --- header replicando Control Escolar --- */
+header.app-header { background: var(--azul-profundo); color: #fff; padding: 1.1rem 1rem 0.7rem; }
+.header-inner { max-width: 64rem; margin: 0 auto; }
+.breadcrumb { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 0.04em; opacity: 0.75; margin-bottom: 0.35rem; }
+.breadcrumb b { opacity: 1; color: var(--amarillo); }
+h1.titulo { font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 1.35rem; margin: 0 0 0.15rem; }
+.subt { font-size: 0.85rem; opacity: 0.82; max-width: 44rem; line-height: 1.4; }
+
+main { max-width: 64rem; margin: 0 auto; padding: 1.1rem 1rem 4rem; display: flex; flex-direction: column; gap: 1rem; }
+
+.card { background: #fff; border: 1px solid var(--linea); border-radius: 14px; padding: 0.9rem 1.05rem; box-shadow: 0 1px 0 rgba(18,51,94,0.03); }
+.card h2 { font-family: 'Fraunces', Georgia, serif; font-size: 1rem; margin: 0 0 0.6rem; }
+
+.campo { border: 1px solid var(--linea); border-radius: 10px; padding: 0.55rem 0.7rem; font-family: 'Public Sans', sans-serif; font-size: 0.88rem; background: #fff; width: 100%; outline: none; }
+.campo:focus { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(122,22,19,0.12); }
+label.etq { font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; letter-spacing: 0.03em; opacity: 0.6; display: block; margin-bottom: 0.3rem; text-transform: uppercase; }
+
+.btn-primario { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: var(--azul); color: #fff; font-family: 'Public Sans', sans-serif; font-weight: 600; font-size: 0.86rem; padding: 0.6rem 1rem; border-radius: 10px; border: none; cursor: pointer; }
+.btn-primario:hover { background: var(--azul-profundo); }
+.btn-secundario { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: #fff; color: var(--azul-profundo); font-family: 'Public Sans', sans-serif; font-weight: 600; font-size: 0.86rem; padding: 0.55rem 0.9rem; border-radius: 10px; border: 1.5px solid var(--linea); cursor: pointer; }
+.btn-secundario:hover { border-color: var(--azul); }
+.btn-icono { background: transparent; border: none; color: var(--azul-profundo); opacity: 0.6; cursor: pointer; padding: 0.35rem; border-radius: 8px; display: inline-flex; }
+.btn-icono:hover { opacity: 1; background: rgba(122,22,19,0.08); }
+.btn-icono.peligro { color: var(--rojo); }
+
+.chip { font-family: 'Public Sans', sans-serif; font-weight: 600; border: 1.5px solid var(--linea); background: #fff; border-radius: 999px; padding: 0.4rem 0.85rem; cursor: pointer; color: var(--tinta); font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+.chip.activo { background: var(--azul); border-color: var(--azul); color: #fff; }
+.chip-fila { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+
+.pastilla { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; font-weight: 700; padding: 0.28rem 0.6rem; border-radius: 999px; font-family: 'Public Sans', sans-serif; white-space: nowrap; }
+.pastilla.leve { background: rgba(61,122,10,0.14); color: var(--verde); }
+.pastilla.grave { background: rgba(242,169,59,0.2); color: #9c6a0f; }
+.pastilla.muygrave { background: rgba(168,42,31,0.14); color: var(--rojo); }
+.pastilla.abierto { background: rgba(168,42,31,0.14); color: var(--rojo); }
+.pastilla.seguimiento { background: rgba(242,169,59,0.2); color: #9c6a0f; }
+.pastilla.cerrado { background: rgba(61,122,10,0.14); color: var(--verde); }
+
+.tabla-scroll { overflow-x: auto; }
+table.datos { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+table.datos th { text-align: left; font-family: 'IBM Plex Mono', monospace; font-size: 0.64rem; letter-spacing: 0.03em; text-transform: uppercase; opacity: 0.55; padding: 0.4rem 0.55rem; border-bottom: 1.5px solid var(--linea); white-space: nowrap; }
+table.datos td { padding: 0.55rem 0.55rem; border-bottom: 1px solid var(--linea); vertical-align: top; }
+table.datos tr:last-child td { border-bottom: none; }
+table.datos td.acciones { display: flex; gap: 0.2rem; white-space: nowrap; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; }
+.stat { background: #fff; border: 1px solid var(--linea); border-radius: 12px; padding: 0.7rem 0.8rem; text-align: center; }
+.stat .num { font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 1.5rem; }
+.stat .lbl { font-size: 0.7rem; opacity: 0.65; margin-top: 0.15rem; }
+@media (max-width: 640px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.7rem; }
+@media (max-width: 640px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+.aviso-info { background: #FFF9EC; border: 1px solid var(--linea); border-left: 4px solid var(--amarillo); border-radius: 10px; padding: 0.7rem 0.85rem; font-size: 0.82rem; line-height: 1.45; }
+.aviso-confidencial { background: #FBEFEE; border: 1px solid rgba(168,42,31,0.25); border-left: 4px solid var(--rojo); border-radius: 10px; padding: 0.7rem 0.85rem; font-size: 0.8rem; line-height: 1.45; color: var(--azul-profundo); }
+
+/* --- overlay / modal --- */
+.overlay { position: fixed; inset: 0; background: rgba(34,30,31,0.45); display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; z-index: 50; }
+.overlay[hidden] { display: none; }
+.modal { background: var(--papel); border-radius: 16px; max-width: 42rem; width: 100%; padding: 1.2rem 1.3rem 1.4rem; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; }
+.modal-header h2 { margin: 0; }
+
+.pill-select { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+textarea.campo { resize: vertical; min-height: 4.2rem; font-family: 'Public Sans', sans-serif; }
+
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.55rem 0; border-bottom: 1px solid var(--linea); }
+.toggle-row:last-child { border-bottom: none; }
+.switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch .track { position: absolute; inset: 0; background: var(--linea); border-radius: 999px; cursor: pointer; transition: background .15s; }
+.switch .track::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+.switch input:checked + .track { background: var(--azul); }
+.switch input:checked + .track::before { transform: translateX(18px); }
+
+.divisor-talavera { display: flex; gap: 5px; justify-content: center; padding: 2px 0; }
+.divisor-talavera span { width: 6px; height: 6px; border-radius: 50%; opacity: 0.5; background: var(--ambar); }
+
+.vacio { text-align: center; padding: 1.6rem 1rem; opacity: 0.55; font-size: 0.85rem; }
+
+.icono-titulo { display: inline-flex; align-items: center; justify-content: center; width: 1.1em; }
+
+/* --- vista de impresión (Acta / Carta) --- */
+.hoja-imprimir { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  .banner-preview, header.app-header, .toolbar-no-print, .overlay > .modal > .modal-footer,
+  main > .card:not(#hojaImprimirCard) { display: none !important; }
+  #hojaImprimirCard, #hojaImprimirCard * { visibility: visible; }
+  #hojaImprimirCard { position: absolute; left: 0; top: 0; width: 100%; border: none; box-shadow: none; padding: 0; }
+  .hoja-imprimir { display: block !important; }
+}
+.hoja-membrete { text-align: center; border-bottom: 2px solid var(--azul); padding-bottom: 0.6rem; margin-bottom: 0.9rem; }
+.hoja-membrete .esc { font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 1.05rem; }
+.hoja-membrete .cct { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; opacity: 0.65; }
+.hoja-membrete .doc-titulo { margin-top: 0.5rem; font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.hoja-campo { margin-bottom: 0.7rem; }
+.hoja-campo .k { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; text-transform: uppercase; opacity: 0.55; letter-spacing: 0.03em; }
+.hoja-campo .v { font-size: 0.92rem; margin-top: 0.15rem; white-space: pre-wrap; }
+.firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6rem; margin-top: 2.4rem; }
+.firma-linea { border-top: 1px solid var(--tinta); padding-top: 0.3rem; font-size: 0.75rem; text-align: center; }
+
+footer.nota-final { max-width: 64rem; margin: 0 auto; padding: 0 1rem 3rem; font-size: 0.78rem; opacity: 0.6; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="banner-preview">👁️ VISTA PREVIA — así quedaría la nueva pestaña «Bitácora de Incidencias». <span>Alumnos y registros de ejemplo, no son reales. Todavía nada de esto está subido a GitHub.</span></div>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div class="breadcrumb">Control Escolar · Amado Nervo &nbsp;→&nbsp; Alumnos ▾ &nbsp;→&nbsp; <b>Bitácora de Incidencias</b></div>
+    <h1 class="titulo">📓 Bitácora de Incidencias</h1>
+    <div class="subt">Registro de la Ruta de Actuación (Detección → Notificación → Intervención → Seguimiento) del Programa de Seguridad y Cultura de Paz / Manual para la Sana Convivencia Escolar 2026. Llena el formulario una vez y genera el documento listo para firmar.</div>
+  </div>
+</header>
+
+<main>
+
+  <div class="aviso-confidencial">
+    🔒 <b>Información sensible.</b> Esta bitácora va a tener el mismo candado de acceso que el resto de Control Escolar (dirección/docentes). No se piensa mostrar a los alumnos ni a los padres directamente — solo se les entrega el documento ya impreso cuando corresponda.
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="num" style="color:var(--azul)">6</div><div class="lbl">Registros este ciclo</div></div>
+    <div class="stat"><div class="num" style="color:var(--rojo)">2</div><div class="lbl">Abiertos</div></div>
+    <div class="stat"><div class="num" style="color:#9c6a0f">1</div><div class="lbl">En seguimiento</div></div>
+    <div class="stat"><div class="num" style="color:var(--verde)">3</div><div class="lbl">Cerrados</div></div>
+  </div>
+
+  <div class="card toolbar-no-print">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.7rem;">
+      <h2 style="margin:0;">Filtrar bitácora</h2>
+      <button class="btn-primario" id="btnNuevo">＋ Nuevo registro</button>
+    </div>
+    <div class="grid3">
+      <div>
+        <label class="etq">Grado</label>
+        <select class="campo" id="filtroGrado"><option value="">Todos</option><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option></select>
+      </div>
+      <div>
+        <label class="etq">Estado</label>
+        <select class="campo" id="filtroEstado"><option value="">Todos</option><option value="abierto">Abierto</option><option value="seguimiento">En seguimiento</option><option value="cerrado">Cerrado</option></select>
+      </div>
+      <div>
+        <label class="etq">Nivel de la falta</label>
+        <select class="campo" id="filtroNivel"><option value="">Todos</option><option value="leve">Leve</option><option value="grave">Grave</option><option value="muygrave">Muy grave</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Registros</h2>
+    <div class="tabla-scroll">
+      <table class="datos" id="tablaBitacora">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Alumno</th>
+            <th>Grado/Grupo</th>
+            <th>Tipo de instrumento</th>
+            <th>Nivel</th>
+            <th>Fase</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="cuerpoTabla"></tbody>
+      </table>
+    </div>
+    <div class="vacio" id="tablaVacia" hidden>No hay registros que coincidan con el filtro.</div>
+  </div>
+
+  <div class="card">
+    <h2>👤 Ficha de convivencia por alumno</h2>
+    <p style="font-size:0.85rem; opacity:0.75; margin-top:-0.3rem;">Selecciona un alumno para ver su historial completo — esto funciona como el expediente digital que acompaña a los Anexos 3 y 4.</p>
+    <select class="campo" id="selectorFichaAlumno" style="max-width:24rem;"></select>
+    <div id="fichaAlumnoResultado" style="margin-top:0.8rem;"></div>
+  </div>
+
+  <div class="card">
+    <h2>ℹ️ Qué te falta confirmar antes de que esto pase a producción</h2>
+    <div class="aviso-info">
+      Este diseño ya sigue la Ruta de Actuación y los instrumentos (bitácora escolar, acta de hechos, carta compromiso, canalización) que quedaron definidos en el PEMC. Antes de integrarlo de verdad a Control Escolar y subirlo, confírmame:<br><br>
+      1) Si «Leve / Grave / Muy grave» son las categorías que marca tu Manual para la Sana Convivencia Escolar 2026, o si maneja otra tipificación.<br>
+      2) Si quieres que un registro pueda tener más de un alumno involucrado (por ejemplo un conflicto entre dos) o si prefieres uno por registro.<br>
+      3) Quién debe poder ver esta pestaña — ¿solo dirección, o también los docentes que ya entran a Control Escolar?<br>
+      4) Si el texto exacto que debe imprimirse en el "Acta de hechos" / "Carta compromiso" ya lo tienes en el Manual (para copiarlo tal cual) o si el formato de esta vista previa te sirve como está.
+    </div>
+  </div>
+
+</main>
+
+<footer class="nota-final">
+  Vista previa generada para tu revisión — no está conectada a la Hoja de Google ni a ningún dato real todavía. En cuanto confirmes el diseño, se integra dentro de <span class="font-mono">index.html</span> (pestaña Alumnos ▾) usando el mismo patrón de siempre: una fila por registro en la misma Hoja compartida, con su propio prefijo de clave (<span class="font-mono">incidencia:</span>), sin tocar el Apps Script.
+</footer>
+
+<!-- ============ MODAL: nuevo / editar registro ============ -->
+<div class="overlay" id="overlayForm" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="font-display" id="tituloModal">Nuevo registro</h2>
+      <button class="btn-icono" id="btnCerrarForm">✕</button>
+    </div>
+    <form id="formIncidencia" style="display:flex; flex-direction:column; gap:0.8rem;">
+      <div class="grid2">
+        <div>
+          <label class="etq">Fecha</label>
+          <input class="campo" type="date" id="fFecha" required>
+        </div>
+        <div>
+          <label class="etq">Hora</label>
+          <input class="campo" type="time" id="fHora">
+        </div>
+      </div>
+
+      <div>
+        <label class="etq">Alumno involucrado</label>
+        <div class="grid3">
+          <select class="campo" id="fGrado"><option value="">Grado</option><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option></select>
+          <select class="campo" id="fGrupo" disabled><option value="">Grupo</option></select>
+          <select class="campo" id="fAlumno" disabled><option value="">Alumno</option></select>
+        </div>
+      </div>
+
+      <div>
+        <label class="etq">Tipo de instrumento</label>
+        <div class="chip-fila" id="fTipo">
+          <button type="button" class="chip" data-val="Bitácora escolar">Bitácora escolar</button>
+          <button type="button" class="chip" data-val="Acta de hechos">Acta de hechos</button>
+          <button type="button" class="chip" data-val="Carta compromiso">Carta compromiso</button>
+          <button type="button" class="chip" data-val="Canalización">Canalización</button>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label class="etq">Nivel de la falta</label>
+          <div class="chip-fila" id="fNivel">
+            <button type="button" class="chip" data-val="leve">Leve</button>
+            <button type="button" class="chip" data-val="grave">Grave</button>
+            <button type="button" class="chip" data-val="muygrave">Muy grave</button>
+          </div>
+        </div>
+        <div>
+          <label class="etq">Fase de la Ruta de Actuación</label>
+          <div class="chip-fila" id="fFase">
+            <button type="button" class="chip" data-val="Detección">Detección</button>
+            <button type="button" class="chip" data-val="Notificación">Notificación</button>
+            <button type="button" class="chip" data-val="Intervención">Intervención</button>
+            <button type="button" class="chip" data-val="Seguimiento">Seguimiento</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label class="etq">Descripción de los hechos</label>
+        <textarea class="campo" id="fDescripcion" placeholder="Qué pasó, dónde y quiénes estuvieron presentes…" required></textarea>
+      </div>
+
+      <div>
+        <label class="etq">Acuerdos / acciones tomadas</label>
+        <textarea class="campo" id="fAcuerdos" placeholder="Compromisos, canalización, seguimiento acordado…"></textarea>
+      </div>
+
+      <div>
+        <label class="etq">Atendido por</label>
+        <select class="campo" id="fAtendioPor">
+          <option>Dirección</option>
+          <option>Docente</option>
+          <option>Brigada Escolar — alumno integrante</option>
+          <option>Brigada Escolar — figura parental</option>
+          <option>Otro</option>
+        </select>
+      </div>
+
+      <div class="card" style="padding:0.3rem 0.9rem;">
+        <div class="toggle-row">
+          <span style="font-size:0.85rem;">¿Se notificó a la familia?</span>
+          <label class="switch"><input type="checkbox" id="fNotifico"><span class="track"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span style="font-size:0.85rem;">¿Se integró al expediente (Anexo 3/4)?</span>
+          <label class="switch"><input type="checkbox" id="fAnexo"><span class="track"></span></label>
+        </div>
+      </div>
+
+      <div>
+        <label class="etq">Estado del caso</label>
+        <div class="chip-fila" id="fEstado">
+          <button type="button" class="chip" data-val="abierto">Abierto</button>
+          <button type="button" class="chip" data-val="seguimiento">En seguimiento</button>
+          <button type="button" class="chip" data-val="cerrado">Cerrado</button>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.4rem;">
+        <button type="button" class="btn-secundario" id="btnCancelarForm">Cancelar</button>
+        <button type="submit" class="btn-primario">Guardar registro</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL: ver / imprimir un registro ============ -->
+<div class="overlay" id="overlayVer" hidden>
+  <div class="modal" style="max-width:38rem;">
+    <div class="modal-header toolbar-no-print">
+      <h2 class="font-display">Detalle del registro</h2>
+      <div style="display:flex; gap:0.4rem;">
+        <button class="btn-secundario" id="btnImprimirDetalle">🖨️ Imprimir</button>
+        <button class="btn-icono" id="btnCerrarVer">✕</button>
+      </div>
+    </div>
+
+    <div class="card" id="hojaImprimirCard">
+      <div class="hoja-imprimir hoja-membrete">
+        <div class="esc">Telesecundaria "Amado Nervo"</div>
+        <div class="cct">CCT 21ETV0473W · Santa María Xoyatla, Tepeojuma, Puebla · Ciclo 2026-2027</div>
+        <div class="doc-titulo" id="vTipoTitulo">Acta de hechos</div>
+      </div>
+      <div id="hojaCampos"></div>
+      <div class="firmas hoja-imprimir">
+        <div class="firma-linea">Dirección</div>
+        <div class="firma-linea">Docente</div>
+        <div class="firma-linea">Alumno(a)</div>
+        <div class="firma-linea">Madre / Padre / Tutor(a)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== datos de EJEMPLO (ficticios) ===================== */
+const ALUMNOS_DEMO = [
+  { id: "d1", grado: "1", grupo: "A", nombre: "Alumno Ejemplo Uno" },
+  { id: "d2", grado: "1", grupo: "A", nombre: "Alumna Ejemplo Dos" },
+  { id: "d3", grado: "2", grupo: "A", nombre: "Alumno Ejemplo Tres" },
+  { id: "d4", grado: "2", grupo: "A", nombre: "Alumna Ejemplo Cuatro" },
+  { id: "d5", grado: "3", grupo: "A", nombre: "Alumno Ejemplo Cinco" },
+];
+
+let registros = [
+  { id: "r1", fecha: "2026-09-03", hora: "10:15", alumnoId: "d4", tipo: "Bitácora escolar", nivel: "grave", fase: "Intervención", descripcion: "Comentario de un familiar sobre posible maltrato en casa (ejemplo ilustrativo, no es un caso real).", acuerdos: "Se canalizó con DIF municipal y se dio seguimiento con la familia.", atendioPor: "Dirección", notifico: true, anexo: true, estado: "cerrado" },
+  { id: "r2", fecha: "2026-09-08", hora: "09:40", alumnoId: "d1", tipo: "Acta de hechos", nivel: "leve", fase: "Detección", descripcion: "Uso de apodo ofensivo hacia un compañero durante el recreo.", acuerdos: "Plática de reflexión con ambos alumnos y compromiso verbal.", atendioPor: "Docente", notifico: false, anexo: false, estado: "cerrado" },
+  { id: "r3", fecha: "2026-09-09", hora: "12:05", alumnoId: "d3", tipo: "Carta compromiso", nivel: "grave", fase: "Notificación", descripcion: "Falta de respeto reiterada a un docente en clase.", acuerdos: "Carta compromiso firmada por alumno y madre de familia.", atendioPor: "Dirección", notifico: true, anexo: true, estado: "seguimiento" },
+  { id: "r4", fecha: "2026-09-10", hora: "08:30", alumnoId: "d2", tipo: "Bitácora escolar", nivel: "leve", fase: "Detección", descripcion: "Llegó sin material de trabajo por tercera vez en la semana.", acuerdos: "Se habló con la alumna sobre organización de materiales.", atendioPor: "Docente", notifico: false, anexo: false, estado: "cerrado" },
+  { id: "r5", fecha: "2026-09-11", hora: "11:00", alumnoId: "d5", tipo: "Acta de hechos", nivel: "muygrave", fase: "Notificación", descripcion: "Pelea física entre dos alumnos durante el receso (ejemplo ilustrativo).", acuerdos: "Canalización a Brigada Escolar, notificación inmediata a ambas familias.", atendioPor: "Brigada Escolar — alumno integrante", notifico: true, anexo: true, estado: "abierto" },
+  { id: "r6", fecha: "2026-09-12", hora: "07:55", alumnoId: "d4", tipo: "Bitácora escolar", nivel: "leve", fase: "Seguimiento", descripcion: "Seguimiento del caso registrado el 3 de septiembre — evolución favorable.", acuerdos: "Continuar acompañamiento quincenal.", atendioPor: "Dirección", notifico: false, anexo: false, estado: "abierto" },
+];
+
+const NIVEL_LABEL = { leve: "Leve", grave: "Grave", muygrave: "Muy grave" };
+const ESTADO_LABEL = { abierto: "Abierto", seguimiento: "En seguimiento", cerrado: "Cerrado" };
+
+function alumnoPorId(id) { return ALUMNOS_DEMO.find(a => a.id === id); }
+function nombreAlumno(id) { const a = alumnoPorId(id); return a ? a.nombre : "—"; }
+function gradoGrupo(id) { const a = alumnoPorId(id); return a ? `${a.grado}° ${a.grupo}` : "—"; }
+
+/* ===================== filtros + tabla ===================== */
+function aplicarFiltros() {
+  const g = document.getElementById("filtroGrado").value;
+  const e = document.getElementById("filtroEstado").value;
+  const n = document.getElementById("filtroNivel").value;
+  return registros
+    .filter(r => !g || (alumnoPorId(r.alumnoId) && alumnoPorId(r.alumnoId).grado === g))
+    .filter(r => !e || r.estado === e)
+    .filter(r => !n || r.nivel === n)
+    .sort((a, b) => (b.fecha + b.hora).localeCompare(a.fecha + a.hora));
+}
+
+function renderTabla() {
+  const lista = aplicarFiltros();
+  const cuerpo = document.getElementById("cuerpoTabla");
+  const vacio = document.getElementById("tablaVacia");
+  cuerpo.innerHTML = "";
+  vacio.hidden = lista.length !== 0;
+  lista.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="font-mono" style="font-size:0.78rem;">${r.fecha}<br><span style="opacity:0.5;">${r.hora || ""}</span></td>
+      <td>${nombreAlumno(r.alumnoId)}</td>
+      <td>${gradoGrupo(r.alumnoId)}</td>
+      <td>${r.tipo}</td>
+      <td><span class="pastilla ${r.nivel}">${NIVEL_LABEL[r.nivel]}</span></td>
+      <td style="font-size:0.8rem;">${r.fase}</td>
+      <td><span class="pastilla ${r.estado}">${ESTADO_LABEL[r.estado]}</span></td>
+      <td class="acciones">
+        <button class="btn-icono" title="Ver / imprimir" data-ver="${r.id}">👁️</button>
+        <button class="btn-icono" title="Editar" data-editar="${r.id}">✏️</button>
+        <button class="btn-icono peligro" title="Borrar" data-borrar="${r.id}">🗑️</button>
+      </td>`;
+    cuerpo.appendChild(tr);
+  });
+  cuerpo.querySelectorAll("[data-ver]").forEach(b => b.addEventListener("click", () => abrirVer(b.dataset.ver)));
+  cuerpo.querySelectorAll("[data-editar]").forEach(b => b.addEventListener("click", () => abrirForm(b.dataset.editar)));
+  cuerpo.querySelectorAll("[data-borrar]").forEach(b => b.addEventListener("click", () => {
+    if (confirm("¿Borrar este registro de la bitácora? Esta acción no se puede deshacer.")) {
+      registros = registros.filter(r => r.id !== b.dataset.borrar);
+      renderTabla();
+      renderFicha();
+    }
+  }));
+}
+
+document.getElementById("filtroGrado").addEventListener("change", renderTabla);
+document.getElementById("filtroEstado").addEventListener("change", renderTabla);
+document.getElementById("filtroNivel").addEventListener("change", renderTabla);
+
+/* ===================== ficha por alumno ===================== */
+function llenarSelectorFicha() {
+  const sel = document.getElementById("selectorFichaAlumno");
+  sel.innerHTML = '<option value="">Selecciona un alumno…</option>' +
+    ALUMNOS_DEMO.map(a => `<option value="${a.id}">${a.nombre} — ${a.grado}° ${a.grupo}</option>`).join("");
+  sel.addEventListener("change", renderFicha);
+}
+function renderFicha() {
+  const id = document.getElementById("selectorFichaAlumno").value;
+  const cont = document.getElementById("fichaAlumnoResultado");
+  if (!id) { cont.innerHTML = ""; return; }
+  const suyos = registros.filter(r => r.alumnoId === id).sort((a, b) => (b.fecha).localeCompare(a.fecha));
+  if (!suyos.length) { cont.innerHTML = `<p class="vacio">Sin registros de convivencia para ${nombreAlumno(id)}.</p>`; return; }
+  cont.innerHTML = suyos.map(r => `
+    <div class="card" style="margin-bottom:0.5rem;">
+      <div style="display:flex; justify-content:space-between; gap:0.5rem; flex-wrap:wrap;">
+        <span class="font-mono" style="font-size:0.78rem; opacity:0.6;">${r.fecha} · ${r.tipo}</span>
+        <span><span class="pastilla ${r.nivel}">${NIVEL_LABEL[r.nivel]}</span> <span class="pastilla ${r.estado}">${ESTADO_LABEL[r.estado]}</span></span>
+      </div>
+      <p style="font-size:0.85rem; margin:0.4rem 0 0;">${r.descripcion}</p>
+    </div>`).join("");
+}
+
+/* ===================== modal nuevo/editar ===================== */
+const overlayForm = document.getElementById("overlayForm");
+let editandoId = null;
+let chipVals = { tipo: "", nivel: "", fase: "", estado: "abierto" };
+
+function setChipGroup(contId, key) {
+  document.querySelectorAll(`#${contId} .chip`).forEach(btn => {
+    btn.addEventListener("click", () => {
+      chipVals[key] = btn.dataset.val;
+      document.querySelectorAll(`#${contId} .chip`).forEach(b => b.classList.remove("activo"));
+      btn.classList.add("activo");
+    });
+  });
+}
+setChipGroup("fTipo", "tipo");
+setChipGroup("fNivel", "nivel");
+setChipGroup("fFase", "fase");
+setChipGroup("fEstado", "estado");
+
+function llenarGrupos(grado, grupoPreSel) {
+  const selGrupo = document.getElementById("fGrupo");
+  const grupos = [...new Set(ALUMNOS_DEMO.filter(a => a.grado === grado).map(a => a.grupo))].sort();
+  selGrupo.innerHTML = '<option value="">Grupo</option>' + grupos.map(g => `<option value="${g}">${g}</option>`).join("");
+  selGrupo.disabled = !grado;
+  if (grupoPreSel) selGrupo.value = grupoPreSel;
+}
+function llenarAlumnos(grado, grupo, alumnoPreSel) {
+  const selAlumno = document.getElementById("fAlumno");
+  const lista = ALUMNOS_DEMO.filter(a => a.grado === grado && a.grupo === grupo);
+  selAlumno.innerHTML = '<option value="">Alumno</option>' + lista.map(a => `<option value="${a.id}">${a.nombre}</option>`).join("");
+  selAlumno.disabled = !grupo;
+  if (alumnoPreSel) selAlumno.value = alumnoPreSel;
+}
+document.getElementById("fGrado").addEventListener("change", (e) => { llenarGrupos(e.target.value); llenarAlumnos("", ""); });
+document.getElementById("fGrupo").addEventListener("change", (e) => { llenarAlumnos(document.getElementById("fGrado").value, e.target.value); });
+
+function abrirForm(id) {
+  editandoId = id || null;
+  document.getElementById("tituloModal").textContent = id ? "Editar registro" : "Nuevo registro";
+  const r = id ? registros.find(x => x.id === id) : null;
+
+  document.getElementById("fFecha").value = r ? r.fecha : new Date().toISOString().slice(0, 10);
+  document.getElementById("fHora").value = r ? r.hora : new Date().toTimeString().slice(0, 5);
+  document.getElementById("fDescripcion").value = r ? r.descripcion : "";
+  document.getElementById("fAcuerdos").value = r ? r.acuerdos : "";
+  document.getElementById("fAtendioPor").value = r ? r.atendioPor : "Dirección";
+  document.getElementById("fNotifico").checked = r ? r.notifico : false;
+  document.getElementById("fAnexo").checked = r ? r.anexo : false;
+
+  chipVals = { tipo: r ? r.tipo : "", nivel: r ? r.nivel : "", fase: r ? r.fase : "", estado: r ? r.estado : "abierto" };
+  ["fTipo", "fNivel", "fFase", "fEstado"].forEach(cont => {
+    document.querySelectorAll(`#${cont} .chip`).forEach(b => b.classList.toggle("activo", b.dataset.val === chipVals[cont === "fTipo" ? "tipo" : cont === "fNivel" ? "nivel" : cont === "fFase" ? "fase" : "estado"]));
+  });
+
+  const a = r ? alumnoPorId(r.alumnoId) : null;
+  document.getElementById("fGrado").value = a ? a.grado : "";
+  llenarGrupos(a ? a.grado : "", a ? a.grupo : "");
+  llenarAlumnos(a ? a.grado : "", a ? a.grupo : "", a ? a.id : "");
+
+  overlayForm.hidden = false;
+}
+document.getElementById("btnNuevo").addEventListener("click", () => abrirForm(null));
+document.getElementById("btnCerrarForm").addEventListener("click", () => overlayForm.hidden = true);
+document.getElementById("btnCancelarForm").addEventListener("click", () => overlayForm.hidden = true);
+
+document.getElementById("formIncidencia").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const alumnoId = document.getElementById("fAlumno").value;
+  if (!alumnoId) { alert("Selecciona grado, grupo y alumno."); return; }
+  if (!chipVals.tipo || !chipVals.nivel || !chipVals.fase) { alert("Elige tipo de instrumento, nivel de la falta y fase de la Ruta de Actuación."); return; }
+  const datos = {
+    id: editandoId || ("r" + Date.now()),
+    fecha: document.getElementById("fFecha").value,
+    hora: document.getElementById("fHora").value,
+    alumnoId,
+    tipo: chipVals.tipo, nivel: chipVals.nivel, fase: chipVals.fase, estado: chipVals.estado,
+    descripcion: document.getElementById("fDescripcion").value,
+    acuerdos: document.getElementById("fAcuerdos").value,
+    atendioPor: document.getElementById("fAtendioPor").value,
+    notifico: document.getElementById("fNotifico").checked,
+    anexo: document.getElementById("fAnexo").checked,
+  };
+  if (editandoId) {
+    registros = registros.map(r => r.id === editandoId ? datos : r);
+  } else {
+    registros.push(datos);
+  }
+  overlayForm.hidden = true;
+  renderTabla();
+  renderFicha();
+});
+
+/* ===================== modal ver / imprimir ===================== */
+const overlayVer = document.getElementById("overlayVer");
+function abrirVer(id) {
+  const r = registros.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById("vTipoTitulo").textContent = r.tipo;
+  document.getElementById("hojaCampos").innerHTML = `
+    <div class="hoja-campo"><div class="k">Alumno</div><div class="v">${nombreAlumno(r.alumnoId)} — ${gradoGrupo(r.alumnoId)}</div></div>
+    <div class="hoja-campo"><div class="k">Fecha y hora</div><div class="v">${r.fecha} ${r.hora || ""}</div></div>
+    <div class="hoja-campo"><div class="k">Nivel de la falta</div><div class="v">${NIVEL_LABEL[r.nivel]}</div></div>
+    <div class="hoja-campo"><div class="k">Fase de la Ruta de Actuación</div><div class="v">${r.fase}</div></div>
+    <div class="hoja-campo"><div class="k">Descripción de los hechos</div><div class="v">${r.descripcion}</div></div>
+    <div class="hoja-campo"><div class="k">Acuerdos / acciones tomadas</div><div class="v">${r.acuerdos || "—"}</div></div>
+    <div class="hoja-campo"><div class="k">Atendido por</div><div class="v">${r.atendioPor}</div></div>
+    <div class="hoja-campo"><div class="k">Notificación a la familia</div><div class="v">${r.notifico ? "Sí" : "No"}</div></div>
+    <div class="hoja-campo"><div class="k">Integrado al expediente (Anexo 3/4)</div><div class="v">${r.anexo ? "Sí" : "No"}</div></div>
+    <div class="hoja-campo"><div class="k">Estado del caso</div><div class="v">${ESTADO_LABEL[r.estado]}</div></div>
+  `;
+  overlayVer.hidden = false;
+}
+document.getElementById("btnCerrarVer").addEventListener("click", () => overlayVer.hidden = true);
+document.getElementById("btnImprimirDetalle").addEventListener("click", () => window.print());
+
+/* ===================== arranque ===================== */
+llenarSelectorFicha();
+renderTabla();
+</script>
+</body>
+</html>
