@@ -496,6 +496,8 @@ const Globe2 = crearIcono('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" 
 const Scale = crearIcono('<path d="M12 3v18"/><path d="M5 8h14"/><path d="M3 8l3-5 3 5-3 4-3-4z"/><path d="M15 8l3-5 3 5-3 4-3-4z"/><path d="M8 21h8"/>');
 const Sprout = crearIcono('<path d="M7 20h10"/><path d="M10 20c0-6-3-8-6-8 0 4 2 7 6 8z"/><path d="M14 20c0-8 4-10 7-10-1 5-3 9-7 10z"/><path d="M12 20V9"/>');
 const FolderKanban = crearIcono('<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><path d="M8 12v4"/><path d="M12 10v6"/><path d="M16 13v3"/>');
+const ShieldAlert = crearIcono('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/>');
+const Printer = crearIcono('<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>');
 
 
 /* ---------- estados de México (para campos de entidad) ---------- */
@@ -527,6 +529,14 @@ const USUARIOS = {
 
 const TIPOS_ASUNTO = ["Conducta", "Asistencia", "Salud", "Académico", "Familiar", "Otro"];
 const ESTATUS_CASO = ["Abierto", "En seguimiento", "Cerrado"];
+// Categorías de la Bitácora de Incidencias / Convivencia Escolar, alineadas al
+// Manual para la Sana Convivencia Escolar (Nueva Escuela Mexicana): los 4
+// instrumentos ya definidos en el PEMC de la escuela, el nivel de la falta y las
+// fases de la Ruta de Actuación. Si el Manual real usa otras etiquetas, se cambian
+// aquí nada más (no afecta el resto de la app).
+const INSTRUMENTOS_CONVIVENCIA = ["Registro en bitácora", "Acta de hechos", "Carta compromiso", "Canalización"];
+const NIVEL_INCIDENCIA = ["Leve", "Grave", "Muy grave"];
+const FASE_RUTA_ACTUACION = ["Detección", "Notificación a la familia", "Intervención y acuerdos", "Seguimiento"];
 
 const RECURSOS = [
   {
@@ -1863,8 +1873,33 @@ const EFEMERIDES = [
   { fecha: "2026-09-19", titulo: "2º Simulacro Nacional 2026" },
   { fecha: "2026-09-21", titulo: "Fechas de corte de caja de la Asamblea de Padres (21-24 sept)" },
   { fecha: "2026-11-02", titulo: "Inicia el Concurso Estatal de Coros (al 20 nov)" },
-  { fecha: "2026-11-18", titulo: "Evento deportivo estatal: Atletismo" },
+  { fecha: "2026-11-18", titulo: "Juegos Deportivos de Zona: Atletismo y Pruebas de Pista" },
   { fecha: "2026-12-03", titulo: "Final del Concurso Nacional de Coros (3-4 dic, o finales regionales en enero 2027)" },
+  // De la Reunión de Organización Administrativa Zona 052 (8 sept 2026) — fechas oficiales para Amado Nervo
+  { fecha: "2026-09-12", titulo: "⚠️ Confirmar con la zona fecha límite de entrega EIA (el material de zona trae 2 fechas distintas: 11 o 18 de sept — avisar a Claude cuál es la correcta)" },
+  { fecha: "2026-09-14", titulo: "Guardias Patrias en la escuela (14-18 sept, 1-2 min, 3 alumnos por costado)" },
+  { fecha: "2026-09-15", titulo: "Vence cooperación de $500 para impresora por directivo (zona)" },
+  { fecha: "2026-09-23", titulo: "Vence cooperación anual de $360 (zona)" },
+  { fecha: "2026-11-10", titulo: "Visita de seguimiento del PIC a Amado Nervo (Turno 1, 8:00-11:00, Trimestre I)" },
+  { fecha: "2026-11-19", titulo: "Juegos Deportivos de Zona: Fútbol 5, Béisbol 5, Baloncesto 5/3x3, Voleibol 5, Ajedrez" },
+  { fecha: "2027-01-20", titulo: "Etapa Regional Juegos Deportivos Escolares (20-22 ene, Unidad Deportiva Izúcar de Matamoros)" },
+  { fecha: "2027-02-15", titulo: "Concurso de Escoltas — Etapa 1 (15-18 feb)" },
+  { fecha: "2027-02-22", titulo: "Concurso de Escoltas — Etapa 2 (22-26 feb)" },
+  { fecha: "2027-03-03", titulo: "Visita de seguimiento del PIC a Amado Nervo (Turno 1, 8:00-11:00, Trimestre II)" },
+  { fecha: "2027-06-03", titulo: "Visita de seguimiento del PIC a Amado Nervo (Turno 1, 8:00-11:00, Trimestre III)" },
+  // Días conmemorativos asignados directamente a Amado Nervo (Agenda Técnico-Pedagógica Zona 052)
+  { fecha: "2027-05-20", titulo: "Día Mundial de las Abejas (Amado Nervo)" },
+  { fecha: "2027-05-22", titulo: "Día Mundial de la Biodiversidad (Amado Nervo)" },
+  // Día Naranja: Acción por la No Violencia contra las Mujeres y Niñas (observancia mensual de zona, día 25)
+  { fecha: "2026-09-25", titulo: "Día Naranja: Acción por la No Violencia contra las Mujeres y Niñas" },
+  { fecha: "2026-10-25", titulo: "Día Naranja: Acción por la No Violencia contra las Mujeres y Niñas" },
+  { fecha: "2026-11-25", titulo: "Día Naranja: Acción por la No Violencia contra las Mujeres y Niñas" },
+  { fecha: "2027-01-25", titulo: "Día Naranja: Acción por la No Violencia contra las Mujeres y Niñas" },
+  { fecha: "2027-02-25", titulo: "Día Naranja: Acción por la No Violencia contra las Mujeres y Niñas" },
+  { fecha: "2027-03-25", titulo: "Día Naranja: Acción por la No Violencia contra las Mujeres y Niñas" },
+  { fecha: "2027-04-25", titulo: "Día Naranja: Acción por la No Violencia contra las Mujeres y Niñas" },
+  { fecha: "2027-05-25", titulo: "Día Naranja: Acción por la No Violencia contra las Mujeres y Niñas" },
+  { fecha: "2027-06-25", titulo: "Día Naranja: Acción por la No Violencia contra las Mujeres y Niñas" },
 ].map((e) => ({ ...e, tipo: "oficial" }));
 
 function generarCuadriculaMes(anio, mesIdx) {
@@ -1876,6 +1911,48 @@ function generarCuadriculaMes(anio, mesIdx) {
   for (let d = 1; d <= diasEnMes; d++) celdas.push(d);
   while (celdas.length % 7 !== 0) celdas.push(null);
   return celdas;
+}
+
+// Un solo emoji por evento, elegido por palabras clave en el título, para que el
+// calendario se vea más alegre sin perder formalidad (solo un ícono, no decoración
+// de más). Si nada coincide, cae en un genérico según si es del calendario oficial
+// SEP (📌) o un evento propio de la escuela (⭐).
+function emojiParaEvento(titulo, tipo) {
+  const t = (titulo || "").toLowerCase();
+  const incluye = (...palabras) => palabras.some((p) => t.includes(p));
+  if (incluye("vacacion")) return "🏖️";
+  if (incluye("suspensi", "no laborable")) return "🚫";
+  if (incluye("regreso a clases")) return "🏫";
+  if (incluye("inicio de clases", "inician clases")) return "🏫";
+  if (incluye("fin de clases")) return "🎓";
+  if (incluye("simulacro")) return "🚨";
+  if (incluye("cte", "consejo técnico", "consejo tecnico")) return "📋";
+  if (incluye("juegos deportivo", "deportiv", "atletismo", "fútbol", "futbol", "béisbol", "beisbol", "baloncesto", "voleibol", "ajedrez")) return "⚽";
+  if (incluye("coro", "canto", "música", "musica")) return "🎵";
+  if (incluye("lectura", "maratón", "maraton", "libro")) return "📚";
+  if (incluye("escolta", "guardia", "bandera", "patria")) return "🇲🇽";
+  if (incluye("convivencia", "paz", "adicci")) return "🤝";
+  if (incluye("día naranja", "dia naranja", "violencia")) return "🧡";
+  if (incluye("día del niño", "dia del nino")) return "🎈";
+  if (incluye("día de las madres", "dia de las madres")) return "💐";
+  if (incluye("día del maestro", "dia del maestro", "docente")) return "🍎";
+  if (incluye("cooperación", "cooperacion", "pago", "vence")) return "💰";
+  if (incluye("pic", "visita")) return "🔎";
+  if (incluye("examen", "diagnóstico", "diagnostico")) return "📝";
+  if (incluye(" eia", "eia ", "eia:")) return "🧩";
+  if (incluye("abeja")) return "🐝";
+  if (incluye("biodiversidad", "medio ambiente")) return "🌱";
+  if (incluye("amado nervo", "natalicio")) return "🖋️";
+  if (incluye("independencia")) return "🎆";
+  if (incluye("muertos")) return "💀";
+  if (incluye("navidad")) return "🎄";
+  if (incluye("año nuevo", "ano nuevo", "reyes")) return "🎉";
+  if (incluye("constitución", "constitucion", "revolución", "revolucion", "batalla de puebla", "juárez", "juarez")) return "🎉";
+  if (incluye("preinscripci", "inscripci")) return "🖊️";
+  if (incluye("reunión", "reunion", "asamblea", "junta")) return "🗣️";
+  if (incluye("confirmar")) return "⚠️";
+  if (incluye("alfabetiz")) return "🔤";
+  return tipo === "oficial" ? "📌" : "⭐";
 }
 
 function Calendario({ eventos, setEventos, rolActual, onStamp }) {
@@ -1949,19 +2026,20 @@ function Calendario({ eventos, setEventos, rolActual, onStamp }) {
     : todosDelMes;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex justify-center" style={{ width: "100vw", marginLeft: "calc(50% - 50vw)", padding: "0 0.5rem" }}>
+    <div className="flex flex-col gap-4" style={{ width: "100%", maxWidth: "640px" }}>
       <div className="card">
         <div className="flex items-center justify-between mb-3">
           <button onClick={() => cambiarMes(-1)} className="btn-icono" style={{ fontSize: "1.3rem", fontWeight: 700 }}>‹</button>
-          <div className="font-display" style={{ fontWeight: 800, fontSize: "1.15rem", color: "var(--azul-profundo)" }}>{MESES[mesIdx]} {anio}</div>
+          <div className="font-display" style={{ fontWeight: 800, fontSize: "1.4rem", color: "var(--azul-profundo)" }}>{MESES[mesIdx]} {anio}</div>
           <button onClick={() => cambiarMes(1)} className="btn-icono" style={{ fontSize: "1.3rem", fontWeight: 700 }}>›</button>
         </div>
-        <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+        <div className="grid grid-cols-7 gap-2 mb-2">
           {DIAS_SEMANA.map((d, i) => (
-            <div key={i} className="font-mono text-center" style={{ fontSize: "0.62rem", opacity: 0.5, fontWeight: 700 }}>{d}</div>
+            <div key={i} className="font-mono text-center" style={{ fontSize: "0.7rem", opacity: 0.5, fontWeight: 700 }}>{d}</div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1.5">
+        <div className="grid grid-cols-7 gap-2">
           {celdas.map((d, i) => {
             if (d === null) return <div key={i} />;
             const fechaCelda = `${prefijoMes}-${String(d).padStart(2, "0")}`;
@@ -1974,22 +2052,26 @@ function Calendario({ eventos, setEventos, rolActual, onStamp }) {
             if (hayOficial && hayEscuela) fondo = "linear-gradient(135deg, rgba(245,179,67,0.28) 50%, rgba(122,22,19,0.14) 50%)";
             else if (hayOficial) fondo = "rgba(245,179,67,0.28)";
             else if (hayEscuela) fondo = "rgba(122,22,19,0.1)";
+            const emojiDelDia = marcas.length > 0 ? emojiParaEvento(marcas[0].titulo, marcas[0].tipo) : null;
             return (
               <button key={i} onClick={() => clicDia(d)} className="dia-celda-grande" style={{
                 background: fondo,
                 border: esSeleccionado ? "2px solid var(--azul-profundo)" : esHoy ? "2px solid var(--azul)" : "1.5px solid var(--linea)",
               }}>
-                <span className="font-display" style={{ fontSize: "0.95rem", fontWeight: esHoy || esSeleccionado ? 800 : 600, color: "var(--tinta)" }}>{d}</span>
+                <span className="flex items-center gap-1">
+                  <span className="font-display" style={{ fontSize: "1.15rem", fontWeight: esHoy || esSeleccionado ? 800 : 600, color: "var(--tinta)" }}>{d}</span>
+                  {emojiDelDia && <span style={{ fontSize: "0.95rem", lineHeight: 1 }} aria-hidden="true">{emojiDelDia}</span>}
+                </span>
                 {marcas.length > 0 && (
-                  <span className="font-mono" style={{ fontSize: "0.52rem", opacity: 0.6, lineHeight: 1.1, textAlign: "center", padding: "0 2px" }}>
-                    {marcas.length === 1 ? marcas[0].titulo.slice(0, 14) : `${marcas.length} eventos`}
+                  <span className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.65, lineHeight: 1.15, textAlign: "center", padding: "0 2px" }}>
+                    {marcas.length === 1 ? marcas[0].titulo.slice(0, 16) : `${marcas.length} eventos`}
                   </span>
                 )}
               </button>
             );
           })}
         </div>
-        <div className="flex gap-3 mt-3 font-mono" style={{ fontSize: "0.58rem", opacity: 0.55 }}>
+        <div className="flex gap-3 mt-3 font-mono" style={{ fontSize: "0.62rem", opacity: 0.55 }}>
           <span className="flex items-center gap-1"><span style={{ width: "9px", height: "9px", borderRadius: "3px", background: "rgba(245,179,67,0.55)", display: "inline-block" }} /> Calendario oficial SEP</span>
           <span className="flex items-center gap-1"><span style={{ width: "9px", height: "9px", borderRadius: "3px", background: "rgba(122,22,19,0.4)", display: "inline-block" }} /> Eventos de la escuela</span>
         </div>
@@ -2025,9 +2107,12 @@ function Calendario({ eventos, setEventos, rolActual, onStamp }) {
         {listaAMostrar.length === 0 && <p className="text-sm text-center py-4" style={{ opacity: 0.5 }}>Sin eventos {diaSeleccionado ? "ese día" : "este mes"}.</p>}
         {listaAMostrar.map((e) => (
           <div key={e.id || e.fecha + e.titulo} className={`card flex items-center justify-between ${e.fecha < hoyStr ? "pasado" : ""}`}>
-            <div>
-              <div className="text-sm font-medium">{e.titulo}</div>
-              <div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.5 }}>{fechaBonita(e.fecha)}{e.tipo === "oficial" ? " · SEP" : ""}</div>
+            <div className="flex items-start gap-2">
+              <span style={{ fontSize: "1.15rem", lineHeight: 1.3 }} aria-hidden="true">{emojiParaEvento(e.titulo, e.tipo)}</span>
+              <div>
+                <div className="text-sm font-medium">{e.titulo}</div>
+                <div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.5 }}>{fechaBonita(e.fecha)}{e.tipo === "oficial" ? " · SEP" : ""}</div>
+              </div>
             </div>
             {e.tipo !== "oficial" && rolActual === "directora" && (
               <div className="flex items-center gap-1 shrink-0">
@@ -2038,6 +2123,7 @@ function Calendario({ eventos, setEventos, rolActual, onStamp }) {
           </div>
         ))}
       </div>
+    </div>
     </div>
   );
 }
@@ -2101,66 +2187,247 @@ function CTE({ sesiones, setSesiones, usuario, onStamp }) {
 /* ---------- Bitácora de asuntos especiales ---------- */
 function Bitacora({ alumnos, casos, setCasos, gradosPermitidos, usuario, onStamp }) {
   const alumnosVisibles = alumnos.filter((a) => gradosPermitidos.includes(a.grado)).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
-  const [form, setForm] = useState({ alumnoId: "", tipo: TIPOS_ASUNTO[0], descripcion: "", estatus: "Abierto" });
+  const formVacio = { alumnoId: "", instrumento: INSTRUMENTOS_CONVIVENCIA[0], tipo: TIPOS_ASUNTO[0], nivel: NIVEL_INCIDENCIA[0], fase: FASE_RUTA_ACTUACION[0], descripcion: "", acuerdos: "", notificoFamilia: false, expediente: false, estatus: "Abierto" };
+  const [form, setForm] = useState(formVacio);
+  const [editandoId, setEditandoId] = useState(null);
+  const [filtroGrado, setFiltroGrado] = useState("todos");
+  const [filtroNivel, setFiltroNivel] = useState("todos");
+  const [filtroEstatus, setFiltroEstatus] = useState("todos");
+  const [verAlumnoId, setVerAlumnoId] = useState("");
+  const [imprimiendo, setImprimiendo] = useState(null);
 
   const guardar = () => {
     if (!form.alumnoId || !form.descripcion.trim()) return;
-    const nuevo = { id: uid(), ...form, fecha: hoyISO(), registradoPor: usuario };
-    setCasos([nuevo, ...casos]);
-    setForm({ alumnoId: "", tipo: TIPOS_ASUNTO[0], descripcion: "", estatus: "Abierto" });
-    onStamp("Caso registrado");
+    if (editandoId) {
+      setCasos(casos.map((c) => (c.id === editandoId ? { ...c, ...form } : c)));
+      onStamp("Actualizado");
+    } else {
+      const nuevo = { id: uid(), ...form, fecha: hoyISO(), registradoPor: usuario };
+      setCasos([nuevo, ...casos]);
+      onStamp("Registrado");
+    }
+    setForm(formVacio);
+    setEditandoId(null);
+  };
+
+  const iniciarEdicion = (c) => {
+    setForm({
+      alumnoId: c.alumnoId,
+      instrumento: c.instrumento || INSTRUMENTOS_CONVIVENCIA[0],
+      tipo: c.tipo || TIPOS_ASUNTO[0],
+      nivel: c.nivel || NIVEL_INCIDENCIA[0],
+      fase: c.fase || FASE_RUTA_ACTUACION[0],
+      descripcion: c.descripcion || "",
+      acuerdos: c.acuerdos || "",
+      notificoFamilia: !!c.notificoFamilia,
+      expediente: !!c.expediente,
+      estatus: c.estatus || "Abierto",
+    });
+    setEditandoId(c.id);
+  };
+
+  const cancelarEdicion = () => { setForm(formVacio); setEditandoId(null); };
+
+  const eliminar = (id) => {
+    setCasos(casos.filter((c) => c.id !== id));
+    if (editandoId === id) cancelarEdicion();
   };
 
   const cambiarEstatus = (id, estatus) => {
     setCasos(casos.map((c) => (c.id === id ? { ...c, estatus } : c)));
   };
 
-  const eliminar = (id) => setCasos(casos.filter((c) => c.id !== id));
-
-  const casosVisibles = casos
-    .filter((c) => alumnosVisibles.some((a) => a.id === c.alumnoId))
-    .sort((a, b) => b.fecha.localeCompare(a.fecha));
-
   const nombrePorId = (id) => nombreAlumno(alumnos.find((a) => a.id === id)) || "Alumno eliminado";
 
+  let casosVisibles = casos.filter((c) => alumnosVisibles.some((a) => a.id === c.alumnoId));
+  if (filtroGrado !== "todos") casosVisibles = casosVisibles.filter((c) => { const a = alumnos.find((x) => x.id === c.alumnoId); return a && a.grado === filtroGrado; });
+  if (filtroNivel !== "todos") casosVisibles = casosVisibles.filter((c) => (c.nivel || NIVEL_INCIDENCIA[0]) === filtroNivel);
+  if (filtroEstatus !== "todos") casosVisibles = casosVisibles.filter((c) => (c.estatus || "Abierto") === filtroEstatus);
+  casosVisibles = casosVisibles.sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+  const historialAlumno = verAlumnoId
+    ? casos.filter((c) => c.alumnoId === verAlumnoId).sort((a, b) => b.fecha.localeCompare(a.fecha))
+    : [];
+
+  const colorNivel = (n) => (n === "Muy grave" ? "var(--rojo)" : n === "Grave" ? "#9c6a0f" : "var(--verde)");
+  const fondoNivel = (n) => (n === "Muy grave" ? "rgba(193,68,45,0.14)" : n === "Grave" ? "rgba(242,169,59,0.18)" : "rgba(75,139,59,0.14)");
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="card" style={{ borderColor: "var(--rojo)" }}>
-        <div className="flex items-center gap-2 mb-1">
-          <AlertCircle size={16} color="var(--rojo)" />
-          <span className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Nuevo asunto especial</span>
+    <>
+      <div className="flex flex-col gap-4">
+        <div className="card" style={{ borderColor: "var(--rojo)" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <ShieldAlert size={16} color="var(--rojo)" />
+            <span className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>{editandoId ? "Editar registro" : "Nueva incidencia de convivencia"}</span>
+          </div>
+          <p className="text-sm mb-3" style={{ opacity: 0.6 }}>
+            Bitácora de incidencias conforme a la Ruta de Actuación del Manual para la Sana Convivencia Escolar (Nueva Escuela Mexicana). Uso interno del personal.
+          </p>
+          <div className="flex flex-col gap-2">
+            <select className="campo" value={form.alumnoId} onChange={(e) => setForm({ ...form, alumnoId: e.target.value })}>
+              <option value="">Selecciona alumno…</option>
+              {alumnosVisibles.map((a) => <option key={a.id} value={a.id}>{nombreAlumno(a)} · {a.grado}°</option>)}
+            </select>
+
+            <div>
+              <label className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.55 }}>INSTRUMENTO (PEMC)</label>
+              <div className="flex gap-1.5 flex-wrap mt-1">
+                {INSTRUMENTOS_CONVIVENCIA.map((i) => (
+                  <button key={i} type="button" onClick={() => setForm({ ...form, instrumento: i })} className={`chip-grado ${form.instrumento === i ? "activo" : ""}`} style={{ fontSize: "0.7rem", padding: "0.32rem 0.6rem" }}>{i}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <div style={{ flex: 1, minWidth: "9rem" }}>
+                <label className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.55 }}>NIVEL DE LA FALTA</label>
+                <select className="campo mt-1" value={form.nivel} onChange={(e) => setForm({ ...form, nivel: e.target.value })}>
+                  {NIVEL_INCIDENCIA.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: "9rem" }}>
+                <label className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.55 }}>TIPO DE ASUNTO</label>
+                <select className="campo mt-1" value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
+                  {TIPOS_ASUNTO.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.55 }}>FASE DE LA RUTA DE ACTUACIÓN</label>
+              <select className="campo mt-1" value={form.fase} onChange={(e) => setForm({ ...form, fase: e.target.value })}>
+                {FASE_RUTA_ACTUACION.map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+
+            <textarea className="campo" rows={3} placeholder="Descripción de los hechos" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
+            <textarea className="campo" rows={2} placeholder="Acuerdos / compromisos" value={form.acuerdos} onChange={(e) => setForm({ ...form, acuerdos: e.target.value })} />
+
+            <label className="flex items-center gap-2 text-sm" style={{ cursor: "pointer" }}>
+              <input type="checkbox" checked={form.notificoFamilia} onChange={(e) => setForm({ ...form, notificoFamilia: e.target.checked })} />
+              ¿Se notificó a la familia?
+            </label>
+            <label className="flex items-center gap-2 text-sm" style={{ cursor: "pointer" }}>
+              <input type="checkbox" checked={form.expediente} onChange={(e) => setForm({ ...form, expediente: e.target.checked })} />
+              ¿Se integró al expediente del alumno (Anexo 3/4)?
+            </label>
+
+            <div>
+              <label className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.55 }}>ESTADO DEL CASO</label>
+              <select className="campo mt-1" value={form.estatus} onChange={(e) => setForm({ ...form, estatus: e.target.value })}>
+                {ESTATUS_CASO.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={guardar} className="btn-primario" style={{ flex: 1 }}>
+                {editandoId ? <Check size={16} /> : <Plus size={16} />} {editandoId ? "Guardar cambios" : "Registrar"}
+              </button>
+              {editandoId && <button onClick={cancelarEdicion} className="btn-secundario">Cancelar</button>}
+            </div>
+          </div>
         </div>
-        <p className="text-sm mb-3" style={{ opacity: 0.6 }}>Uso interno del personal: conducta, salud, asistencia u otro seguimiento particular de un alumno.</p>
-        <div className="flex flex-col gap-2">
-          <select className="campo" value={form.alumnoId} onChange={(e) => setForm({ ...form, alumnoId: e.target.value })}>
-            <option value="">Selecciona alumno…</option>
+
+        <DivisorTalavera />
+
+        <div className="card">
+          <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Ficha de convivencia por alumno</div>
+          <select className="campo" value={verAlumnoId} onChange={(e) => setVerAlumnoId(e.target.value)}>
+            <option value="">Ver historial de un alumno…</option>
             {alumnosVisibles.map((a) => <option key={a.id} value={a.id}>{nombreAlumno(a)} · {a.grado}°</option>)}
           </select>
-          <select className="campo" value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
-            {TIPOS_ASUNTO.map((t) => <option key={t} value={t}>{t}</option>)}
+          {verAlumnoId && (
+            <div className="flex flex-col gap-2 mt-2">
+              {historialAlumno.length === 0 && <p className="text-sm" style={{ opacity: 0.55 }}>Sin registros para este alumno.</p>}
+              {historialAlumno.map((c) => (
+                <div key={c.id} className="text-sm" style={{ borderLeft: `3px solid ${colorNivel(c.nivel || NIVEL_INCIDENCIA[0])}`, paddingLeft: "0.6rem" }}>
+                  <span className="font-mono" style={{ fontSize: "0.62rem", opacity: 0.55 }}>{fechaBonita(c.fecha)} · {c.nivel || NIVEL_INCIDENCIA[0]} · {c.estatus || "Abierto"}</span>
+                  <div>{c.descripcion}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <select className="campo" style={{ maxWidth: "8.5rem" }} value={filtroGrado} onChange={(e) => setFiltroGrado(e.target.value)}>
+            <option value="todos">Todos los grados</option>
+            {gradosPermitidos.map((g) => <option key={g} value={g}>{g}° grado</option>)}
           </select>
-          <textarea className="campo" rows={3} placeholder="Descripción del asunto y seguimiento" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
-          <button onClick={guardar} className="btn-primario"><Plus size={16} /> Registrar en bitácora</button>
+          <select className="campo" style={{ maxWidth: "9.5rem" }} value={filtroNivel} onChange={(e) => setFiltroNivel(e.target.value)}>
+            <option value="todos">Todos los niveles</option>
+            {NIVEL_INCIDENCIA.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <select className="campo" style={{ maxWidth: "9.5rem" }} value={filtroEstatus} onChange={(e) => setFiltroEstatus(e.target.value)}>
+            <option value="todos">Todos los estados</option>
+            {ESTATUS_CASO.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {casosVisibles.length === 0 && <p className="text-sm text-center py-6" style={{ opacity: 0.55 }}>No hay incidencias registradas.</p>}
+          {casosVisibles.map((c) => (
+            <div key={c.id} className="card">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{nombrePorId(c.alumnoId)}</div>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                    <span className="pastilla" style={{ background: fondoNivel(c.nivel || NIVEL_INCIDENCIA[0]), color: colorNivel(c.nivel || NIVEL_INCIDENCIA[0]) }}>{c.nivel || NIVEL_INCIDENCIA[0]}</span>
+                    <span className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.55 }}>{(c.instrumento || INSTRUMENTOS_CONVIVENCIA[0]).toUpperCase()} · {fechaBonita(c.fecha)} · {c.registradoPor}</span>
+                  </div>
+                  <p className="text-sm mt-1.5">{c.descripcion}</p>
+                  <select className="campo mt-2" style={{ maxWidth: "10rem", fontSize: "0.78rem" }} value={c.estatus || "Abierto"} onChange={(e) => cambiarEstatus(c.id, e.target.value)}>
+                    {ESTATUS_CASO.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1 shrink-0">
+                  <button onClick={() => { setImprimiendo(c); setTimeout(() => window.print(), 150); }} className="btn-icono" style={{ color: "var(--azul)" }} title="Ver / imprimir"><Printer size={14} /></button>
+                  <button onClick={() => iniciarEdicion(c)} className="btn-icono" style={{ color: "var(--azul)" }} title="Editar"><Pencil size={14} /></button>
+                  <button onClick={() => eliminar(c.id)} className="btn-icono" title="Borrar"><Trash2 size={14} /></button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <DivisorTalavera />
+      <IncidenciaImprimible caso={imprimiendo} nombreDelAlumno={imprimiendo ? nombrePorId(imprimiendo.alumnoId) : ""} />
+    </>
+  );
+}
 
-      <div className="flex flex-col gap-3">
-        {casosVisibles.length === 0 && <p className="text-sm text-center py-6" style={{ opacity: 0.55 }}>No hay asuntos especiales registrados.</p>}
-        {casosVisibles.map((c) => (
-          <div key={c.id} className="card">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
-                <div className="font-medium text-sm">{nombrePorId(c.alumnoId)}</div>
-                <div className="font-mono" style={{ fontSize: "0.62rem", opacity: 0.55 }}>{c.tipo.toUpperCase()} · {fechaBonita(c.fecha)} · {c.registradoPor}</div>
-                <p className="text-sm mt-1.5">{c.descripcion}</p>
-                <select className="campo mt-2" style={{ maxWidth: "10rem", fontSize: "0.78rem" }} value={c.estatus} onChange={(e) => cambiarEstatus(c.id, e.target.value)}>
-                  {ESTATUS_CASO.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <button onClick={() => eliminar(c.id)} className="btn-icono shrink-0"><Trash2 size={14} /></button>
-            </div>
+/* ---------- vista de impresión de un registro de la Bitácora de Incidencias ---------- */
+function IncidenciaImprimible({ caso, nombreDelAlumno }) {
+  if (!caso) return null;
+  return (
+    <div className="solo-impresion">
+      <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "1rem" }}>
+        <img src={ESCUDO_ESCUELA} alt="" style={{ width: "48px" }} />
+        <div>
+          <div style={{ fontWeight: 800, fontSize: "1rem" }}>Telesecundaria Estatal "Amado Nervo"</div>
+          <div style={{ fontSize: "0.75rem" }}>Xoyatla, Tepeojuma, Puebla · Registro de convivencia escolar</div>
+        </div>
+      </div>
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.8rem" }}>{caso.instrumento || INSTRUMENTOS_CONVIVENCIA[0]}</div>
+      <table style={{ width: "100%", fontSize: "0.82rem", marginBottom: "1rem", borderCollapse: "collapse" }}>
+        <tbody>
+          <tr><td style={{ padding: "0.25rem 0", width: "11rem", fontWeight: 700, verticalAlign: "top" }}>Alumno(a):</td><td style={{ padding: "0.25rem 0" }}>{nombreDelAlumno}</td></tr>
+          <tr><td style={{ padding: "0.25rem 0", fontWeight: 700, verticalAlign: "top" }}>Fecha:</td><td style={{ padding: "0.25rem 0" }}>{fechaBonita(caso.fecha)}</td></tr>
+          <tr><td style={{ padding: "0.25rem 0", fontWeight: 700, verticalAlign: "top" }}>Tipo de asunto:</td><td style={{ padding: "0.25rem 0" }}>{caso.tipo}</td></tr>
+          <tr><td style={{ padding: "0.25rem 0", fontWeight: 700, verticalAlign: "top" }}>Nivel de la falta:</td><td style={{ padding: "0.25rem 0" }}>{caso.nivel || NIVEL_INCIDENCIA[0]}</td></tr>
+          <tr><td style={{ padding: "0.25rem 0", fontWeight: 700, verticalAlign: "top" }}>Fase de la Ruta de Actuación:</td><td style={{ padding: "0.25rem 0" }}>{caso.fase || FASE_RUTA_ACTUACION[0]}</td></tr>
+          <tr><td style={{ padding: "0.25rem 0", fontWeight: 700, verticalAlign: "top" }}>Descripción de los hechos:</td><td style={{ padding: "0.25rem 0" }}>{caso.descripcion}</td></tr>
+          <tr><td style={{ padding: "0.25rem 0", fontWeight: 700, verticalAlign: "top" }}>Acuerdos:</td><td style={{ padding: "0.25rem 0" }}>{caso.acuerdos || "—"}</td></tr>
+          <tr><td style={{ padding: "0.25rem 0", fontWeight: 700, verticalAlign: "top" }}>¿Se notificó a la familia?</td><td style={{ padding: "0.25rem 0" }}>{caso.notificoFamilia ? "Sí" : "No"}</td></tr>
+          <tr><td style={{ padding: "0.25rem 0", fontWeight: 700, verticalAlign: "top" }}>¿Integrado al expediente (Anexo 3/4)?</td><td style={{ padding: "0.25rem 0" }}>{caso.expediente ? "Sí" : "No"}</td></tr>
+          <tr><td style={{ padding: "0.25rem 0", fontWeight: 700, verticalAlign: "top" }}>Estado del caso:</td><td style={{ padding: "0.25rem 0" }}>{caso.estatus || "Abierto"}</td></tr>
+          <tr><td style={{ padding: "0.25rem 0", fontWeight: 700, verticalAlign: "top" }}>Registró:</td><td style={{ padding: "0.25rem 0" }}>{caso.registradoPor}</td></tr>
+        </tbody>
+      </table>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2.5rem", marginTop: "3rem" }}>
+        {["Dirección", "Docente", "Alumno(a)", "Madre/Padre/Tutor(a)"].map((f) => (
+          <div key={f} style={{ textAlign: "center" }}>
+            <div style={{ borderTop: "1px solid #000", paddingTop: "0.3rem", fontSize: "0.75rem" }}>{f}</div>
           </div>
         ))}
       </div>
@@ -2210,10 +2477,10 @@ function construirReporteTexto({ alumnos, asistencia, calificaciones, avisos, ev
   L.push("== SESIONES CTE ==");
   sesiones.forEach((s) => L.push(`Sesión ${s.numero} | ${s.fecha} | Asuntos: ${s.asuntos} | Acuerdos: ${s.acuerdos} | Registró: ${s.registradoPor}`));
   L.push("");
-  L.push("== BITÁCORA DE ASUNTOS ESPECIALES ==");
+  L.push("== BITÁCORA DE INCIDENCIAS (CONVIVENCIA ESCOLAR) ==");
   casos.forEach((c) => {
     const nombre = nombreAlumno(alumnos.find((a) => a.id === c.alumnoId)) || "alumno eliminado";
-    L.push(`${c.fecha} | ${nombre} | ${c.tipo} | ${c.estatus} | ${c.descripcion} | Registró: ${c.registradoPor}`);
+    L.push(`${c.fecha} | ${nombre} | ${c.instrumento || "Registro en bitácora"} | ${c.tipo} | Nivel: ${c.nivel || "Leve"} | Fase: ${c.fase || "Detección"} | Estado: ${c.estatus} | ${c.descripcion} | Acuerdos: ${c.acuerdos || "—"} | Notificó a familia: ${c.notificoFamilia ? "Sí" : "No"} | Expediente: ${c.expediente ? "Sí" : "No"} | Registró: ${c.registradoPor}`);
   });
   return L.join("\n");
 }
@@ -2298,8 +2565,21 @@ function construirLibroExcel({ alumnos, asistencia, calificaciones, avisos, even
   ), "CTE");
 
   XLSX.utils.book_append_sheet(wb, hojaComoTexto(
-    casos.map((c) => ({ Fecha: c.fecha, Alumno: nombreAlumno(alumnos.find((a) => a.id === c.alumnoId)) || "eliminado", Tipo: c.tipo, Estatus: c.estatus, Descripcion: c.descripcion, RegistroPor: c.registradoPor })),
-    ["Fecha", "Alumno", "Tipo", "Estatus", "Descripcion", "RegistroPor"]
+    casos.map((c) => ({
+      Fecha: c.fecha,
+      Alumno: nombreAlumno(alumnos.find((a) => a.id === c.alumnoId)) || "eliminado",
+      Instrumento: c.instrumento || "Registro en bitácora",
+      Tipo: c.tipo,
+      Nivel: c.nivel || "Leve",
+      Fase: c.fase || "Detección",
+      Estatus: c.estatus,
+      Descripcion: c.descripcion,
+      Acuerdos: c.acuerdos || "",
+      NotificoFamilia: c.notificoFamilia ? "Sí" : "No",
+      Expediente: c.expediente ? "Sí" : "No",
+      RegistroPor: c.registradoPor,
+    })),
+    ["Fecha", "Alumno", "Instrumento", "Tipo", "Nivel", "Fase", "Estatus", "Descripcion", "Acuerdos", "NotificoFamilia", "Expediente", "RegistroPor"]
   ), "Bitacora");
 
   return wb;
@@ -2744,61 +3024,46 @@ function ProgramaAnaliticoPIC({ onStamp }) {
   );
 }
 
-function ReglamentoIncidencias({ reglamento, setReglamento, rolActual, onStamp, alumnos, casos, setCasos, gradosPermitidos, usuario }) {
-  const [subTab, setSubTab] = useState("reglamento");
+function ReglamentoIncidencias({ reglamento, setReglamento, rolActual, onStamp }) {
   const [texto, setTexto] = useState(reglamento);
   useEffect(() => setTexto(reglamento), [reglamento]);
   const guardar = () => { setReglamento(texto); onStamp("Guardado"); };
 
-  const SUBTABS_REG = [
-    { id: "reglamento", label: "Reglamento" },
-    { id: "incidencias", label: "Incidencias (Bitácora)" },
-  ];
-
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-2 flex-wrap">
-        {SUBTABS_REG.map((t) => (
-          <button key={t.id} onClick={() => setSubTab(t.id)} className={`chip-grado ${subTab === t.id ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>
-            {t.label}
-          </button>
-        ))}
+      <a href={PROYECTO_REGLAMENTO_ONLINE.url} target="_blank" rel="noopener noreferrer" className="card flex items-start gap-2.5">
+        <ExternalLink size={16} color="var(--verde)" style={{ marginTop: "2px", flexShrink: 0 }} />
+        <div className="flex-1">
+          <div className="text-sm font-medium">{PROYECTO_REGLAMENTO_ONLINE.titulo}</div>
+          <div className="text-sm" style={{ opacity: 0.6 }}>{PROYECTO_REGLAMENTO_ONLINE.descripcion}</div>
+        </div>
+        <ExternalLink size={14} style={{ opacity: 0.4, marginTop: "3px", flexShrink: 0 }} />
+      </a>
+
+      <div className="card">
+        <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Reglamento y obligaciones del alumno (texto propio)</div>
+        <p className="text-sm mb-3" style={{ opacity: 0.6 }}>
+          Texto propio de la escuela para dar a conocer el reglamento a familias y alumnos. Basa su contenido en el Manual para la Convivencia Escolar de SEP Puebla (liga de arriba).
+        </p>
+        {rolActual === "directora" ? (
+          <div className="flex flex-col gap-2">
+            <textarea className="campo" rows={10} value={texto} onChange={(e) => setTexto(e.target.value)}
+              placeholder={"Ejemplo:\n1. Puntualidad y asistencia...\n2. Respeto entre compañeros...\n3. Cuidado del material escolar..."} />
+            <button onClick={guardar} className="btn-primario"><Check size={16} /> Guardar reglamento</button>
+          </div>
+        ) : texto ? (
+          <p className="text-sm whitespace-pre-wrap">{texto}</p>
+        ) : (
+          <p className="text-sm" style={{ opacity: 0.55 }}>La directora aún no ha publicado el reglamento.</p>
+        )}
       </div>
 
-      {subTab === "reglamento" && (
-        <div className="flex flex-col gap-4">
-          <a href={PROYECTO_REGLAMENTO_ONLINE.url} target="_blank" rel="noopener noreferrer" className="card flex items-start gap-2.5">
-            <ExternalLink size={16} color="var(--verde)" style={{ marginTop: "2px", flexShrink: 0 }} />
-            <div className="flex-1">
-              <div className="text-sm font-medium">{PROYECTO_REGLAMENTO_ONLINE.titulo}</div>
-              <div className="text-sm" style={{ opacity: 0.6 }}>{PROYECTO_REGLAMENTO_ONLINE.descripcion}</div>
-            </div>
-            <ExternalLink size={14} style={{ opacity: 0.4, marginTop: "3px", flexShrink: 0 }} />
-          </a>
-
-          <div className="card">
-            <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Reglamento y obligaciones del alumno (texto propio)</div>
-            <p className="text-sm mb-3" style={{ opacity: 0.6 }}>
-              Texto propio de la escuela para dar a conocer el reglamento a familias y alumnos. Basa su contenido en el Manual para la Convivencia Escolar de SEP Puebla (liga de arriba).
-            </p>
-            {rolActual === "directora" ? (
-              <div className="flex flex-col gap-2">
-                <textarea className="campo" rows={10} value={texto} onChange={(e) => setTexto(e.target.value)}
-                  placeholder={"Ejemplo:\n1. Puntualidad y asistencia...\n2. Respeto entre compañeros...\n3. Cuidado del material escolar..."} />
-                <button onClick={guardar} className="btn-primario"><Check size={16} /> Guardar reglamento</button>
-              </div>
-            ) : texto ? (
-              <p className="text-sm whitespace-pre-wrap">{texto}</p>
-            ) : (
-              <p className="text-sm" style={{ opacity: 0.55 }}>La directora aún no ha publicado el reglamento.</p>
-            )}
-          </div>
+      <div className="card flex items-start gap-2.5" style={{ background: "rgba(122,22,19,0.05)" }}>
+        <ShieldAlert size={16} color="var(--rojo)" style={{ marginTop: "2px", flexShrink: 0 }} />
+        <div className="text-sm">
+          La <strong>Bitácora de Incidencias</strong> (registro de faltas a la convivencia por alumno) ahora vive en <strong>Alumnos ▾ → Incidencias</strong>, junto con el resto de la información de cada alumno.
         </div>
-      )}
-
-      {subTab === "incidencias" && (
-        <Bitacora alumnos={alumnos} casos={casos} setCasos={setCasos} gradosPermitidos={gradosPermitidos} usuario={usuario} onStamp={onStamp} />
-      )}
+      </div>
     </div>
   );
 }
@@ -4250,7 +4515,7 @@ function App() {
       .solo-impresion { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 1rem; }
     }
     .dia-celda { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 2.5rem; padding-top: 0.35rem; border-radius: 8px; border: 1.5px solid transparent; }
-    .dia-celda-grande { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; min-height: 3.4rem; padding: 0.3rem 0.15rem; border-radius: 10px; cursor: pointer; font-family: inherit; transition: transform 0.08s; }
+    .dia-celda-grande { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 3px; min-height: 4.4rem; padding: 0.4rem 0.2rem; border-radius: 10px; cursor: pointer; font-family: inherit; transition: transform 0.08s; }
     .dia-celda-grande:hover { transform: scale(1.04); }
     .dia-celda-grande:focus-visible { outline: 2px solid var(--azul); outline-offset: 1px; }
     @media (prefers-reduced-motion: reduce) { .sello { animation: none; opacity: 1; } .gafete:hover { transform: none; } }
@@ -4296,6 +4561,7 @@ function App() {
     { id: "inscripciones", label: "Inscripciones", icon: Users },
     { id: "directorio", label: "Directorio", icon: Briefcase },
     { id: "calificaciones", label: "Calificaciones", icon: BookOpen },
+    { id: "incidencias", label: "Incidencias", icon: ShieldAlert },
     { id: "avisos", label: "Avisos", icon: Megaphone },
     { id: "calendario", label: "Calendario", icon: CalendarDays },
     { id: "cte", label: "CTE", icon: Landmark },
@@ -4307,7 +4573,7 @@ function App() {
 
   const NAV_GROUPS = [
     { id: "inicio", tabs: ["inicio"] },
-    { id: "alumnos", label: "Alumnos", tabs: ["inscripciones", "directorio", "asistencia", "calificaciones"] },
+    { id: "alumnos", label: "Alumnos", tabs: ["inscripciones", "directorio", "asistencia", "calificaciones", "incidencias"] },
     { id: "diagnosticos", label: "Diagnósticos", tabs: ["diagnostico", "eia"] },
     { id: "comunicacion", label: "Comunicación", tabs: ["avisos", "calendario"] },
     { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "pic", "documentos"] },
@@ -4426,6 +4692,7 @@ function App() {
         {tab === "inscripciones" && <Inscripciones alumnos={alumnos} setAlumnos={setAlumnos} gradosPermitidos={gradosPermitidos} rol={rol} onStamp={fireStamp} />}
         {tab === "directorio" && <Directorio alumnos={alumnos} gradosPermitidos={gradosPermitidos} />}
         {tab === "calificaciones" && <Calificaciones alumnos={alumnos} calificaciones={calificaciones} setCalificaciones={setCalificaciones} gradosPermitidos={gradosPermitidos} onStamp={fireStamp} />}
+        {tab === "incidencias" && <Bitacora alumnos={alumnos} casos={bitacora} setCasos={setBitacora} gradosPermitidos={gradosPermitidos} usuario={usuario.nombre} onStamp={fireStamp} />}
         {tab === "avisos" && <Avisos avisos={avisos} setAvisos={setAvisos} usuario={usuario.nombre} rolActual={rol} onStamp={fireStamp} />}
         {tab === "calendario" && <Calendario eventos={eventos} setEventos={setEventos} rolActual={rol} onStamp={fireStamp} />}
         {tab === "cte" && <CTE sesiones={cteSesiones} setSesiones={setCteSesiones} usuario={usuario.nombre} onStamp={fireStamp} />}
@@ -4435,11 +4702,6 @@ function App() {
             setReglamento={setReglamento}
             rolActual={rol}
             onStamp={fireStamp}
-            alumnos={alumnos}
-            casos={bitacora}
-            setCasos={setBitacora}
-            gradosPermitidos={gradosPermitidos}
-            usuario={usuario.nombre}
           />
         )}
         {tab === "pic" && <ProgramaAnaliticoPIC onStamp={fireStamp} />}
