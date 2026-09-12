@@ -4091,6 +4091,7 @@ function App() {
   const [liga, setLigaState] = useState(obtenerLigaGuardada());
   const [rol, setRol] = useState(null);
   const [tab, setTab] = useState("inicio");
+  const [menuNavAbierto, setMenuNavAbierto] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [alumnos, setAlumnosState] = useState([]);
   const [asistencia, setAsistenciaState] = useState({});
@@ -4304,6 +4305,15 @@ function App() {
     { id: "recursos", label: "Recursos", icon: FileText },
   ];
 
+  const NAV_GROUPS = [
+    { id: "inicio", tabs: ["inicio"] },
+    { id: "alumnos", label: "Alumnos", tabs: ["inscripciones", "directorio", "asistencia", "calificaciones"] },
+    { id: "diagnosticos", label: "Diagnósticos", tabs: ["diagnostico", "eia"] },
+    { id: "comunicacion", label: "Comunicación", tabs: ["avisos", "calendario"] },
+    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "pic", "documentos"] },
+    { id: "recursos", tabs: ["recursos"] },
+  ];
+
   return (
     <div className="app-shell min-h-screen pb-10">
       <style>{estilos}</style>
@@ -4334,22 +4344,76 @@ function App() {
         </div>
       </header>
 
-      <nav className="flex overflow-x-auto px-3 pt-3 pb-2 gap-1" style={{ background: "var(--azul-profundo)" }}>
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          const activo = tab === t.id;
+      <nav className="flex flex-wrap px-3 pt-3 pb-2 gap-1" style={{ background: "var(--azul-profundo)" }}>
+        {NAV_GROUPS.map((grupo) => {
+          if (grupo.tabs.length === 1) {
+            const t = TABS.find((x) => x.id === grupo.tabs[0]);
+            const Icon = t.icon;
+            const activo = tab === t.id;
+            return (
+              <button key={grupo.id} onClick={() => { setTab(t.id); setMenuNavAbierto(null); }}
+                className="flex flex-col items-center gap-1 px-3 py-2 shrink-0"
+                style={{
+                  background: activo ? "var(--papel)" : "transparent",
+                  borderRadius: "12px 12px 0 0",
+                  color: activo ? "var(--azul-profundo)" : "rgba(255,255,255,0.75)",
+                  border: "none", cursor: "pointer",
+                }}>
+                <Icon size={16} />
+                <span className="font-mono" style={{ fontSize: "0.6rem", letterSpacing: "0.02em" }}>{t.label}</span>
+              </button>
+            );
+          }
+          const tabsDelGrupo = grupo.tabs.map((id) => TABS.find((x) => x.id === id)).filter(Boolean);
+          const activoGrupo = tabsDelGrupo.some((t) => t.id === tab);
+          const abierto = menuNavAbierto === grupo.id;
           return (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className="flex flex-col items-center gap-1 px-3 py-2 shrink-0"
-              style={{
-                background: activo ? "var(--papel)" : "transparent",
-                borderRadius: "12px 12px 0 0",
-                color: activo ? "var(--azul-profundo)" : "rgba(255,255,255,0.75)",
-                border: "none", cursor: "pointer",
-              }}>
-              <Icon size={16} />
-              <span className="font-mono" style={{ fontSize: "0.6rem", letterSpacing: "0.02em" }}>{t.label}</span>
-            </button>
+            <div key={grupo.id} style={{ position: "relative" }}>
+              <button
+                onClick={() => setMenuNavAbierto(abierto ? null : grupo.id)}
+                className="flex flex-col items-center gap-1 px-3 py-2 shrink-0"
+                style={{
+                  background: activoGrupo || abierto ? "var(--papel)" : "transparent",
+                  borderRadius: "12px 12px 0 0",
+                  color: activoGrupo || abierto ? "var(--azul-profundo)" : "rgba(255,255,255,0.75)",
+                  border: "none", cursor: "pointer",
+                }}>
+                <span className="flex items-center gap-1">
+                  {(() => { const IconoActivo = (tabsDelGrupo.find((t) => t.id === tab) || tabsDelGrupo[0]).icon; return <IconoActivo size={16} />; })()}
+                </span>
+                <span className="font-mono flex items-center gap-0.5" style={{ fontSize: "0.6rem", letterSpacing: "0.02em" }}>
+                  {grupo.label}
+                  <ChevronDown size={11} style={{ transform: abierto ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+                </span>
+              </button>
+              {abierto && (
+                <React.Fragment>
+                  <div onClick={() => setMenuNavAbierto(null)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+                  <div style={{
+                    position: "absolute", top: "100%", left: 0, marginTop: "2px",
+                    background: "var(--papel)", border: "1px solid var(--linea)", borderRadius: "0 10px 10px 10px",
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.22)", minWidth: "200px", zIndex: 41, overflow: "hidden",
+                  }}>
+                    {tabsDelGrupo.map((t) => {
+                      const Icon = t.icon;
+                      const activo = tab === t.id;
+                      return (
+                        <button key={t.id} onClick={() => { setTab(t.id); setMenuNavAbierto(null); }}
+                          className="flex items-center gap-2 w-full"
+                          style={{
+                            padding: "0.6rem 0.85rem",
+                            background: activo ? "var(--linea)" : "transparent",
+                            color: "var(--azul-profundo)", border: "none", textAlign: "left",
+                            cursor: "pointer", fontSize: "0.75rem", fontFamily: "inherit",
+                          }}>
+                          <Icon size={15} /> {t.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </React.Fragment>
+              )}
+            </div>
           );
         })}
       </nav>
