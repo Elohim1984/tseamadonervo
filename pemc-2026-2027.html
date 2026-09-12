@@ -18,12 +18,40 @@ body { background:var(--bg); font-family: -apple-system, "Segoe UI", Roboto, Ari
 .paper img { max-width:100%; height:auto; }
 .paper * { max-width:100%; }
 .footer { text-align:center; color:#8a7a5c; font-size:0.75rem; padding-bottom:30px; }
+.toolbar-exportar { max-width:900px; margin:16px auto 0; padding:0 16px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.toolbar-exportar button { display:flex; align-items:center; gap:6px; border-radius:8px; padding:0.55rem 1rem; font-size:0.85rem; font-family:inherit; cursor:pointer; }
+.btn-exportar-primario { background:var(--maroon); color:#fff; border:none; }
+.btn-exportar-secundario { background:#fff; color:var(--maroon); border:1.5px solid var(--maroon); }
+@media print { .toolbar-exportar { display:none !important; } }
 </style>
 <div class="banner">
   <h1>Telesecundaria "Amado Nervo" — 21ETV0473W</h1>
   <p>Programa Escolar de Mejora Continua · Ciclo 2026-2027</p>
 </div>
 <div class="note">Borrador de trabajo en revisión por el colectivo docente en CTE. No sustituye el documento oficial firmado que se entrega a supervisión.</div>
+<div class="toolbar-exportar">
+  <button class="btn-exportar-primario" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+  <button class="btn-exportar-secundario" onclick="descargarWord()">📝 Descargar Word</button>
+</div>
+<script>
+function descargarWord(){
+  var origen = document.querySelector('.paper');
+  if(!origen) return;
+  var nombreDoc = "PEMC 2026-2027 — Amado Nervo";
+  var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"><title>' + nombreDoc + '</title></head><body>'
+    + origen.innerHTML + '</body></html>';
+  var blob = new Blob(['﻿', html], { type: 'application/msword' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = nombreDoc.replace(/—/g, '-').replace(/[^a-zA-Z0-9À-ÿ ._-]/g, '').replace(/\s+/g, ' ').trim() + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+</script>
 <div class="paper">
 <p align="center" style="line-height: 100%; margin-bottom: 0.01in">
 <font size="2" style="font-size: 10pt">Subsecretaria Básica y Media
