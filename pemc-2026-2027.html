@@ -1,0 +1,1725 @@
+<!doctype html><html><head><!-- frame-runtime --><script>window.__FRAME_PREAMBLE={"v":1,"capabilities":{"artifact":"artifact.BoUB4pxl.js","assets":"assets.B6H5Rue4.js","comments":"comments.CJGulO07.js","db":"db.D373BnLH.js","downloads":"downloads.CKk-Yshd.js","embed":"embed.Hf7Acqy1.js","endpoints":"endpoints.BGpYVATw.js","mcp":"mcp.GIBQRXCC.js","network":"network.B5UA9Su4.js","permissions":"permissions.DAF5cUfF.js","room":"room.Dptr10ye.js","sample":"sample.BTkq5Oaj.js","self":"artifact.BoUB4pxl.js","user":"user.DV7k6YjV.js"},"transforms":"_transforms.C6t_n-gA.js","comments":"_comments.Daca5pvt.js","translate":"_translate.B2LIOQT7.js","ldx":"_ldx.CMCg6PeI.js"}                                                                                                                                                                                                                    </script><script>(function(){"use strict";var St=["light","dark","system"],At=/^[A-Za-z0-9_-]{1,64}$/,Xe=/^[a-zA-Z_:][a-zA-Z0-9_:.-]{0,127}$/,kt=new Set(["class","hidden","value","checked","style","title","alt","placeholder","lang","dir","role","tabindex","disabled","readonly","contenteditable","open","colspan","rowspan"]);function Tt(t){const e=t.toLowerCase();return e.startsWith("data-")||e.startsWith("aria-")||kt.has(e)}var Ye="data-ldx-props";function Rt(t,e){if(e.toLowerCase()===Ye)return!0;const n=t.getAttribute(Ye);if(n===null)return!1;try{const o=JSON.parse(n);if(o===null||typeof o!="object"||Array.isArray(o))return!0;const s=e.toLowerCase();return Object.keys(o).some(a=>a.toLowerCase()===s)}catch{return!0}}var qr="http://www.w3.org/1999/xhtml",Ot="http://www.w3.org/2000/svg",Lt=new Set(["script","style","iframe","noscript","noframes","noembed","xmp","plaintext","template","title","textarea","object","embed"]),Pt=new Set(["script","style"]);function Mt(t){const e=t.localName.toLowerCase();return t.namespaceURI==="http://www.w3.org/1999/xhtml"?!Lt.has(e):t.namespaceURI===Ot?!Pt.has(e):!1}function Te(t,e){return t===e||(t===160||t===32)&&(e===160||e===32)}function Nt(t,e){const n=t.length,o=e.length;let s=0;for(;s<n&&s<o&&Te(t.charCodeAt(s),e.charCodeAt(s));)s++;let a=0;for(;a<n-s&&a<o-s&&Te(t.charCodeAt(n-1-a),e.charCodeAt(o-1-a));)a++;return{p:s,s:a}}function Ct(t,e){const n=t.firstChild;if(t.childNodes.length!==1||n===null||n.nodeType!==Node.TEXT_NODE){t.textContent=e;return}const o=n.data,s=o.length,a=e.length,{p:i,s:f}=Nt(o,e);i===s&&f===0&&s===a||n.replaceData(i,s-i-f,e.slice(i,a-f));const S=n.data,w=t.ownerDocument.getSelection?.()??null,y=w!==null&&w.rangeCount>0&&(w.anchorNode===n||w.focusNode===n)?{anchor:w.anchorNode,anchorOffset:w.anchorOffset,focus:w.focusNode,focusOffset:w.focusOffset}:null;let A=-1,p=-1;for(let b=0;b<S.length&&b<e.length;b++){const L=S.charCodeAt(b),P=e.charCodeAt(b);L!==P&&Te(L,P)&&(A<0&&(A=b),p=b)}const v=A>=0;if(v&&n.replaceData(A,p-A+1,e.slice(A,p+1)),v&&y!==null&&y.anchor!==null&&y.focus!==null)try{w.setBaseAndExtent(y.anchor,y.anchorOffset,y.focus,y.focusOffset)}catch{}}var jt=new Set(["html","head","body","frameset"]);function It(t){return t.namespaceURI==="http://www.w3.org/1999/xhtml"&&jt.has(t.localName)}function xt(t){if(t===null||typeof t!="object")return!1;const e=t;if(typeof e.target!="string"||!At.test(e.target)||e.text!==void 0&&typeof e.text!="string")return!1;if(e.attrsSet!==void 0){if(e.attrsSet===null||typeof e.attrsSet!="object")return!1;for(const[n,o]of Object.entries(e.attrsSet))if(!Xe.test(n)||typeof o!="string")return!1}if(e.attrsRemoved!==void 0){if(!Array.isArray(e.attrsRemoved))return!1;for(const n of e.attrsRemoved)if(typeof n!="string"||!Xe.test(n))return!1}return!0}function Ft(t,e){if(t===null||typeof t!="object")return!1;const{seq:n,elements:o}=t;if(typeof n!="number"||!Number.isSafeInteger(n)||!Array.isArray(o)||o.length===0||o.length>64)return!1;for(let s=0;s<o.length;s++)if(!e(o[s]))return!1;return!0}function Dt(t){return t===null||typeof t!="object"?!1:Ft(t.__frame_patch,xt)}function Ht(t){if(t===null||typeof t!="object")return!1;const e=t.__frame_init;return e!==null&&typeof e=="object"}function qt(t){return t!==null&&typeof t=="object"&&t.__frame_size_poke===!0}function Bt(t){if(t===null||typeof t!="object")return!1;const e=t.__frame_host_visible;return e!==null&&typeof e=="object"&&typeof e.visible=="boolean"}function Ut(t){if(t===null||typeof t!="object")return!1;const e=t.__frame_theme;if(e===null||typeof e!="object")return!1;const n=e.theme;return typeof n=="string"&&St.includes(n)}var zt=["ok","empty","snapshot_error","snapshot_timeout","unclonable","oversize","unavailable","restore_error","withheld"],Kt=["TypeError","RangeError","ReferenceError","SyntaxError","DataCloneError","QuotaExceededError","AbortError","TimeoutError","SecurityError","Error","other"];function Wt(t){return typeof t=="string"&&Kt.includes(t)?t:"other"}var $t=Object.freeze({until:null,now:!1}),Xt="__claude_hot",Yt="__claude_hot_in",Gt=/^__claude_hot(?:_in)?(?::|$)/,Ge=/^[0-9a-z]{1,32}$/,Re=t=>t===void 0?Xt:"__claude_hot:"+t,se=t=>t===void 0?Yt:"__claude_hot_in:"+t;function Vt(t,e){const n=[];for(let o=0;o<t.length;o++){const s=t.key(o);s!==null&&s!==e&&Gt.test(s)&&n.push(s)}for(const o of n)t.removeItem(o)}function Jt(t){let e=null;try{e=q(JSON.parse(t)?.hot)}catch{return null}return e===null||typeof e.k!="string"||!Ge.test(e.k)?null:le(e.g)?{k:e.k,g:e.g}:{k:e.k}}var Br=262144,Zt=3e3,Ve=/^[a-z0-9._:-]{1,64}$/,Qt=["none","hot-restart","hard-reload"],er=["asset","doc","added","removed"],tr=1500,rr=/^[0-9a-f]{64}$/;function q(t){return t!==null&&typeof t=="object"?t:null}function le(t){return typeof t=="number"&&Number.isInteger(t)&&t>=0&&t<2**31}function Je(t){return t===void 0||typeof t=="number"&&Number.isFinite(t)}function nr(t){return t===void 0||typeof t=="string"&&Ve.test(t)}function Ze(t){const e=q(t);return e!==null&&(e.until===null||typeof e.until=="number"&&Number.isFinite(e.until))&&typeof e.now=="boolean"}function Oe(t){const e=q(t);return e!==null&&typeof e.ver=="string"&&e.ver.length<=128&&Je(e.seq)&&typeof e.handoff=="string"&&zt.includes(e.handoff)&&nr(e.note)}function or(t){const e=q(t);return e!==null&&le(e.gen)&&(e.phase==="final"||e.phase==="pending")&&(e.from===null||Oe(e.from))}function ar(t){const e=q(t);return e!==null&&e.kv===1&&le(e.gen)&&Oe(e.from)&&Object.hasOwn(e,"data")}function sr(t){const e=q(t);return e!==null&&e.__frame_hot_snapshot===!0&&le(e.gen)&&typeof e.timeoutMs=="number"&&e.timeoutMs>=0&&e.timeoutMs<=6e4&&(e.handoff===void 0||typeof e.handoff=="boolean")&&(e.deadline===void 0||Ze(e.deadline))&&Je(e.seq)&&(e.note===void 0||typeof e.note=="string")&&(e.key===void 0||typeof e.key=="string")}function lr(t){const e=q(t);return e!==null&&e.__frame_hot_start===!0&&le(e.gen)&&Oe(e.from)}function Qe(t){const e=q(t);return e!==null&&typeof e.ver=="string"&&e.ver.length<=128&&Number.isFinite(e.seq)}function et(t){if(t==null||typeof t=="string")return!0;const e=q(t);return e!==null&&typeof e.doc=="string"&&typeof e.profile=="string"}function ir(t){const e=q(t);return e!==null&&typeof e.path=="string"&&er.includes(e.kind)&&et(e.from)&&et(e.to)}function cr(t){return t===null?null:Object.freeze(t.filter(ir))}function ur(t){const e=q(t);return e!==null&&e.__frame_hot_update===!0&&Number.isFinite(e.id)&&Qe(e.from)&&Qe(e.to)&&(e.changed===null||Array.isArray(e.changed))&&Qt.includes(e.required)&&Ze(e.deadline)&&typeof e.verdictTimeoutMs=="number"&&e.verdictTimeoutMs>=0&&e.verdictTimeoutMs<=6e4&&(e.preflight===void 0||typeof e.preflight=="string"&&rr.test(e.preflight))}var Z=/^[\w.-]+\.js$/;function fr(t,e,n){return n?"inert":typeof e=="string"&&Z.test(e)?t?[e]:"inert":t?"inert":"framed"}var tt=Object.freeze({[Symbol("claude.hot.restart")]:!0});function rt(t,e){let n;try{n=t??sessionStorage}catch{return null}const o=Re(e?.k),s=se(e?.k);let a=null;try{a=n.getItem(o)}catch{}try{n.removeItem(o)}catch{}try{Vt(n,s)}catch{}let i=null;if(a!==null&&!(e!==null&&e.g===void 0))try{const f=JSON.parse(a);ar(f)&&(e===null||f.gen===e.g)&&(i=f)}catch{}if(i===null)try{n.removeItem(s)}catch{}return i}function dr(){const t=/^\/_f\/([^/]{1,128})\//.exec(location.pathname);return t?t[1]:""}var he="{}";function ie(t){if(!t)return null;const e={ver:t.ver,handoff:t.handoff};return t.seq!==void 0&&(e.seq=t.seq),t.note!==void 0&&(e.note=t.note),e}function nt(t,e){return t!==null&&t.note===void 0&&e?.note!==void 0?{...t,note:e.note}:t}function ot(t){const e=t?.k;return e!==null&&typeof e=="object"?e:void 0}function hr(t,e,n,o=null){const s=setTimeout,a=clearTimeout,i=queueMicrotask,f=performance.now.bind(performance),S=new TextEncoder,w=dr();let y=null;try{y=sessionStorage}catch{}const A={storage:y,fetch:typeof fetch=="function"?fetch.bind(globalThis):null,entry:location.origin+location.pathname+location.search,ver:w,key:o?.k};let p=o?.k;const v=typeof requestAnimationFrame=="function"?requestAnimationFrame:r=>s(()=>r(f()),16);let b=e?.data??{},L=ie(e?.from),P=e?.gen??0,h=e!==null,k=!1,E=!1,j=null,ce=!1;const ue=new AbortController;let fe=null,I=null,ee=null,we=!1,$=()=>{};const l=new Promise(r=>{$=r});let m=!1,g=!1,C=!1,M,R=null,D=!1,B=!1;const te=r=>{for(const c of[Re(r),se(r)])try{y?.removeItem(c)}catch{}},x=(r,c)=>{try{c!==null&&n.post(r,c)}catch{}},K=()=>{const r={__frame_hot:!0,ready:I!==null,accept:ee!==null};m&&(r.readData=!0),C&&(r.threw=!0),R?.assess&&(r.preflight=!0),x(r,j)};let d=!1,re=!1,z=!1,ne=!1;const oe=()=>{d||!ce||z||(d=!0,x({__frame_reveal_hold:!0},"*"))},W=()=>new Promise(r=>{let c,u=0;const _=O=>{if(c===void 0)c=O;else if(O!==c||++u>=8){r();return}try{v(_)}catch{r()}};try{v(_)}catch{r()}}),be=()=>{z=!0,x({__frame_reveal_ready:!0},"*")},qe=r=>{re||(re=!0,r.then(c=>{if(c===!1)return;let u=null;try{u=R?.settle?.()??null}catch{}return(u===null?W():new Promise(_=>{s(_,50),Promise.resolve(u).then(_,_)}).then(W)).then(be)}))},Cr=()=>{if(ne||!z)return;ne=!0;const r=()=>{try{R?.afterReveal?.()}catch{}};r(),W().then(()=>{r(),be()})},Ee=(r=!1)=>{if(we||I===null||!h||!E)return;we=!0;const c=I,u=b;i(()=>{let _;try{_=c(u)}catch(H){throw $(!1),H}let O=!1;try{O=typeof _?.then=="function"}catch{}if(!O){$(!0);return}Promise.resolve(_).then(()=>$(!0),H=>{$(!1),i(()=>{throw H})})}),qe(r?l:n.dcl.then(()=>l))},Se=r=>typeof r=="string"&&Ve.test(r)?r:void 0,mt=r=>{const c={__frame_hot_restart:!0},u=Se(r?.note);u!==void 0&&(c.note=u),r?.required==="hard-reload"&&(c.required="hard-reload"),x(c,j)},_t=Object.freeze({get data(){return E||(g=!0),!h&&!m&&(m=!0,E&&K()),b},get from(){return L},get gen(){return P},signal:ue.signal,snapshot(r){typeof r=="function"&&(fe=r)},ready(r){typeof r!="function"||I!==null||(I=r,oe(),K(),k&&x({__frame_hot_ready:!0,gen:P},j),Ee())},accept(r){typeof r=="function"&&(ee=r,K())},restart(r){const c={note:r?.note,required:r?.required};if(E){mt(c);return}const u=M;M={note:Se(u?.note)??c.note,required:u?.required==="hard-reload"||c.required==="hard-reload"?"hard-reload":void 0}}});let Ae=null,yt=()=>{};const jr=new Promise(r=>{yt=r});let Ir=null;const vt=()=>Ir??=n.dcl.then(()=>{let r=!1;try{r=Ae!==null&&Ae.expect()}catch{}if(!r)return;const c=Ae.maxMs;return new Promise(u=>{jr.then(u),s(u,c)})}),gt=()=>{if(!D||B||R===null)return;B=!0;const r=R;vt().then(()=>{try{z||r.afterStart(ot(e),!1)}catch{}})},wt=r=>{e!==null&&g&&(m=!0),b={},L=null,P=0;try{y?.removeItem(se(o?.k))}catch{}e!==null&&!r&&qe(n.dcl.then(()=>I!==null?l:void 0))},xr=()=>{D=!0,qe(vt().then(()=>I!==null?l:void 0)),gt()};try{addEventListener("error",()=>{C||I!==null||(C=!0,K())})}catch{}let X=-1,Be,Ue,de=!0,ze=!1,Ke,ke=null;const We=r=>{const c=ke===null;ke=de&&r[0]!=="withheld"?r:["withheld",r[1],he];let u=r[0];if(de&&u!=="withheld"){const O={ver:w,handoff:u};Be!==void 0&&(O.seq=Be),Ue!==void 0&&(O.note=Ue);try{if(y===null)throw new Error("no storage");y.setItem(Re(p),'{"kv":1,"gen":'+X+',"from":'+JSON.stringify(O)+(Ke!==void 0?',"k":'+JSON.stringify(Ke):"")+',"data":'+(u==="ok"?r[2]:he)+"}")}catch{u="unavailable"}}else{u="withheld",te(p);try{R?.release?.()}catch{}}const _={__frame_hot_snapshotted:!0,gen:X,handoff:u,bytes:r[1]};if(r[3]!==void 0&&(_.errName=r[3]),x(_,j),c&&(u==="snapshot_error"||u==="unclonable"||u==="oversize"))try{console.warn("claude.hot: snapshot",u,r[3])}catch{}},bt=r=>{try{return Wt(r?.name)}catch{return"other"}},ae=(r,c,u=0)=>We(c===void 0?[r,u,he]:[r,u,he,bt(c)]),Fr=r=>{if(r.gen<=X)return;const c=X>=0;if(X=r.gen,Be=r.seq,Ue=Se(r.note),typeof r.key=="string"&&Ge.test(r.key)&&r.key!==p&&(te(p),p=r.key),de&&=r.handoff!==!1,c){ke!==null?We(ke):ze&&x({__frame_hot_held:!0,gen:X},j);return}ue.abort();const u=Object.freeze({handoff:de,timeoutMs:r.timeoutMs,deadline:r.deadline??$t}),_=fe,O=()=>{if(de)try{Ke=R?.capture()}catch{}if(_===null){ae("empty");return}let F=!1;const Y=s(()=>{F||(F=!0,ae("snapshot_timeout"))},Math.max(0,u.timeoutMs));Promise.resolve().then(()=>_(u)).then(G=>{if(F)return;F=!0,a(Y);let V;try{V=JSON.stringify(G)}catch(J){ae("unclonable",J);return}if(typeof V!="string"){ae("unclonable");return}let N=V.length;try{N=S.encode(V).length}catch{}if(N>262144){ae("oversize",void 0,N);return}We(["ok",N,V])},G=>{F||(F=!0,a(Y),ae("snapshot_error",G))})};let H=null;try{H=R?.holdForIme()??null}catch{}if(H===null)O();else{ze=!0,x({__frame_hot_held:!0,gen:X},j);const F=()=>{ze=!1,O()};H.then(F,F)}},Dr=r=>{if(!k||h||I===null||r.gen!==P)return;let c=null;try{c=rt(y,o&&{k:o.k,g:r.gen})}catch{}if(c!==null&&c.gen!==r.gen){c=null;try{y?.removeItem(se(o?.k))}catch{}}b=c?.data??{},L=nt(ie(c?.from??r.from),ie(r.from)),c!==null&&(P=c.gen),h=!0,k=!1;const u=ot(c);l.then(_=>{try{_&&R?.afterStart(u,!0)}catch{}}),Ee(!0)};let $e=0;const Hr=r=>{const c=ee;if(c===null||r.id<=$e)return;$e=r.id;const u=R?.assess;if(r.preflight===void 0||u===void 0){Et(r,c);return}let _=!1;const O=Y=>{_||(_=!0,a(F),r.id===$e&&Et(r,c,Y))},H=()=>O(u.timeout(r)),F=s(H,tr+100);u.run(r,window).then(O,H)},Et=(r,c,u)=>{let _,O=!1;const H=Object.freeze({from:{ver:r.from.ver,seq:r.from.seq},to:{ver:r.to.ver,seq:r.to.seq},changed:cr(r.changed),required:r.required,deadline:r.deadline,restart(N){return _??=Se(N?.note),O||=N?.required==="hard-reload",tt},...u?.update}),F=N=>{const J={__frame_hot_verdict:!0,id:r.id};N==="applied"||N==="deferred"?J.verdict=N:N===tt&&(J.verdict="restart",O&&(J.required="hard-reload"),_!==void 0&&(J.note=_)),x(Object.assign(J,u?.verdict),j)};let Y=!1;const G=N=>Y?!1:(Y=!0,a(V),F(N),!0),V=s(G,r.verdictTimeoutMs);Promise.resolve().then(()=>c(H)).then(G,N=>{if(G(void 0))try{console.warn("claude.hot: accept",bt(N))}catch{}})};try{t.hot===void 0&&Object.defineProperty(t,"hot",{value:_t,writable:!1,configurable:!1,enumerable:!1})}catch{}return{hot:_t,boot:A,afterConnect(){ce=!0,(e!==null||I!==null)&&oe()},onInit(r,c){j=c,E=!0;const u=or(r)?r:null;u?.phase==="final"&&e!==null&&e.gen===u.gen?(h=!0,L=nt(L,ie(u.from)),xr()):(k=u?.phase==="pending",wt(k),h=!k,P=u?.gen??0,L=ie(u?.from)),K(),k&&I!==null&&x({__frame_hot_ready:!0,gen:P},c),M!==void 0&&(mt(M),M=void 0),Ee()},onNoInit(){E=!0,wt(!1),h=!0,Ee()},onShell(r){return r?.__frame_revealed===!0?(Cr(),!1):sr(r)?(Fr(r),!0):lr(r)?(Dr(r),!0):ur(r)?(Hr(r),!0):!1},attachExtras(r){R=r,gt(),r.assess&&K()},inSlot:()=>se(p),hydration(r,c){Ae??={expect:r,maxMs:c}},hydrated(){yt()},carried(){return h?b:{}},presented:()=>z}}var Ur="frame_ldx_runtime",pr="frame_ldx_build",zr="script#an-form",mr=256;function at(t,e,n){for(const o of t)n(o)&&t.delete(o);t.size>=mr&&!t.has(e)&&t.delete(t.values().next().value),t.add(e)}function Le(t,e,n){try{const o=t[e];if(typeof o!="function")return;t[e]=function(...s){const a=o.apply(this,s);try{n(this)}catch{}return a}}catch{}}var Pe;function _r(){if(Pe)return Pe;const t={media:new Set,contexts:new Set,onStart:null,onPause:null};Pe=t;const e=window.HTMLMediaElement?.prototype;e&&(Le(e,"play",s=>{at(t.media,s,a=>a.paused),t.onStart?.(s)}),Le(e,"pause",s=>t.onPause?.(s)));const n=window.AudioContext,o=window.AudioNode?.prototype;return n&&o&&Le(o,"connect",s=>{const a=s.context;a instanceof n&&(at(t.contexts,a,i=>i.state==="closed"),t.onStart?.(a))}),t}function yr(t){let e=window;for(let n=0;e.parent&&e.parent!==e&&n<8;n++)if(e=e.parent,t(e))return!0;return!1}function vr(){let t=null;const e=()=>t??parent,n=o=>t?o===t:yr(s=>s===o);return{post(o,s){if(t){e().postMessage(o,s);return}let a=parent;for(let i=0;i<8&&(a.postMessage(o,s),!(!a.parent||a.parent===a));i++)a=a.parent},on(o){const s=a=>{const i=a.source;n(i)&&o(a.data,a.origin,a.isTrusted,()=>{t??=i})};return addEventListener("message",s),()=>removeEventListener("message",s)},port:o=>({post(s,a){if(a?.activation){e().postMessage(s,{targetOrigin:o,includeUserActivation:!0});return}if(a?.transfer){e().postMessage(s,o,a.transfer);return}e().postMessage(s,o)},on(s,a){const i=f=>{n(f.source)&&f.origin===o&&s(f.data,f)};return addEventListener("message",i,a),()=>removeEventListener("message",i,a)}})}}function gr(){const t={post:()=>{},on:()=>()=>{}};return{...t,port:()=>t}}var Me="__frame_scroll",wr=150,br=310,Er=160,Sr=3e4;function Ar(){let t=0,e=!1,n=!1,o=!1,s=0,a=null;const i=h=>{try{sessionStorage.setItem(Me,JSON.stringify({y:h}))}catch{}},f=()=>{if(clearTimeout(t),a===null)return;const h=a;a=null,i(h)},S=()=>{if(e){e=!1;return}n=!0,a=scrollY,clearTimeout(t),t=setTimeout(f,wr)};try{addEventListener("scroll",S,{passive:!0}),addEventListener("pagehide",f)}catch{}const w=()=>{let h;try{h=sessionStorage.getItem(Me)}catch{return null}if(h===null)return null;let k;try{k=JSON.parse(h)}catch{k=null}const E=k?.y;if(!(typeof E=="number"&&Number.isFinite(E)&&E>=0)){try{sessionStorage.removeItem(Me)}catch{}return null}return E};let y=!1;const A=h=>{try{const k=scrollY;scrollTo({top:h,left:0,behavior:"instant"}),s=h,o=!0,clearTimeout(t),a=null,i(h);const E=scrollY;E!==k&&(e=!0),E!==h&&!y&&(y=!0,addEventListener("load",()=>{try{if(scrollY===E){const j=w();A(j!==null?j:s)}}catch{}},{once:!0}))}catch{}},p=()=>{try{return!!location.hash}catch{return!0}};let v=!1;const b=()=>{try{if(v||innerWidth>br||innerHeight>Er)return;v=!0;const h=Date.now(),k=()=>{try{removeEventListener("resize",k)}catch{}if(Date.now()-h>Sr||n||p())return;const E=w();A(E!==null?E:s)};addEventListener("resize",k)}catch{}};let L=!1,P=!1;return{restore(){if(L||(L=!0,p()))return;const h=w();h!==null&&(A(h),b())},promoted(){if(P||(P=!0,p()))return;const h=w();h!==null?(A(h),b()):o&&A(s)}}}function kr(t,e,n,o){let s=null;try{s=window.trustedTypes?.createPolicy("frame-runtime",{createScriptURL:S=>S})??null}catch{}const a=window.Worker,i=a?.prototype,f=Object.freeze({Worker:a,workerOn:i?.addEventListener,workerPost:i?.postMessage,workerTerminate:i?.terminate,fetch:window.fetch.bind(window),preventDefault:Event.prototype.preventDefault,now:Date.now,policy:s,origins:e});n(t).then(S=>S?.bootTopLevel?S.bootTopLevel(f,o):o.settle()).catch(()=>o.settle())}var Kr="modulepreload",Wr=function(t){return"/"+t},$r={},Tr=function(e,n,o){let s=Promise.resolve();function a(i){const f=new Event("vite:preloadError",{cancelable:!0});if(f.payload=i,window.dispatchEvent(f),!f.defaultPrevented)throw i}return s.then(i=>{for(const f of i||[])f.status==="rejected"&&a(f.reason);return e().catch(a)})},Rr=window===top,st=Object.getOwnPropertyDescriptor(window,"claude"),pe=fr(Rr,window.__FRAME_PREAMBLE?.topLevel,st?.writable===!1),Ne=typeof pe=="object"&&pe[0],T=Ne?gr():vr();(function(){const t=Object.defineProperty,e=globalThis,n=["RTCPeerConnection","webkitRTCPeerConnection","RTCDataChannel","RTCIceCandidate","RTCSessionDescription","RTCRtpSender","RTCRtpReceiver"];let o=0;for(let s=0;s<n.length;s++){const a=n[s];try{t(e,a,{value:void 0,writable:!1,configurable:!1})}catch{try{delete e[a]}catch{}try{t(e,a,{value:void 0,writable:!1,configurable:!0})}catch{}}typeof e[a]=="function"&&o++}if(o&&pe==="framed")try{T.post({__frame_rtc_lockdown_failed:o},"*")}catch{}})();var Or=1e4,Lr=2e3,Ce=2e3,lt=Object.freeze([...window.__FRAME_PREAMBLE?.origins??["https://claude.ai","https://preview.claude.ai"]]);function it(t){for(const e of lt)if(e.endsWith(":*"))try{const n=new URL(t);if(`${n.protocol}//${n.hostname}:*`===e)return!0}catch{}else if(t===e)return!0;return!1}var me=Object.freeze({...window.__FRAME_PREAMBLE?.capabilities}),je=window.__FRAME_PREAMBLE?.transforms,Ie=window.__FRAME_PREAMBLE?.comments,xe=window.__FRAME_PREAMBLE?.translate,_e=window.__FRAME_PREAMBLE?.ldx;function Q(t){return Tr(()=>import("/_runtime/"+t),void 0)}function ct(t,e,n){return{contract:t.contract,changes:new Set(t.changes??[]),flags:new Set(t.flags??[]),capabilities:t.capabilities??{},capBudgets:t.capBudgets??{},transforms:new Map,shellOrigin:e,shell:n,mount:He,hooks:ve,pipe:()=>({wrap:(o,s)=>(...a)=>{try{return s(...a)}catch(i){return Promise.reject(i)}}})}}var ye=null,U=null;function ut(t,e,n){try{Object.defineProperty(t,e,{value:n,writable:!1,configurable:!1,enumerable:!0})}catch{try{Object.defineProperty(t,e,{value:n,writable:!1,configurable:!0,enumerable:!0})}catch{}}}var Fe=!1,ve={editBefore:null,edit:null};function Pr(t,e,n=!1){const o=[];let s;if(n)try{ve.editBefore?.(t)}catch{}for(const a of t.elements){const i=document.querySelector(`[data-id="${a.target}"]`);if(!i){s=a.target;break}if([...Object.keys(a.attrsSet??{}),...a.attrsRemoved??[]].some(f=>!Tt(f)||Rt(i,f))){s=a.target;break}if(a.text!==void 0&&(!Mt(i)||It(i))){s=a.target;break}for(const[f,S]of Object.entries(a.attrsSet??{}))if(!dt(i,f)){try{i.setAttribute(f,S)}catch{}ft(i,f,S)}for(const f of a.attrsRemoved??[])dt(i,f)||(i.removeAttribute(f),ft(i,f,null));typeof a.text=="string"&&Ct(i,a.text),o.push(a.target)}if(n)try{ve.edit?.(t.seq,o,s)}catch{}if(s!==void 0){T.post({__frame_patch_miss:{seq:t.seq}},e);return}try{document.dispatchEvent(new CustomEvent("claude:edit",{detail:{seq:t.seq,targets:o}}))}catch{}}function ft(t,e,n){if(!(t instanceof HTMLInputElement))return;const o=e.toLowerCase();o==="checked"?t.checked=n!==null:o==="value"&&t.type!=="file"&&(t.value=n??"")}function dt(t,e){const n=e.toLowerCase(),o=t;return n==="data-id"||(n==="value"||n==="checked")&&(o.__artifactSecret===!0||/^(password|hidden|file)$/.test(o.type??"")||/(^|\s)(cc-|one-time-code|current-password|new-password)/i.test(`${t.getAttribute("autocomplete")??""} ${o.autocomplete??""}`))}function ht(t){const e=document.documentElement;t==="light"||t==="dark"?(e.dataset.theme=t,e.style.colorScheme=t,Fe=!0):Fe&&(delete e.dataset.theme,e.style.colorScheme="",Fe=!1)}var ge=new Map;function Mr(){let t;const e={u:new Promise(n=>{t=n}),r:n=>{e.done=!0,t(n)},done:!1,nulled:!1};return e}function De(){for(const t of ge.values())t.done||(t.nulled=!0,t.r(null))}var Nr=Object.freeze(Object.assign(Object.create(null),{call:Function.prototype.call,apply:Function.prototype.apply,bind:Function.prototype.bind})),He=(t,e)=>{const n=ge.get(t);if(!n||n.done){n?.nulled&&U&&T.post({__frame_cap_telemetry:{kind:"cap-load-error",cap:t}},U);return}const o=typeof e=="function"?Object.setPrototypeOf(e,Nr):Object.assign(Object.create(null),e);typeof o.then=="function"&&delete o.then,n.r(Object.freeze(o))};function pt(){const t=st?.value??{};ut(window,"claude",t);for(const e of Object.keys(me)){if(t[e]!==void 0){ut(t,e,t[e]);continue}ge.set(e,Mr())}if(t.use===void 0){const e=n=>{if(typeof n!="string"||!Object.hasOwn(me,n))return Promise.resolve(null);const o=ge.get(n);return o?o.u:Promise.resolve(t[n]??null)};try{Object.defineProperty(t,"use",{value:e,writable:!0,configurable:!0,enumerable:!1})}catch{}}return t}if(pe==="framed"){const t=je&&Z.test(je)?Q(je).catch(()=>{}):Promise.resolve(void 0),e=l=>{if(l.type==="auxclick"&&l.button!==1)return;const m=l.target,g=m&&m.closest?m.closest("a[href],area[href]"):null;if(!g)return;const C=g.getAttribute("href");if(!C)return;let M;try{M=new URL(C,document.baseURI)}catch{return}if((M.protocol==="http:"||M.protocol==="https:")&&M.origin!==location.origin){l.preventDefault();const R=(g.getAttribute("target")??"").toLowerCase(),D=l.type==="auxclick"||l.metaKey||l.ctrlKey||l.shiftKey||l.altKey||!["","_self","_top","_parent"].includes(R);T.post({__frame_nav:!0,url:M.href,newTab:D},"*")}};addEventListener("click",e,!0),addEventListener("auxclick",e,!0);const n={},o=l=>{l.isTrusted&&(n.pointer=!0)},s=l=>{l.isTrusted&&(n.click=!0)};addEventListener("pointermove",o,{capture:!0,passive:!0}),addEventListener("click",s,{capture:!0,passive:!0});const a={cb:null};addEventListener("keydown",l=>a.cb?.(l),!0);const i=_r();t.then(l=>l?.installEscapeForward?.(a,m=>{U&&T.post(m,U)})),t.then(l=>{try{l?.installFocusKeep?.()}catch{}}),t.then(l=>{if(!l?.wireNav)return;const m=T.port("*");l.wireNav(m),removeEventListener("click",e,!0),removeEventListener("auxclick",e,!0),removeEventListener("pointermove",o,!0),removeEventListener("click",s,!0),l.wireEngagement?.(n,m)});let f=null;try{f=Ar()}catch{}const S=document.readyState==="loading"?new Promise(l=>document.addEventListener("DOMContentLoaded",()=>l(),{once:!0})):Promise.resolve();let w=null,y=null;try{y=Jt(window.name),w=rt(null,y)}catch{}const A=pt();let p=null;try{p=hr(A,w,{post:(l,m)=>T.post(l,m),dcl:S},y)}catch{}t.then(l=>{try{p&&l?.installHotExtras?.(p)}catch{}});let v=null;const b=()=>Array.isArray(v?.flags)&&v.flags.includes("frame_ldx_runtime")&&!!_e&&Z.test(_e)&&document.querySelector("script#an-form")!==null;try{p?.hydration(b,Zt)}catch{}let L=null,P=0;const h=T.on((l,m,g,C)=>{it(m)&&Ht(l)&&(C(),v=l.__frame_init,U=m,h(),clearTimeout(P),L?.())});T.post({__frame_connect:!0},"*");try{p?.afterConnect()}catch{}const k=setTimeout,E=clearTimeout;let j=()=>NaN;try{j=performance.now.bind(performance)}catch{}let ce=0;const ue=()=>{try{T.post({__frame_alive:!0},"*")}catch{}ce=k(ue,Lr)},fe=()=>E(ce);ue(),addEventListener("load",fe,{once:!0});const I=new Promise(l=>{L=l,P=setTimeout(()=>{h(),l()},Or)}),ee=new WeakSet;addEventListener("error",l=>{l.target&&ee.add(l.target)},!0);const we=()=>{let l=[];try{l=[...document.querySelectorAll("link[rel~=stylesheet]:not([rel~=alternate])")].filter(g=>!g.sheet&&!g.disabled&&!ee.has(g)&&g.getAttribute("href")&&URL.canParse(g.href)&&(!g.media||matchMedia(g.media).matches))}catch{}let m=l.length;return m===0?Promise.resolve():new Promise(g=>{try{const C=Ce-j(),M=k(g,C>0?C<Ce?C:Ce:0),R=()=>{--m===0&&(E(M),g())};for(const D of l)D.addEventListener("load",R,{once:!0}),D.addEventListener("error",R,{once:!0})}catch{g()}})};S.then(()=>{try{f?.restore()}catch{}});const $={cb:null};T.on((l,m)=>{if(it(m)&&qt(l)){try{f?.promoted()}catch{}$.cb?.()}}),I.then(async()=>{if(!v||!U){De();try{p?.onNoInit()}catch{}return}ht(v.theme),v.hostVisible===!1&&t.then(d=>d?.applyHostVisible?.(!1,i));try{p?.onInit(v.hot,U)}catch{}const l=U,m=T.port(l);let g=!1,C=!1;T.on((d,re,z)=>{if(re!==l)return;try{if(p?.onShell(d))return}catch{}if(Ut(d)&&ht(d.__frame_theme.theme),Bt(d)){const W=d.__frame_host_visible.visible;t.then(be=>be?.applyHostVisible?.(W,i))}Dt(d)&&Pr(d.__frame_patch,l,z);const ne=d?.__fc_mode;ne&&typeof ne=="object"&&!g&&Ie&&Z.test(Ie)&&(g=!0,Q(Ie).then(W=>W.install?.(l,ne.on===!0,m)).catch(()=>{}));const oe=d?.__ft_cmd;oe&&typeof oe=="object"&&!C&&xe&&Z.test(xe)&&(C=!0,Q(xe).then(W=>W.install?.(l,oe,m)).catch(()=>{}))});const M=Object.keys(v.capabilities??{}).filter(d=>Object.hasOwn(me,d)).map(d=>[d,me[d]]).filter(d=>typeof d[1]=="string"&&Z.test(d[1])),R=await Promise.allSettled(M.map(([,d])=>Q(d))),D=await t,B=U;if(D?.buildBoot||T.post({__frame_cap_telemetry:{kind:"cap-load-error",cap:"_transforms"}},B),D?.buildBoot)try{ye=D.buildBoot(v,D.TRANSFORMS??{},{shellOrigin:B,mount:He,hooks:ve,shell:m},d=>T.post({__frame_cap_telemetry:d},B))}catch{T.post({__frame_cap_telemetry:{kind:"cap-load-error",cap:"_transforms"}},B),ye=ct(v,B,m)}else ye=ct(v,B,m);const te=d=>T.post({__frame_cap_telemetry:{kind:"cap-load-error",cap:d}},B),x=ye;R.forEach((d,re)=>{const z=M[re][0];if(d.status!=="fulfilled"){te(z);return}try{d.value?.install?.(x)}catch{te(z)}}),De(),await S,await we(),fe(),T.post({__frame_ready:!0},U),t.then(d=>d?.installSizeReporter?.(B,$,m));let K=!1;try{K=b()}catch{}_e&&K?Q(_e).then(d=>d?.boot?.({shellOrigin:l,build:x.flags.has(pr),hot:p?.hot??null,carried:p?.carried(),presented:()=>p?.presented()??!0})).catch(()=>!1).then(d=>{p?.hydrated(),d!==!0&&te("_ldx")}):p?.hydrated()})}else Ne&&(pt(),kr(Ne,lt,Q,{settle:De,mount:He}))})();</script><!-- /frame-runtime --><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>PEMC 2026-2027 — Amado Nervo</title>
+<style>
+:root {
+  --maroon:#7a1f1f; --ochre:#b8860b; --green:#2f6b3a; --paper:#ffffff; --ink:#1c1c1c; --bg:#f4ede2;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg:#241a14; }
+}
+:root[data-theme="dark"] { --bg:#241a14; }
+body { background:var(--bg); font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color:var(--ink); }
+.banner { background:var(--maroon); color:#fff; padding:22px 24px; text-align:center; }
+.banner h1 { margin:0 0 4px; font-size:1.3rem; }
+.banner p { margin:0; font-size:0.85rem; opacity:0.9; }
+.note { max-width:900px; margin:16px auto 0; padding:12px 16px; background:#fff8e6; border-left:4px solid var(--ochre); font-size:0.85rem; color:#4a3b12; border-radius:4px; }
+.paper { max-width:900px; margin:20px auto 60px; background:var(--paper); color:#111; padding:32px 36px; border-radius:6px; box-shadow:0 2px 10px rgba(0,0,0,0.15); overflow-x:auto; font-size:0.92rem; line-height:1.5; }
+.paper table { max-width:100%; border-collapse:collapse; }
+.paper img { max-width:100%; height:auto; }
+.paper * { max-width:100%; }
+.footer { text-align:center; color:#8a7a5c; font-size:0.75rem; padding-bottom:30px; }
+.toolbar-exportar { max-width:900px; margin:16px auto 0; padding:0 16px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.toolbar-exportar button { display:flex; align-items:center; gap:6px; border-radius:8px; padding:0.55rem 1rem; font-size:0.85rem; font-family:inherit; cursor:pointer; }
+.btn-exportar-primario { background:var(--maroon); color:#fff; border:none; }
+.btn-exportar-secundario { background:#fff; color:var(--maroon); border:1.5px solid var(--maroon); }
+@media print { .toolbar-exportar { display:none !important; } }
+</style>
+<div class="banner">
+  <h1>Telesecundaria "Amado Nervo" — 21ETV0473W</h1>
+  <p>Programa Escolar de Mejora Continua · Ciclo 2026-2027</p>
+</div>
+<div class="note">Borrador de trabajo en revisión por el colectivo docente en CTE. No sustituye el documento oficial firmado que se entrega a supervisión.</div>
+<div class="toolbar-exportar">
+  <button class="btn-exportar-primario" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+  <button class="btn-exportar-secundario" onclick="descargarWord()">📝 Descargar Word</button>
+</div>
+<script>
+function descargarWord(){
+  var origen = document.querySelector('.paper');
+  if(!origen) return;
+  var nombreDoc = "PEMC 2026-2027 — Amado Nervo";
+  var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"><title>' + nombreDoc + '</title></head><body>'
+    + origen.innerHTML + '</body></html>';
+  var blob = new Blob(['﻿', html], { type: 'application/msword' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = nombreDoc.replace(/—/g, '-').replace(/[^a-zA-Z0-9À-ÿ ._-]/g, '').replace(/\s+/g, ' ').trim() + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+</script>
+<div class="paper">
+<p align="center" style="line-height: 100%; margin-bottom: 0.01in">
+<font size="2" style="font-size: 10pt">Subsecretaria Básica y Media
+Superior Dirección Telesecundaria</font></p>
+<p align="center" style="line-height: 100%; margin-bottom: 0.01in"><font size="2" style="font-size: 10pt">Jefatura
+de Sector 11 Estatal Zona Escolar 052</font></p>
+<p align="center" style="line-height: 100%; margin-bottom: 0.28in"><font size="2" style="font-size: 10pt"><b>Ts.
+Amado Nervo 21ETV0473W</b></font></p>
+<p align="center" style="line-height: 100%; margin-bottom: 0in"><font color="#7a1f1f"><font size="5" style="font-size: 19pt"><b>PROGRAMA
+ESCOLAR DE MEJORA CONTINUA (PEMC)</b></font></font></p>
+<p align="center" style="line-height: 100%; margin-top: 0.07in; margin-bottom: 0.42in">
+<font size="2" style="font-size: 11pt"><i>Ciclo Escolar 2026-2027</i></font></p>
+<p style="line-height: 100%; margin-bottom: 0.28in; border-top: none; border-bottom: 1.50pt solid #7a1f1f; border-left: none; border-right: none; padding-top: 0in; padding-bottom: 0.06in; padding-left: 0in; padding-right: 0in">
+<br/>
+<br/>
+
+</p>
+<p style="line-height: 100%; margin-bottom: 0.08in"><b>Docentes:</b></p>
+<ul>
+	<li value="1"><p style="line-height: 100%; margin-bottom: 0.04in">Neftalí
+	Bladimir Ortan Aguilar — 1er grado, grupo A</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Salvador
+	Olvera Barrera — 2° y 3er grado</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Matrícula
+	total: 32 alumnos</p></li>
+</ul>
+<p style="line-height: 100%; margin-bottom: 0in"><br/>
+
+</p>
+<h1 class="western" style="margin-top: 0in; margin-bottom: 0.1in; page-break-before: always">
+<font color="#7a1f1f"><b>Diagnóstico escolar</b></font></h1>
+<p style="line-height: 100%; margin-bottom: 0.08in"><b>Datos de
+identificación de la escuela</b></p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="191"/>
+	<col width="418"/>
+	<tr>
+		<td width="191" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Datos generales del Centro de Trabajo</b></font></p>
+		</td>
+		<td width="418" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Telesecundaria
+			&quot;Amado Nervo&quot; — CCT 21ETV0473W — Zona Escolar 052,
+			Sector 11 Estatal</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="191" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Ubicación geográfica</b></font></p>
+		</td>
+		<td width="418" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Calle
+			Cerro del Vigilante S/N, Santa María Xoyatla, Tepeojuma, Puebla,
+			C.P. 74394 — zona rural</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="191" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Sistema, modalidad, sostenimiento</b></font></p>
+		</td>
+		<td width="418" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Telesecundaria,
+			sostenimiento público estatal, turno matutino</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="191" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Plantilla docente</b></font></p>
+		</td>
+		<td width="418" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Neftalí
+			Bladimir Ortan Aguilar (director comisionado, 1er grado, grupo A)
+			· Salvador Olvera Barrera (2° y 3er grado) — escuela bidocente</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="191" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Matrícula escolar</b></font></p>
+		</td>
+		<td width="418" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">32 alumnos
+			en total (1°, 2° y 3er grado, grupo A). [Desglose por grado y
+			sexo pendiente de confirmar con el ciclo escolar en curso.]</span></font></p>
+		</td>
+	</tr>
+</table>
+<h2 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#b8860b"><b>Diagnóstico
+socioeducativo</b></font></h2>
+<p style="line-height: 100%; margin-bottom: 0.08in"><b>Problematización</b></p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="200"/>
+	<col width="201"/>
+	<col width="200"/>
+	<tr>
+		<td width="200" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="center">
+			<font color="#ffffff"><b>CONDICIONES SOCIALES</b></font></p>
+		</td>
+		<td width="201" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="center">
+			<font color="#ffffff"><b>CULTURALES</b></font></p>
+		</td>
+		<td width="200" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="center">
+			<font color="#ffffff"><b>GEOGRÁFICAS</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="200" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Migración
+			de padres de familia hacia Estados Unidos</span></font></font></p>
+		</td>
+		<td width="201" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Lengua
+			materna náhuatl hablada por la mayoría de la comunidad, con bajo
+			dominio de la escritura (base del PIC 2025-2026 y su Fase 2)</span></font></font></p>
+		</td>
+		<td width="200" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Localidad
+			rural de Xoyatla, Tepeojuma, Puebla — 745 habitantes, a 1,463
+			msnm</span></font></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="200" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Composición
+			familiar diversa: varios alumnos viven con la madre sola o con
+			abuelos/otros familiares</span></font></font></p>
+		</td>
+		<td width="201" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Tradiciones
+			religiosas: Semana Santa y 12 de octubre (Cristo Rey)</span></font></font></p>
+		</td>
+		<td width="200" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Escasez
+			de agua identificada por los propios alumnos como la problemática
+			más urgente de la comunidad</span></font></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="200" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Bullying,
+			apodos y violencia entre compañeros (Diagnóstico Integral 2026)</span></font></font></p>
+		</td>
+		<td width="201" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Producción
+			de mezcal como actividad económica tradicional del municipio</span></font></font></p>
+		</td>
+		<td width="200" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Manejo
+			deficiente de basura y residuos en la comunidad</span></font></font></p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.14in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="304"/>
+	<col width="304"/>
+	<tr>
+		<td width="304" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="center">
+			<font color="#ffffff"><b>ECONÓMICAS</b></font></p>
+		</td>
+		<td width="304" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="center">
+			<font color="#ffffff"><b>EDUCATIVAS</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="304" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Economía
+			basada en agricultura y producción de mezcal; ingresos limitados
+			en varias familias</span></font></font></p>
+		</td>
+		<td width="304" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Migración
+			de figuras paternas en busca de mejores ingresos</span></font></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="304" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Falta
+			de acceso a internet en casa para un grupo relevante de alumnos
+			(afecta tareas)</span></font></font></p>
+		</td>
+		<td width="304" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><font size="2" style="font-size: 9pt"><span style="font-weight: normal">Rezago
+			en escritura de textos y ortografía [confirmar con resultados del
+			examen académico]</span></font></font></p>
+		</td>
+	</tr>
+</table>
+<h2 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#b8860b"><b>Resultados
+de las evaluaciones internas y externas</b></font></h2>
+<ul>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Diagnóstico
+	Integral 2026 (socioemocional, socioeconómico, aprendizaje,
+	académico y comunitario): 28-29 respuestas de 32 alumnos — agua y
+	basura como problemáticas comunitarias más mencionadas;
+	convivencia (bullying/apodos) como preocupación repetida.</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Estilos de
+	aprendizaje (VAK): predominio del estilo Visual, seguido de
+	Auditivo; Kinestésico como el menos frecuente.</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Examen
+	diagnóstico académico (55 reactivos, 4 campos formativos, por
+	grado): aplicado en papel; [resultados pendientes de captura en el
+	libro de Excel entregado — agregar aquí el promedio por campo
+	formativo y grado una vez capturados].</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">PIC del
+	ciclo anterior (2025-2026): confirmó mediante encuesta comunitaria
+	que el 90% de la comunidad habla náhuatl y solo el 20% sabe
+	escribirlo — resultado que fundamenta la continuidad del proyecto
+	en Fase 2 este ciclo.</p></li>
+</ul>
+<h2 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#b8860b"><b>Calendario
+de sesiones del Consejo Técnico Escolar 2026-2027</b></font></h2>
+<p style="line-height: 100%; margin-bottom: 0.08in"><font color="#555555"><i>Fuente:
+Orientaciones para la Fase Intensiva del Consejo Técnico Escolar,
+Zona Escolar 052, 21 de agosto de 2026.</i></font></p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="204"/>
+	<col width="404"/>
+	<tr>
+		<td width="204" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Sesión CTE</b></font></p>
+		</td>
+		<td width="404" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Fecha (Zona Escolar 052 / Escuela)</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="204" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">CTE Fase
+			Intensiva</span></font></p>
+		</td>
+		<td width="404" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">21 de
+			agosto de 2026 (Zona) — 24 al 28 de agosto de 2026 (Escuela)</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="204" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">1ª Sesión
+			Ordinaria</span></font></p>
+		</td>
+		<td width="404" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">23 de
+			septiembre de 2026 (Zona) — 25 de septiembre de 2026 (Escuela)</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="204" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">2ª Sesión
+			Ordinaria</span></font></p>
+		</td>
+		<td width="404" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">28 de
+			octubre de 2026 (Zona) — 30 de octubre de 2026 (Escuela)</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="204" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">3ª Sesión
+			Ordinaria</span></font></p>
+		</td>
+		<td width="404" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">25 de
+			noviembre de 2026 (Zona) — 27 de noviembre de 2026 (Escuela)</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="204" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">4ª Sesión
+			Ordinaria</span></font></p>
+		</td>
+		<td width="404" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">27 de
+			enero de 2027 (Zona) — 29 de enero de 2027 (Escuela)</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="204" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">5ª Sesión
+			Ordinaria</span></font></p>
+		</td>
+		<td width="404" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">24 de
+			febrero de 2027 (Zona) — 26 de febrero de 2027 (Escuela)</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="204" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">6ª Sesión
+			Ordinaria</span></font></p>
+		</td>
+		<td width="404" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">28 de
+			abril de 2027 (Zona) — 30 de abril de 2027 (Escuela)</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="204" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">7ª Sesión
+			Ordinaria</span></font></p>
+		</td>
+		<td width="404" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">26 de mayo
+			de 2027 (Zona) — 28 de mayo de 2027 (Escuela)</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="204" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">8ª Sesión
+			Ordinaria</span></font></p>
+		</td>
+		<td width="404" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">23 de
+			junio de 2027 (Zona) — 25 de junio de 2027 (Escuela)</span></font></p>
+		</td>
+	</tr>
+</table>
+<h2 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#b8860b"><b>Programa
+de Seguridad y Cultura de Paz en la Escuela y Manual para la Sana
+Convivencia Escolar</b></font></h2>
+<p style="line-height: 100%; margin-bottom: 0.08in"><font color="#555555"><i>Marco
+de referencia retomado de las Orientaciones para la Fase Intensiva
+del CTE 2026-2027 (Zona Escolar 052) y del Programa &quot;Por Amor a
+Puebla — Hagamos Equipo por la Paz&quot;, de aplicación
+obligatoria en la escuela.</i></font></p>
+<p style="line-height: 100%; margin-bottom: 0.08in"><b>Difusión del
+Manual para la Sana Convivencia Escolar 2026</b></p>
+<ul>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Publicarlo
+	en los medios electrónicos de la escuela (portal escolar) y tenerlo
+	impreso y visible para consulta permanente de la comunidad escolar.</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Emitir un
+	oficio o circular a madres, padres y tutores informando su ubicación
+	física y el enlace electrónico de consulta.</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Integrar al
+	expediente de cada alumno, durante la inscripción del ciclo
+	2026-2027: Anexo 3 (carta de conocimiento del Manual) y Anexo 4
+	(carta compromiso para la sana convivencia y corresponsabilidad).</p></li>
+</ul>
+<p style="line-height: 100%; margin-bottom: 0.08in"><b>Brigada
+Escolar</b></p>
+<ul>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Presidente:
+	responsable del plantel (director).</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">2
+	estudiantes (un alumno y una alumna), 2 docentes, 2 figuras
+	parentales (un padre/tutor y una madre/tutora).</p></li>
+</ul>
+<p style="line-height: 100%; margin-bottom: 0.08in"><b>Ruta de
+actuación ante una posible situación de riesgo (acoso, maltrato o
+violencia)</b></p>
+<ul>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">1.
+	Detección: escucha activa y uso de indicadores para identificar
+	posibles casos.</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">2.
+	Notificación: informar, analizar el caso, integrar evidencia y
+	citar a las partes involucradas.</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">3.
+	Intervención: acta de hechos, medidas de protección y canalización
+	externa si es necesario (Protocolos de Erradicación del Acoso, del
+	Maltrato y de la Violencia Sexual).</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">4.
+	Seguimiento: monitoreo del caso y de su resolución, y acuerdos para
+	prevenir futuras incidencias.</p></li>
+</ul>
+<p style="line-height: 100%; margin-bottom: 0.08in"><i>Instrumentos
+de registro a usar en cada caso: bitácora escolar (relato textual),
+expediente (resguardo de evidencias), carta compromiso con
+padres/tutores, acta de hechos (tiempo, modo y lugar) y, si
+corresponde, canalización a atención interdisciplinaria (DIF,
+Fiscalía, servicios de salud).</i></p>
+<p style="line-height: 100%; margin-bottom: 0.08in"><font color="#7a1f1f"><b>Nota
+para la dirección: este es el mecanismo oficial vigente para dar
+seguimiento formal al caso ya identificado en el Diagnóstico
+Integral 2026 (alumna que reportó agresión por parte de un
+familiar). Si aún no se ha levantado el acta de hechos ni realizado
+la canalización correspondiente, se recomienda hacerlo como
+siguiente paso, apoyándose en la Brigada Escolar y en la Ruta de
+Actuación aquí descrita.</b></font></p>
+<h2 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#b8860b"><b>Ámbitos
+del Programa Escolar de Mejora Continua (PEMC)</b></font></h2>
+<ul>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Aprovechamiento
+	Escolar y Asistencia</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Prácticas
+	Docentes y Directivas</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Formación
+	Docente</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Avance de
+	los Planes y Programas Educativos</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Participación
+	de la Comunidad</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Desempeño
+	de la Autoridad Escolar</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Infraestructura
+	y Equipamiento</p></li>
+	<li><p style="line-height: 100%; margin-bottom: 0.04in">Carga
+	Administrativa</p></li>
+</ul>
+<h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Programa
+Escolar de Mejora Continua</b></font></h1>
+<p style="line-height: 100%; margin-bottom: 0.08in"><font color="#555555"><i>Los
+7 ámbitos siguientes ya traen una propuesta de problemática,
+objetivo, meta, indicador y acciones — borrador redactado con base
+en la información disponible en el proyecto (diagnósticos, PIC,
+Control Escolar). El colectivo docente debe revisarlos, ajustar
+metas/tiempos y completar lo que dependa de datos aún no compartidos
+(como el examen académico) antes de presentarlo a supervisión.</i></font></p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="138"/>
+	<col width="5"/>
+	<col width="152"/>
+	<col width="298"/>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Ámbito(s)</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Participación de la Comunidad</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Problemática identificada</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Debilitamiento
+			de la lengua náhuatl escrita y necesidad de vincular a la escuela
+			con la comunidad en torno a problemáticas reales (agua, manejo de
+			basura).</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Objetivos</b></font></p>
+		</td>
+		<td width="152" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Metas</b></font></p>
+		</td>
+		<td width="298" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Indicadores</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Fortalecer
+			el vínculo escuela-comunidad a través del PIC &quot;Tlateponalti
+			Náhuatl — Fase 2&quot;, usando la escritura náhuatl para
+			documentar y difundir el cuidado del agua y el manejo de la
+			basura.</span></font></p>
+		</td>
+		<td width="152" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Lograr que
+			el 100% de los grupos presente a la comunidad al menos un material
+			bilingüe (náhuatl-español) sobre agua o basura durante el ciclo
+			escolar.</span></font></p>
+		</td>
+		<td width="298" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">N.° de
+			materiales bilingües elaborados y presentados a la comunidad /
+			N.° de grupos.</span></font></p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.07in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="164"/>
+	<col width="112"/>
+	<col width="72"/>
+	<col width="244"/>
+	<tr>
+		<td width="164" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Acciones</b></font></p>
+		</td>
+		<td width="112" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Responsables</b></font></p>
+		</td>
+		<td width="72" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Tiempo</b></font></p>
+		</td>
+		<td width="244" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Seguimiento, ¿cómo estamos avanzando?</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">1. Retomar
+			y dar continuidad al PIC del ciclo anterior en su Fase 2.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">2.
+			Vincular a padres de familia y hablantes de náhuatl de la
+			comunidad como asesores.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">3.
+			Organizar una presentación pública (feria o evento) de los
+			materiales elaborados.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">4.
+			Realizar la Asamblea de Padres de Familia de Inicio de Ciclo
+			Escolar (31 de agosto al 7 de septiembre de 2026) e informar en
+			ella sobre el PIC, el Manual para la Sana Convivencia Escolar y el
+			Comité de Convivencia Escolar y Desaliento de las Prácticas que
+			Generan Violencia.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.21in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="138"/>
+	<col width="5"/>
+	<col width="152"/>
+	<col width="298"/>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Ámbito(s)</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Aprovechamiento Escolar y Asistencia /
+			Prácticas Docentes y Directivas</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Problemática identificada</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Convivencia
+			escolar afectada por bullying, apodos y violencia entre
+			compañeros, señalada por los propios alumnos en el Diagnóstico
+			Integral 2026.</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Objetivos</b></font></p>
+		</td>
+		<td width="152" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Metas</b></font></p>
+		</td>
+		<td width="298" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Indicadores</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Fomentar
+			la sana convivencia en la escuela para mejorar las relaciones
+			sociales y los ambientes de aprendizaje, apoyándose en el
+			Reglamento de Convivencia ya vigente.</span></font></p>
+		</td>
+		<td width="152" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Lograr
+			realizar el 80% de las actividades del programa de convivencia a
+			lo largo de todo el ciclo escolar.</span></font></p>
+		</td>
+		<td width="298" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">N.° de
+			actividades de convivencia realizadas / N.° de actividades
+			programadas.</span></font></p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.07in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="164"/>
+	<col width="112"/>
+	<col width="72"/>
+	<col width="244"/>
+	<tr>
+		<td width="164" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Acciones</b></font></p>
+		</td>
+		<td width="112" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Responsables</b></font></p>
+		</td>
+		<td width="72" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Tiempo</b></font></p>
+		</td>
+		<td width="244" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Seguimiento, ¿cómo estamos avanzando?</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">1.
+			Capacitar al personal docente en el Reglamento de Convivencia y en
+			manejo de conflictos.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">2.
+			Difundir el Reglamento de Convivencia entre alumnos y padres de
+			familia.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">3. Dar
+			seguimiento a los casos detectados mediante la bitácora de
+			incidentes de Control Escolar.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">4. Aplicar
+			el Manual para la Sana Convivencia Escolar 2026 y conformar la
+			Brigada Escolar (director, 2 alumnos, 2 docentes, 2 figuras
+			parentales), integrando los Anexos 3 y 4 al expediente de cada
+			alumno durante la inscripción.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">5. Dar
+			seguimiento, mediante la Ruta de Actuación
+			(detección-notificación-intervención-seguimiento), a los casos
+			de riesgo ya identificados en el Diagnóstico Integral 2026.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.21in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="138"/>
+	<col width="5"/>
+	<col width="152"/>
+	<col width="298"/>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Ámbito(s)</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Infraestructura y Equipamiento</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Problemática identificada</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Escasez de
+			agua y manejo deficiente de basura en la comunidad y,
+			potencialmente, en la propia escuela — problemática señalada
+			por los propios alumnos como la más urgente.</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Objetivos</b></font></p>
+		</td>
+		<td width="152" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Metas</b></font></p>
+		</td>
+		<td width="298" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Indicadores</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Gestionar
+			mejoras en el suministro de agua y en el manejo de residuos dentro
+			de la escuela, en coordinación con la comunidad y las autoridades
+			locales, y reforzar la separación y disposición de basura en la
+			propia escuela.</span></font></p>
+		</td>
+		<td width="152" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Gestionar
+			al menos una acción concreta de mejora de agua o manejo de
+			residuos en la escuela durante el ciclo escolar, y colocar botes
+			de separación de basura en los 3 salones.</span></font></p>
+		</td>
+		<td width="298" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">N.° de
+			acciones de mejora gestionadas y concretadas / N.° de acciones
+			programadas.</span></font></p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.07in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="164"/>
+	<col width="112"/>
+	<col width="72"/>
+	<col width="244"/>
+	<tr>
+		<td width="164" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Acciones</b></font></p>
+		</td>
+		<td width="112" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Responsables</b></font></p>
+		</td>
+		<td width="72" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Tiempo</b></font></p>
+		</td>
+		<td width="244" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Seguimiento, ¿cómo estamos avanzando?</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">1.
+			Diagnosticar el estado actual del suministro de agua y del manejo
+			de basura en la escuela.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">2. Colocar
+			botes de separación de residuos en salones y áreas comunes.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">3.
+			Gestionar apoyo ante autoridades municipales (agua potable,
+			recolección de basura) con acompañamiento del PIC.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">4.
+			Mantener actualizado el Programa Interno de Protección Civil
+			(PIPC) en la plataforma estatal y registrar a la escuela en el
+			Segundo Simulacro Nacional 2026 (19 de septiembre de 2026).</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.21in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="138"/>
+	<col width="5"/>
+	<col width="152"/>
+	<col width="298"/>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Ámbito(s)</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Avance de los Planes y Programas
+			Educativos</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Problemática identificada</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Rezago
+			detectado en operaciones básicas, resolución de problemas
+			lógico-matemáticos, comprensión y redacción de textos, y
+			ortografía — con base en la experiencia docente y el
+			Diagnóstico Integral 2026; pendiente de confirmar con los
+			resultados del examen diagnóstico académico (55 reactivos) ya
+			aplicado y aún sin capturar.</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Objetivos</b></font></p>
+		</td>
+		<td width="152" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Metas</b></font></p>
+		</td>
+		<td width="298" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Indicadores</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Avanzar en
+			la implementación del Programa Sintético y el Programa Analítico
+			por Campos Formativos 2026-2027, dando prioridad a la
+			lectoescritura (incluida la lengua náhuatl del PIC) y al
+			razonamiento lógico-matemático aplicado a problemas reales de la
+			comunidad.</span></font></p>
+		</td>
+		<td width="152" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Aplicar el
+			100% del Programa Analítico por Campos Formativos en los tres
+			grados, con revisión trimestral en CTE.</span></font></p>
+		</td>
+		<td width="298" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">N.° de
+			PPA (proyectos) desarrollados conforme al Programa Analítico /
+			N.° de PPA planeados por trimestre.</span></font></p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.07in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="164"/>
+	<col width="112"/>
+	<col width="72"/>
+	<col width="244"/>
+	<tr>
+		<td width="164" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Acciones</b></font></p>
+		</td>
+		<td width="112" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Responsables</b></font></p>
+		</td>
+		<td width="72" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Tiempo</b></font></p>
+		</td>
+		<td width="244" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Seguimiento, ¿cómo estamos avanzando?</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">1.
+			Capturar y analizar los resultados del examen diagnóstico
+			académico (55 reactivos) por campo formativo y grado.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">2. Revisar
+			en cada sesión de CTE el avance del Programa Analítico por
+			Campos Formativos (conforme al calendario de las 8 sesiones
+			ordinarias 2026-2027).</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">3. Ajustar
+			el Programa Analítico con base en los resultados capturados.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">4. Dar
+			seguimiento a alumnos en riesgo de abandono escolar mediante el
+			Sistema de Acompañamiento para Trayectorias Educativas Continuas,
+			Completas y de Excelencia (SIATECCE).</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.21in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="138"/>
+	<col width="5"/>
+	<col width="152"/>
+	<col width="298"/>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Ámbito(s)</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Formación Docente</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Problemática identificada</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Escuela
+			bidocente donde ambos maestros atienden más de un grado (uno de
+			ellos comisionado en dirección frente a grupo), lo que exige
+			fortalecer estrategias de trabajo multigrado y de enseñanza de la
+			lengua náhuatl como segunda lengua de instrucción.</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Objetivos</b></font></p>
+		</td>
+		<td width="152" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Metas</b></font></p>
+		</td>
+		<td width="298" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Indicadores</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Fortalecer
+			las capacidades docentes en metodología de trabajo por proyectos
+			en telesecundaria, atención a grupos multigrado, y estrategias
+			didácticas para la enseñanza de la lengua náhuatl.</span></font></p>
+		</td>
+		<td width="152" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Que los 2
+			docentes participen en al menos una actividad de formación o
+			autoformación colegiada por trimestre.</span></font></p>
+		</td>
+		<td width="298" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">N.° de
+			actividades de formación realizadas / N.° de actividades
+			programadas.</span></font></p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.07in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="164"/>
+	<col width="112"/>
+	<col width="72"/>
+	<col width="244"/>
+	<tr>
+		<td width="164" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Acciones</b></font></p>
+		</td>
+		<td width="112" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Responsables</b></font></p>
+		</td>
+		<td width="72" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Tiempo</b></font></p>
+		</td>
+		<td width="244" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Seguimiento, ¿cómo estamos avanzando?</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">1. Revisar
+			en colectivo los materiales de la Academia Estatal de
+			Fortalecimiento Pedagógico e Innovación Educativa (Agenda
+			Estatal de Telesecundarias).</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">2.
+			Compartir entre ambos docentes las estrategias que funcionaron en
+			el PIC del ciclo anterior.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">3.
+			Documentar aprendizajes y dificultades de la Fase 2 del PIC para
+			retroalimentar la práctica docente.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.21in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="138"/>
+	<col width="5"/>
+	<col width="152"/>
+	<col width="298"/>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Ámbito(s)</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Desempeño de la Autoridad Escolar</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Problemática identificada</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Director
+			comisionado frente a grupo (Neftalí Bladimir Ortan Aguilar, 1er
+			grado), lo que exige equilibrar la función directiva con la
+			docencia y dar seguimiento puntual a los pendientes de gestión
+			(PIC, PEMC, Control Escolar, protección de la infancia).</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Objetivos</b></font></p>
+		</td>
+		<td width="152" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Metas</b></font></p>
+		</td>
+		<td width="298" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Indicadores</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Fortalecer
+			la gestión escolar y el seguimiento a los compromisos del PEMC,
+			el PIC y los casos de atención a alumnos (bitácora de
+			incidentes), pese a la doble función directivo-docente.</span></font></p>
+		</td>
+		<td width="152" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Dar
+			seguimiento trimestral, en CTE, al avance del PEMC, el PIC y los
+			casos abiertos en la bitácora de incidentes.</span></font></p>
+		</td>
+		<td width="298" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">N.° de
+			sesiones de seguimiento realizadas / N.° de sesiones de CTE del
+			ciclo escolar.</span></font></p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.07in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="164"/>
+	<col width="112"/>
+	<col width="72"/>
+	<col width="244"/>
+	<tr>
+		<td width="164" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Acciones</b></font></p>
+		</td>
+		<td width="112" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Responsables</b></font></p>
+		</td>
+		<td width="72" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Tiempo</b></font></p>
+		</td>
+		<td width="244" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Seguimiento, ¿cómo estamos avanzando?</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">1. Incluir
+			como punto fijo de cada CTE el avance del PEMC y del PIC.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">2. Dar
+			seguimiento a los casos registrados en la bitácora de incidentes
+			de Control Escolar hasta su cierre.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">3.
+			Mantener comunicación con la supervisión de Zona Escolar 052
+			sobre avances y necesidades de la escuela.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.21in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="138"/>
+	<col width="5"/>
+	<col width="152"/>
+	<col width="298"/>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Ámbito(s)</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><b>Carga Administrativa</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="138" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Problemática identificada</b></font></p>
+		</td>
+		<td colspan="3" width="471" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Escuela
+			bidocente con un director comisionado frente a grupo: la carga
+			administrativa (Control Escolar, PEMC, PIC, reportes a
+			supervisión) se concentra en muy poco personal.</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Objetivos</b></font></p>
+		</td>
+		<td width="152" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Metas</b></font></p>
+		</td>
+		<td width="298" bgcolor="#2f6b3a" style="background: #2f6b3a; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Indicadores</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2" width="151" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Optimizar
+			el tiempo dedicado a tareas administrativas aprovechando las
+			herramientas digitales ya implementadas (Control Escolar en línea,
+			portal escolar) para reducir el llenado manual y duplicado de
+			información.</span></font></p>
+		</td>
+		<td width="152" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">Reducir el
+			tiempo dedicado a captura manual de información duplicada,
+			centralizando datos en Control Escolar (ya operando en
+			tseamxoyatla.fun).</span></font></p>
+		</td>
+		<td width="298" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">N.° de
+			procesos administrativos centralizados en Control Escolar / N.°
+			de procesos administrativos totales de la escuela.</span></font></p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.07in"><br/>
+<br/>
+
+</p>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="164"/>
+	<col width="112"/>
+	<col width="72"/>
+	<col width="244"/>
+	<tr>
+		<td width="164" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Acciones</b></font></p>
+		</td>
+		<td width="112" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Responsables</b></font></p>
+		</td>
+		<td width="72" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Tiempo</b></font></p>
+		</td>
+		<td width="244" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#ffffff"><b>Seguimiento, ¿cómo estamos avanzando?</b></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">1.
+			Mantener actualizado Control Escolar como fuente única de datos
+			de alumnos, asistencia y calificaciones.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">2. Usar
+			los reportes exportables de Control Escolar para los informes que
+			pide la supervisión, en lugar de capturarlos por separado.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">3. Revisar
+			trimestralmente qué trámites administrativos se pueden
+			simplificar.</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="164" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="left">
+			<font color="#000000"><span style="font-weight: normal">4.
+			Entregar puntualmente los cortes de caja de la cooperativa escolar
+			a la CORDE (fechas: 21-24 de septiembre de 2026, y siguientes
+			cortes conforme lo indique la Zona Escolar).</span></font></p>
+		</td>
+		<td width="112" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="72" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="244" valign="top" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+</table>
+<p style="line-height: 100%; margin-bottom: 0.21in"><br/>
+<br/>
+
+</p>
+<p style="line-height: 100%; margin-bottom: 0in"><br/>
+
+</p>
+<h1 class="western" style="margin-top: 0in; margin-bottom: 0.1in; page-break-before: always">
+<font color="#7a1f1f"><b>Autorización</b></font></h1>
+<table width="627" cellpadding="4" cellspacing="0">
+	<col width="304"/>
+	<col width="304"/>
+	<tr>
+		<td width="304" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="center">
+			<font color="#000000"><b>Maestro de grupo</b></font></p>
+		</td>
+		<td width="304" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="center">
+			<font color="#000000"><b>Maestro de grupo</b></font></p>
+		</td>
+	</tr>
+	<tr valign="top">
+		<td width="304" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="304" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="304" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="center">
+			<font color="#000000"><span style="font-weight: normal">Neftalí
+			Bladimir Ortan Aguilar</span></font></p>
+		</td>
+		<td width="304" style="border: 1px solid #000000; padding: 0.04in 0.06in"><p align="center">
+			<font color="#000000"><span style="font-weight: normal">Salvador
+			Olvera Barrera</span></font></p>
+		</td>
+	</tr>
+	<tr>
+		<td width="304" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="center">
+			<font color="#000000"><b>Director escolar</b></font></p>
+		</td>
+		<td width="304" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.06in"><p align="center">
+			<font color="#000000"><b>Vo. Bo. — Encargado de despacho de la
+			Supervisión Escolar</b></font></p>
+		</td>
+	</tr>
+	<tr valign="top">
+		<td width="304" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+		<td width="304" style="border: 1px solid #000000; padding: 0.1in 0.06in"><p>
+			<br/>
+
+			</p>
+		</td>
+	</tr>
+</table>
+<div title="footer"><p align="center" style="line-height: 100%; margin-top: 0.02in; margin-bottom: 0in">
+	<font color="#888888"><font size="1" style="font-size: 8pt">Ts.
+	Amado Nervo 21ETV0473W · Programa Escolar de Mejora Continua
+	2026-2027</font></font></p>
+</div>
+
+</div>
+<p class="footer">Zona Escolar 052 · Santa María Xoyatla, Tepeojuma, Puebla · Ciclo Escolar 2026-2027</p>
+
+</body></html>
