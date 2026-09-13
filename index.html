@@ -1374,7 +1374,7 @@ function CedulaBloquePersona({ titulo, a, prefijo, esTutorLegal, extraDerecha, m
 
 function CedulaPaginaUno({ a }) {
   return (
-    <div className="ced-hoja solo-impresion">
+    <div className="ced-hoja">
       <div className="ced-enc-fila">
         <img className="ced-enc-logo" src={ENCABEZADO_CEDULA} alt="Puebla · Secretaría de Educación Pública" />
         <div className="ced-enc-derecha">
@@ -1428,7 +1428,7 @@ function CedulaPaginaUno({ a }) {
 function CedulaPaginaDos({ a }) {
   const tipoDoc = cedTipoDocumentoProbatorio(a);
   return (
-    <div className="ced-hoja solo-impresion">
+    <div className="ced-hoja">
       <div className="ced-nota-tutor">* Llenar este apartado en caso de que el tutor sea diferente al padre o la madre del alumno.</div>
       <CedulaBloquePersona
         titulo="Datos del tutor"
@@ -1526,8 +1526,10 @@ function VistaPreviaCedula({ alumno, onCerrar, onEditar }) {
             <button className="ced-btn-cerrar" onClick={onCerrar}>✕</button>
           </div>
         </div>
-        <CedulaPaginaUno a={alumno} />
-        {imprimirReverso && <CedulaPaginaDos a={alumno} />}
+        <div className="solo-impresion">
+          <CedulaPaginaUno a={alumno} />
+          {imprimirReverso && <CedulaPaginaDos a={alumno} />}
+        </div>
       </div>
     </div>
   );
