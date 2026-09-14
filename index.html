@@ -607,7 +607,31 @@ function mapaCamposPorNombreCorto(form) {
   return mapa;
 }
 
-function setTextSafeCedula(camposPorNombre, name, value) {
+// Calcula un tamaño de letra proporcional al alto real del campo del PDF oficial
+// (en vez de dejar el tamaño automático de pdf-lib, que sale chico y parejo sin
+// importar el campo) y lo va reduciendo si hace falta para que el texto no se
+// salga del ancho disponible — así un nombre largo se ajusta solo en vez de
+// desbordarse. "fuente" se usa nada más para MEDIR el ancho del texto.
+function tamanoLetraProporcional(campo, texto, fuente) {
+  let alto = 10, ancho = 200;
+  try {
+    const widgets = campo.acroField.getWidgets();
+    if (widgets.length) {
+      const r = widgets[0].getRectangle();
+      alto = r.height;
+      ancho = r.width;
+    }
+  } catch (e) {}
+  let tam = Math.min(Math.max(alto * 0.72, 8), 10.5);
+  if (texto && fuente) {
+    try {
+      while (tam > 5 && fuente.widthOfTextAtSize(texto, tam) > ancho - 4) tam -= 0.5;
+    } catch (e) {}
+  }
+  return tam;
+}
+
+function setTextSafeCedula(camposPorNombre, name, value, fuenteParaTamano) {
   const f = camposPorNombre[name];
   if (!f) return;
   try {
@@ -615,6 +639,9 @@ function setTextSafeCedula(camposPorNombre, name, value) {
     const maxLen = f.getMaxLength && f.getMaxLength();
     if (maxLen && v.length > maxLen) v = v.slice(0, maxLen);
     f.setText(v);
+    if (fuenteParaTamano) {
+      try { f.setFontSize(tamanoLetraProporcional(f, v, fuenteParaTamano)); } catch (e) {}
+    }
   } catch (e) {
     console.warn("Cédula PDF - campo de texto falló:", name, e);
   }
@@ -635,10 +662,10 @@ function setCheckSafeCedula(camposPorNombre, name, on) {
 // también en el archivo sin modificar). Por eso no se usa form.flatten() de pdf-lib
 // (truena con ese defecto): se hace un aplanado manual, campo por campo, usando solo
 // la referencia propia de cada campo — así no depende del árbol Parent/Kids mal armado.
-async function aplanarCedulaManual(pdfDoc) {
+async function aplanarCedulaManual(pdfDoc, fuenteParaTexto) {
   const { PDFName, pushGraphicsState, popGraphicsState, translate, drawObject, rotateInPlace } = window.PDFLib;
   const form = pdfDoc.getForm();
-  form.updateFieldAppearances();
+  form.updateFieldAppearances(fuenteParaTexto);
   const fields = form.getFields();
   fields.forEach((field) => {
     const widgets = field.acroField.getWidgets();
@@ -809,16 +836,17 @@ function mapaCamposCedulaPDF(a, hoyISOStr) {
 // Genera el PDF de la cédula (llenado con el PDF oficial real de base) y dispara la
 // descarga en el navegador. incluirReverso: si se incluye la página 2 (reverso).
 async function descargarCedulaPDF(alumno, incluirReverso) {
-  const { PDFDocument } = window.PDFLib;
+  const { PDFDocument, StandardFonts } = window.PDFLib;
   const bytes = base64ABytes(CEDULA_PDF_BASE64);
   const pdfDoc = await PDFDocument.load(bytes);
   pdfDoc.removePage(2); // quita siempre la página 3 (instructivo de llenado, no es parte del documento)
   const form = pdfDoc.getForm();
   const camposPorNombre = mapaCamposPorNombreCorto(form);
+  const fuenteSerif = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const mapa = mapaCamposCedulaPDF(alumno, hoyISO());
-  Object.entries(mapa.texto).forEach(([k, v]) => setTextSafeCedula(camposPorNombre, k, v));
+  Object.entries(mapa.texto).forEach(([k, v]) => setTextSafeCedula(camposPorNombre, k, v, fuenteSerif));
   Object.entries(mapa.check).forEach(([k, v]) => setCheckSafeCedula(camposPorNombre, k, v));
-  await aplanarCedulaManual(pdfDoc);
+  await aplanarCedulaManual(pdfDoc, fuenteSerif);
   if (!incluirReverso) pdfDoc.removePage(1);
   const pdfBytes = await pdfDoc.save();
   const blob = new Blob([pdfBytes], { type: "application/pdf" });
@@ -853,13 +881,15 @@ function cargoDeRol(rol) {
    puede usar form.flatten() de pdf-lib directamente, sin el aplanado manual. */
 
 async function llenarYDescargarPDFOficial(base64PDF, camposTexto, nombreArchivo) {
-  const { PDFDocument } = window.PDFLib;
+  const { PDFDocument, StandardFonts } = window.PDFLib;
   const bytes = base64ABytes(base64PDF);
   const pdfDoc = await PDFDocument.load(bytes);
   const form = pdfDoc.getForm();
   const camposPorNombre = mapaCamposPorNombreCorto(form);
-  Object.entries(camposTexto).forEach(([k, v]) => setTextSafeCedula(camposPorNombre, k, v));
-  form.flatten();
+  const fuenteSerif = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  Object.entries(camposTexto).forEach(([k, v]) => setTextSafeCedula(camposPorNombre, k, v, fuenteSerif));
+  form.updateFieldAppearances(fuenteSerif);
+  form.flatten({ updateFieldAppearances: false });
   const pdfBytes = await pdfDoc.save();
   descargarBytesPDF(pdfBytes, nombreArchivo);
 }
@@ -1015,7 +1045,7 @@ async function descargarActaConstitutivaPDF(datosEscuela, mesaDirectiva, contral
 
 /* --- 3. Lista de Asistencia (se reparte en páginas de 15 tutores) --- */
 async function descargarListaAsistenciaPDF(datosEscuela, tutores, conv) {
-  const { PDFDocument } = window.PDFLib;
+  const { PDFDocument, StandardFonts } = window.PDFLib;
   const c = conv || {};
   const lista = tutores || [];
   const porPagina = 15;
@@ -1027,6 +1057,7 @@ async function descargarListaAsistenciaPDF(datosEscuela, tutores, conv) {
     const pdfDoc = await PDFDocument.load(bytes);
     const form = pdfDoc.getForm();
     const camposPorNombre = mapaCamposPorNombreCorto(form);
+    const fuenteSerif = await pdfDoc.embedFont(StandardFonts.TimesRoman);
     const trozo = lista.slice(pag * porPagina, pag * porPagina + porPagina);
     const campos = {
       "undefined": DATOS_PLANTEL.nombre,
@@ -1037,8 +1068,9 @@ async function descargarListaAsistenciaPDF(datosEscuela, tutores, conv) {
       "de_2": String(totalPaginas),
     };
     trozo.forEach((t, i) => { campos[String(i + 1)] = t.nombre || ""; });
-    Object.entries(campos).forEach(([k, v]) => setTextSafeCedula(camposPorNombre, k, v));
-    form.flatten();
+    Object.entries(campos).forEach(([k, v]) => setTextSafeCedula(camposPorNombre, k, v, fuenteSerif));
+    form.updateFieldAppearances(fuenteSerif);
+    form.flatten({ updateFieldAppearances: false });
     const [paginaCopiada] = await documentoFinal.copyPages(pdfDoc, [0]);
     documentoFinal.addPage(paginaCopiada);
   }
