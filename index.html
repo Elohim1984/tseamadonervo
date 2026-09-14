@@ -659,35 +659,14 @@ function setCheckSafeCedula(camposPorNombre, name, on) {
 
 // El PDF oficial trae de fábrica ~10 campos del alumno cuyo nodo padre interno del
 // formulario no coincide con el árbol real (defecto del PDF original, confirmado
-// también en el archivo sin modificar). Por eso no se usa form.flatten() de pdf-lib
-// (truena con ese defecto): se hace un aplanado manual, campo por campo, usando solo
-// la referencia propia de cada campo — así no depende del árbol Parent/Kids mal armado.
-async function aplanarCedulaManual(pdfDoc, fuenteParaTexto) {
-  const { PDFName, pushGraphicsState, popGraphicsState, translate, drawObject, rotateInPlace } = window.PDFLib;
+// también en el archivo sin modificar), lo que hace tronar form.flatten() de
+// pdf-lib. Ya no se aplana el documento (así queda editable al bajarlo, igual que
+// el formato oficial en blanco), así que ese defecto ya no se activa: solo hace
+// falta regenerar la apariencia de los campos ya llenados para que se vean bien
+// desde un inicio, sin tocar el árbol de campos ni el AcroForm.
+async function prepararCedulaEditable(pdfDoc, fuenteParaTexto) {
   const form = pdfDoc.getForm();
   form.updateFieldAppearances(fuenteParaTexto);
-  const fields = form.getFields();
-  fields.forEach((field) => {
-    const widgets = field.acroField.getWidgets();
-    const pages = new Set();
-    widgets.forEach((widget) => {
-      const page = form.findWidgetPage(widget);
-      pages.add(page);
-      const widgetRef = form.findWidgetAppearanceRef(field, widget);
-      const xObjectKey = page.node.newXObject("FlatWidget", widgetRef);
-      const rectangle = widget.getRectangle();
-      const operators = [
-        pushGraphicsState(),
-        translate(rectangle.x, rectangle.y),
-        ...rotateInPlace(Object.assign({}, rectangle, { rotation: 0 })),
-        drawObject(xObjectKey),
-        popGraphicsState(),
-      ].filter(Boolean);
-      page.pushOperators(...operators);
-    });
-    pages.forEach((page) => page.node.removeAnnot(field.ref));
-  });
-  pdfDoc.catalog.delete(PDFName.of("AcroForm"));
 }
 
 // Arma el mapa "nombre de campo del PDF oficial -> valor del alumno", con la misma
@@ -846,7 +825,7 @@ async function descargarCedulaPDF(alumno, incluirReverso) {
   const mapa = mapaCamposCedulaPDF(alumno, hoyISO());
   Object.entries(mapa.texto).forEach(([k, v]) => setTextSafeCedula(camposPorNombre, k, v, fuenteSerif));
   Object.entries(mapa.check).forEach(([k, v]) => setCheckSafeCedula(camposPorNombre, k, v));
-  await aplanarCedulaManual(pdfDoc, fuenteSerif);
+  await prepararCedulaEditable(pdfDoc, fuenteSerif);
   if (!incluirReverso) pdfDoc.removePage(1);
   const pdfBytes = await pdfDoc.save();
   const blob = new Blob([pdfBytes], { type: "application/pdf" });
@@ -874,11 +853,15 @@ function cargoDeRol(rol) {
 
 /* ---------- Documentos oficiales de la APF: llenado sobre el PDF oficial real ---------- */
 /* Los 5 PDFs oficiales (SEP Puebla) que compartió el director se llenan igual que la
-   Cédula: se cargan como formulario editable, se llenan campo por campo con lo ya
-   capturado en Control Escolar, y se "aplanan" (dejan de ser editables) antes de
-   descargar. A diferencia de la Cédula, estos 5 PDFs NO tienen el defecto de fábrica
-   en su árbol de campos (comprobado antes de integrarlos aquí), así que aquí sí se
-   puede usar form.flatten() de pdf-lib directamente, sin el aplanado manual. */
+   Cédula: se cargan como formulario editable y se llenan campo por campo con lo ya
+   capturado en Control Escolar. A propósito NO se aplanan (no se usa form.flatten()):
+   el documento se guarda con su formulario todavía activo para que, igual que el
+   formato oficial en blanco, se pueda seguir editando en Acrobat o cualquier lector
+   de PDF después de bajarlo — por ejemplo para anotar a mano el número de votos de
+   la asamblea, que Control Escolar deja en blanco por no poder mapearlo con certeza.
+   Antes de guardar sí se regeneran las apariencias de los campos ya llenados
+   (updateFieldAppearances) para que se vean bien desde un inicio, sin depender de
+   que el lector las recalcule. */
 
 async function llenarYDescargarPDFOficial(base64PDF, camposTexto, nombreArchivo) {
   const { PDFDocument, StandardFonts } = window.PDFLib;
@@ -889,7 +872,6 @@ async function llenarYDescargarPDFOficial(base64PDF, camposTexto, nombreArchivo)
   const fuenteSerif = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   Object.entries(camposTexto).forEach(([k, v]) => setTextSafeCedula(camposPorNombre, k, v, fuenteSerif));
   form.updateFieldAppearances(fuenteSerif);
-  form.flatten({ updateFieldAppearances: false });
   const pdfBytes = await pdfDoc.save();
   descargarBytesPDF(pdfBytes, nombreArchivo);
 }
@@ -1044,8 +1026,18 @@ async function descargarActaConstitutivaPDF(datosEscuela, mesaDirectiva, contral
 }
 
 /* --- 3. Lista de Asistencia (se reparte en páginas de 15 tutores) --- */
+// Cada página se llena sobre su propia copia del PDF oficial (con su propio
+// formulario) y se copia -ya llena, sin aplanar- al documento final. Como el PDF
+// de origen reutiliza los mismos nombres de campo ("1".."15", "día", etc.) en
+// cada página, antes de copiarla se le pone a cada campo un prefijo único por
+// página (pag1_, pag2_...) para que no se confundan los valores entre páginas al
+// fusionarlas. Al terminar, se reconstruye el formulario del documento final:
+// se registran como campos las anotaciones que ya quedaron copiadas en cada
+// página y se arma un /DR (recursos por defecto, con las fuentes estándar) para
+// que el documento completo quede realmente editable en cualquier lector de PDF,
+// con el mismo diseño que si fuera un único PDF de una sola pieza.
 async function descargarListaAsistenciaPDF(datosEscuela, tutores, conv) {
-  const { PDFDocument, StandardFonts } = window.PDFLib;
+  const { PDFDocument, StandardFonts, PDFName, PDFDict } = window.PDFLib;
   const c = conv || {};
   const lista = tutores || [];
   const porPagina = 15;
@@ -1070,10 +1062,30 @@ async function descargarListaAsistenciaPDF(datosEscuela, tutores, conv) {
     trozo.forEach((t, i) => { campos[String(i + 1)] = t.nombre || ""; });
     Object.entries(campos).forEach(([k, v]) => setTextSafeCedula(camposPorNombre, k, v, fuenteSerif));
     form.updateFieldAppearances(fuenteSerif);
-    form.flatten({ updateFieldAppearances: false });
+    form.getFields().forEach((f) => {
+      try { f.acroField.setPartialName(`pag${pag + 1}_${f.getName()}`); } catch (e) {}
+    });
     const [paginaCopiada] = await documentoFinal.copyPages(pdfDoc, [0]);
     documentoFinal.addPage(paginaCopiada);
   }
+
+  // Reconstruye el formulario del documento final a partir de las anotaciones
+  // (campos) que ya quedaron copiadas dentro de cada página.
+  const formFinal = documentoFinal.getForm();
+  documentoFinal.getPages().forEach((page) => {
+    const annots = page.node.Annots();
+    if (!annots) return;
+    for (let i = 0; i < annots.size(); i++) {
+      const ref = annots.get(i);
+      const dict = documentoFinal.context.lookup(ref, PDFDict);
+      if (dict && dict.get(PDFName.of("FT"))) formFinal.acroForm.addField(ref);
+    }
+  });
+  const helv = await documentoFinal.embedFont(StandardFonts.Helvetica);
+  const zapf = await documentoFinal.embedFont(StandardFonts.ZapfDingbats);
+  formFinal.acroForm.dict.set(PDFName.of("DR"), documentoFinal.context.obj({ Font: { Helv: helv.ref, ZaDb: zapf.ref } }));
+  formFinal.acroForm.dict.set(PDFName.of("NeedAppearances"), documentoFinal.context.obj(false));
+
   const pdfBytes = await documentoFinal.save();
   descargarBytesPDF(pdfBytes, `Lista_Asistencia_APF_${hoyISO()}.pdf`);
 }
