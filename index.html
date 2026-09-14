@@ -840,12 +840,65 @@ async function descargarCedulaPDF(alumno, incluirReverso) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
-const NOMBRE_COMPLETO = { directora: "Neftalí Bladimir Ortán Aguilar", maestro: "Salvador Olvera Barrera" };
-const CARGO_USUARIO = { directora: "Directora", maestro: "Docente de 2° y 3er grado" };
+// El nombre/cargo del director y de quien atiende 2°/3er grado ya NO están fijos
+// aquí: se toman en vivo de las fichas que se capturan en Gestión escolar →
+// Datos Esc., marcando en cada ficha qué grado(s) atiende esa persona (campo
+// "Grado(s) que atiende"). Así, si el director corrige su nombre o cambia quién
+// da 2°/3er grado, se actualiza solo en todos los documentos, firmas y PDFs
+// oficiales, sin tocar código. Mientras Datos Esc. no tenga ninguna ficha
+// marcada con ese grado, se usan estos valores de respaldo para que nada salga
+// en blanco ni se rompa.
+const NOMBRE_COMPLETO_RESPALDO = { directora: "Neftalid Bladimir Ortán Aguilar", maestro: "Salvador Olvera Barrera" };
+const CARGO_USUARIO_RESPALDO = { directora: "Director comisionado", maestro: "Docente de 2° y 3er grado" };
+
+// Se sincroniza en vivo desde el estado de Datos Esc. (ver el useEffect en App)
+// cada vez que esa lista cambia. Vive fuera de React porque las funciones de
+// abajo arman PDFs y firmas en muchos lugares que no son componentes.
+let PERSONAL_VIVO = [];
+function sincronizarPersonalVivo(lista) {
+  PERSONAL_VIVO = Array.isArray(lista) ? lista : [];
+}
+
+function gradosDeFichaPersonal(p) {
+  const v = (p && p.PERSONAL_GRADO_ATIENDE) || "";
+  if (v === "1er grado") return [1];
+  if (v === "2° grado") return [2];
+  if (v === "3er grado") return [3];
+  if (v === "2° y 3er grado (bidocente)") return [2, 3];
+  return [];
+}
+
+function fichaPersonalQueAtiende(grado) {
+  return PERSONAL_VIVO.find((p) => {
+    const nombre = nombrePersonal(p);
+    return nombre && nombre !== "(sin nombre capturado)" && gradosDeFichaPersonal(p).includes(Number(grado));
+  });
+}
 
 function docenteDeGrado(grado) {
-  return Number(grado) === 1 ? NOMBRE_COMPLETO.directora : NOMBRE_COMPLETO.maestro;
+  const ficha = fichaPersonalQueAtiende(grado);
+  if (ficha) return nombreNaturalPersonal(ficha);
+  return Number(grado) === 1 ? NOMBRE_COMPLETO_RESPALDO.directora : NOMBRE_COMPLETO_RESPALDO.maestro;
 }
+
+const NOMBRE_COMPLETO = {
+  get directora() { return docenteDeGrado(1); },
+  get maestro() {
+    const ficha = fichaPersonalQueAtiende(2) || fichaPersonalQueAtiende(3);
+    return ficha ? nombreNaturalPersonal(ficha) : NOMBRE_COMPLETO_RESPALDO.maestro;
+  },
+};
+
+const CARGO_USUARIO = {
+  get directora() {
+    const ficha = fichaPersonalQueAtiende(1);
+    return (ficha && (ficha.PERSONAL_PUESTO || "").trim()) || CARGO_USUARIO_RESPALDO.directora;
+  },
+  get maestro() {
+    const ficha = fichaPersonalQueAtiende(2) || fichaPersonalQueAtiende(3);
+    return (ficha && (ficha.PERSONAL_PUESTO || "").trim()) || CARGO_USUARIO_RESPALDO.maestro;
+  },
+};
 
 function cargoDeRol(rol) {
   return CARGO_USUARIO[rol] || "";
@@ -1168,9 +1221,13 @@ function determinacionPorNivel(nivel) {
   return "plantel";
 }
 
+// Esta es solo la tarjeta de "¿Quién va a usar la plataforma hoy?" — se muestra
+// antes de que termine de cargar lo guardado en la Hoja, así que aquí el nombre
+// se deja fijo (no se lee de Datos Esc. como sí lo hacen los documentos y firmas
+// oficiales, ver NOMBRE_COMPLETO/CARGO_USUARIO más arriba).
 const USUARIOS = {
-  directora: { nombre: "Neftalid Orta", rol: "Directora · 1er grado" },
-  maestro: { nombre: "Salvador Olvera", rol: "Maestro · 2do y 3er grado" },
+  directora: { nombre: "Neftalid Ortán", rol: "Director · 1er grado" },
+  maestro: { nombre: "Salvador Olvera", rol: "Docente · 2° y 3er grado" },
 };
 
 // Categorías oficiales de "1. Tipo de situación" del Anexo 1 / R-01 (antes tenía categorías
@@ -1427,6 +1484,7 @@ const FICHA_PERSONAL_SCHEMA = [
     { clave: "PERSONAL_APELLIDO_MATERNO", etiqueta: "Apellido materno", tipo: "texto" },
     { clave: "PERSONAL_NOMBRES", etiqueta: "Nombre(s)", tipo: "texto" },
     { clave: "PERSONAL_PUESTO", etiqueta: "Puesto", tipo: "texto" },
+    { clave: "PERSONAL_GRADO_ATIENDE", etiqueta: "Grado(s) que atiende", tipo: "select", opciones: ["1er grado", "2° grado", "3er grado", "2° y 3er grado (bidocente)"] },
     { clave: "PERSONAL_CURP", etiqueta: "CURP", tipo: "texto" },
     { clave: "PERSONAL_RFC", etiqueta: "RFC", tipo: "texto" },
     { clave: "PERSONAL_CLAVE_PRESUPUESTAL", etiqueta: "Clave presupuestal", tipo: "texto" },
@@ -1448,6 +1506,16 @@ function nombrePersonal(p) {
   if (!p) return "";
   const partes = [p.PERSONAL_APELLIDO_PATERNO, p.PERSONAL_APELLIDO_MATERNO, p.PERSONAL_NOMBRES].filter(Boolean);
   return partes.length ? partes.join(" ") : "(sin nombre capturado)";
+}
+
+// Para firmas y documentos oficiales hace falta el orden natural ("Nombre(s)
+// Apellido Paterno Apellido Materno", como firmaría la persona), a diferencia
+// de nombrePersonal (apellidos primero) que se usa para listar/buscar en la
+// propia pestaña de Datos Esc., igual que con los alumnos.
+function nombreNaturalPersonal(p) {
+  if (!p) return "";
+  const partes = [p.PERSONAL_NOMBRES, p.PERSONAL_APELLIDO_PATERNO, p.PERSONAL_APELLIDO_MATERNO].filter(Boolean);
+  return partes.join(" ");
 }
 
 function personalVacio() {
@@ -2477,7 +2545,7 @@ function DatosPersonal({ personal, setPersonal, onStamp }) {
     <>
     <div className="flex flex-col gap-4">
       <p className="text-sm" style={{ opacity: 0.6 }}>
-        Control de datos del personal del plantel (director y docentes). Solo el nombre es obligatorio — el resto lo pueden ir completando cuando lo tengan a la mano.
+        Control de datos del personal del plantel (director y docentes). Solo el nombre es obligatorio — el resto lo pueden ir completando cuando lo tengan a la mano. <strong>Importante:</strong> marca el campo "Grado(s) que atiende" en tu ficha y en la del otro docente — el nombre y el puesto de quien tenga marcado el 1er grado aparecen automáticamente como Dirección en los documentos y firmas oficiales (Convocatoria, Actas, Bitácora, etc.), y de quien tenga 2°, 3er o "2° y 3er grado (bidocente)" aparecen como el docente de esos grados — así no hay que volver a escribirlo en ningún lado.
       </p>
 
       {editandoId && (
@@ -5979,6 +6047,11 @@ function App() {
 
   const confirmarLiga = (url) => { guardarLiga(url); setLigaState(url); };
   const onCambiarLiga = () => { guardarLiga(""); setLigaState(""); setRol(null); };
+
+  // Mantiene sincronizada la copia "en vivo" de Datos Esc. que usan NOMBRE_COMPLETO,
+  // CARGO_USUARIO y docenteDeGrado (fuera de React) para armar los PDFs y firmas
+  // oficiales con los datos que el director vaya capturando/corrigiendo ahí.
+  useEffect(() => { sincronizarPersonalVivo(personal); }, [personal]);
 
   useEffect(() => {
     if (!liga) { setCargando(false); return; }
