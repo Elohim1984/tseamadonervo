@@ -1262,9 +1262,12 @@ async function descargarCorteCajaPDF(datosEscuela, etiquetaCorte, periodo, fecha
   const filas = [];
   if (arrastre) filas.push({ descripcion: "Saldo anterior", ingreso: "", egreso: "", saldo: arrastre });
   (filasConSaldo || []).forEach((f) => filas.push(f));
+  // Numeración progresiva solo para egresos (mismo criterio que la captura en
+  // pantalla): "Saldo anterior" y los ingresos se imprimen sin número en N/P.
+  const filasNumeradas = numerarSoloEgresos(filas);
 
   const porPagina = CORTE_CAJA_FILAS_POR_PAGINA;
-  const totalPaginas = Math.max(1, Math.ceil(filas.length / porPagina));
+  const totalPaginas = Math.max(1, Math.ceil(filasNumeradas.length / porPagina));
   const encabezado = mapaCorteCajaEncabezado(datosEscuela, etiquetaCorte, periodo, fechaElaboracion);
 
   const documentoFinal = await PDFDocument.create();
@@ -1275,10 +1278,10 @@ async function descargarCorteCajaPDF(datosEscuela, etiquetaCorte, periodo, fecha
     const camposPorNombre = mapaCamposPorNombreCorto(form);
     const fuenteSerif = await pdfDoc.embedFont(StandardFonts.TimesRoman);
     const campos = { ...encabezado };
-    const trozo = filas.slice(pag * porPagina, pag * porPagina + porPagina);
+    const trozo = filasNumeradas.slice(pag * porPagina, pag * porPagina + porPagina);
     trozo.forEach((f, i) => {
       const suf = CORTE_CAJA_SUFIJOS_FILA[i];
-      campos[`Texto13${suf}`] = String(i + 1 + pag * porPagina);
+      campos[`Texto13${suf}`] = f.numProgresivo || "";
       campos[`Texto14${suf}`] = f.descripcion || "";
       campos[`Texto15${suf}`] = f.ingreso ? Number(f.ingreso).toFixed(2) : "";
       campos[`Texto16${suf}`] = f.egreso ? Number(f.egreso).toFixed(2) : "";
@@ -5070,12 +5073,27 @@ function ActaEntregaRecepcionVista({ checklist, saliente, entrante, imprimible }
 // le puede marcar una categoría, opcional, para que cuando se construya el Informe
 // Anual se puedan sumar solos los 6 bimestres por categoría en vez de a mano.
 const CATEGORIAS_INGRESO_APF = ["Saldo del ciclo anterior", "Aportación de padres de familia", "Donativo de particulares o clubes", "Donativo de autoridades", "Actividades (rifas, kermeses, bailes)", "Otros ingresos"];
-const CATEGORIAS_EGRESO_APF = ["Seguro escolar", "Mobiliario", "Equipo de audio y cómputo", "Material didáctico", "Material deportivo", "Banda de guerra", "Material de laboratorio", "Material de taller", "Edificio escolar", "Luz", "Teléfono", "Apoyo administrativo", "Internet", "Agua", "Actividades sociales, cívicas y culturales"];
+const CATEGORIAS_EGRESO_APF = ["Seguro escolar", "Mobiliario", "Equipo", "Material didáctico", "Material deportivo", "Banda de guerra", "Material de laboratorio", "Material de taller", "Edificio escolar", "Luz", "Teléfono", "Apoyo administrativo", "Internet", "Agua", "Actividades sociales, cívicas y culturales"];
+
+// El "número progresivo" (columna N/P) del Corte de Caja solo cuenta los renglones
+// de EGRESO (así lo pidió el director) — los ingresos y el renglón de "Saldo
+// anterior"/"Existencia en caja" no llevan número. Se usa la misma función en la
+// tabla de captura en pantalla, en la vista previa/impresión y en el PDF oficial,
+// para que el número de cada egreso sea siempre el mismo en los tres lados.
+function numerarSoloEgresos(filas) {
+  let contador = 0;
+  return (filas || []).map((f) => {
+    const esEgreso = !!(f.egreso && Number(f.egreso) > 0);
+    if (esEgreso) contador += 1;
+    return { ...f, numProgresivo: esEgreso ? String(contador) : "" };
+  });
+}
 
 function InformeBimestralImprimible({ periodo, etiquetaCorte, fechaElaboracion, filas, arrastre, totalIngreso, totalEgreso, saldoFinal, firmas, datosEscuela, imprimible }) {
   const claseExterna = imprimible ? "solo-impresion" : "card";
   const de = datosEscuela || {};
   const zonaNum = (DATOS_PLANTEL.zona.match(/\d+/) || [DATOS_PLANTEL.zona])[0];
+  const filasNumeradas = numerarSoloEgresos(filas);
   return (
     <div className={claseExterna} style={{ fontFamily: "Georgia, 'Times New Roman', serif", color: "#1c1c1c" }}>
       {imprimible && (
@@ -5142,9 +5160,9 @@ function InformeBimestralImprimible({ periodo, etiquetaCorte, fechaElaboracion, 
             <td style={{ ...celdaOficial, textAlign: "right" }}>{" "}</td>
             <td style={{ ...celdaOficial, textAlign: "right" }}>{(arrastre || 0).toFixed(2)}</td>
           </tr>
-          {filas.map((f, i) => (
+          {filasNumeradas.map((f) => (
             <tr key={f.id}>
-              <td style={celdaOficial}>{i + 1}</td>
+              <td style={celdaOficial}>{f.numProgresivo}</td>
               <td style={celdaOficial}>{f.descripcion}</td>
               <td style={{ ...celdaOficial, textAlign: "right" }}>{f.ingreso ? Number(f.ingreso).toFixed(2) : " "}</td>
               <td style={{ ...celdaOficial, textAlign: "right" }}>{f.egreso ? Number(f.egreso).toFixed(2) : " "}</td>
@@ -5184,6 +5202,7 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
   const [filas, setFilas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [form, setForm] = useState({ descripcion: "", ingreso: "", egreso: "", categoria: "" });
+  const [editandoId, setEditandoId] = useState(null);
   const [imprimiendo, setImprimiendo] = useState(false);
   const [generandoPDF, setGenerandoPDF] = useState(false);
   const [errorPDF, setErrorPDF] = useState("");
@@ -5270,6 +5289,21 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
 
   const agregarFila = async () => {
     if (!form.descripcion.trim()) return;
+    if (editandoId) {
+      // Modo edición: se actualiza el renglón existente en su mismo lugar (no se
+      // mueve al final de la lista), para no descuadrar la numeración ni el orden
+      // ya impreso en cortes anteriores.
+      const nuevasFilas = filas.map((f) =>
+        f.id === editandoId
+          ? { ...f, descripcion: form.descripcion.trim(), ingreso: form.ingreso, egreso: form.egreso, categoria: form.categoria || "" }
+          : f
+      );
+      setFilas(nuevasFilas);
+      setEditandoId(null);
+      setForm({ descripcion: "", ingreso: "", egreso: "", categoria: "" });
+      await guardarTodo({ filas: nuevasFilas });
+      return;
+    }
     const nueva = { id: uid(), descripcion: form.descripcion.trim(), ingreso: form.ingreso, egreso: form.egreso, categoria: form.categoria || "", fecha: hoyISO() };
     const nuevasFilas = [...filas, nueva];
     setFilas(nuevasFilas);
@@ -5277,9 +5311,20 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
     await guardarTodo({ filas: nuevasFilas });
   };
 
+  const iniciarEdicion = (f) => {
+    setEditandoId(f.id);
+    setForm({ descripcion: f.descripcion || "", ingreso: f.ingreso || "", egreso: f.egreso || "", categoria: f.categoria || "" });
+  };
+
+  const cancelarEdicion = () => {
+    setEditandoId(null);
+    setForm({ descripcion: "", ingreso: "", egreso: "", categoria: "" });
+  };
+
   const eliminarFila = async (id) => {
     const nuevasFilas = filas.filter((f) => f.id !== id);
     setFilas(nuevasFilas);
+    if (editandoId === id) cancelarEdicion();
     await guardarTodo({ filas: nuevasFilas });
   };
 
@@ -5350,7 +5395,7 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
           </div>
 
           <div className="card">
-            <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Agregar movimiento</div>
+            <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>{editandoId ? "Editar movimiento" : "Agregar movimiento"}</div>
             <div className="flex flex-col gap-2">
               <input className="campo" type="text" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} placeholder="Descripción" />
               <div className="grid grid-cols-2 gap-2">
@@ -5366,7 +5411,14 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
                   {CATEGORIAS_EGRESO_APF.map((c) => <option key={c} value={c}>{c}</option>)}
                 </optgroup>
               </select>
-              <button onClick={agregarFila} className="btn-primario" style={{ alignSelf: "flex-start" }}><Plus size={16} /> Agregar movimiento</button>
+              <div className="flex gap-2">
+                <button onClick={agregarFila} className="btn-primario" style={{ alignSelf: "flex-start" }}>
+                  {editandoId ? (<><Pencil size={16} /> Guardar cambios</>) : (<><Plus size={16} /> Agregar movimiento</>)}
+                </button>
+                {editandoId && (
+                  <button onClick={cancelarEdicion} className="btn-secundario" style={{ alignSelf: "flex-start" }}>Cancelar</button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -5381,21 +5433,24 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
                 <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid var(--borde)" }}>
-                      {["#", "Descripción", "Categoría", "Ingreso", "Egreso", "Saldo", ""].map((h) => (
+                      {["N/P", "Descripción", "Categoría", "Ingreso", "Egreso", "Saldo", ""].map((h) => (
                         <th key={h} style={{ textAlign: "left", padding: "4px 6px" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {conSaldo.map((f, i) => (
-                      <tr key={f.id} style={{ borderBottom: "1px solid var(--borde)" }}>
-                        <td style={{ padding: "4px 6px" }}>{i + 1}</td>
+                    {numerarSoloEgresos(conSaldo).map((f) => (
+                      <tr key={f.id} style={{ borderBottom: "1px solid var(--borde)", background: editandoId === f.id ? "var(--fondo-resaltado, #fff7e6)" : "transparent" }}>
+                        <td style={{ padding: "4px 6px" }}>{f.numProgresivo}</td>
                         <td style={{ padding: "4px 6px" }}>{f.descripcion}</td>
                         <td style={{ padding: "4px 6px", opacity: f.categoria ? 1 : 0.4 }}>{f.categoria || "—"}</td>
                         <td style={{ padding: "4px 6px" }}>{f.ingreso ? `$${Number(f.ingreso).toFixed(2)}` : "—"}</td>
                         <td style={{ padding: "4px 6px" }}>{f.egreso ? `$${Number(f.egreso).toFixed(2)}` : "—"}</td>
                         <td style={{ padding: "4px 6px" }}>${f.saldo.toFixed(2)}</td>
-                        <td style={{ padding: "4px 6px" }}><button onClick={() => eliminarFila(f.id)} className="btn-icono" title="Eliminar"><Trash2 size={14} /></button></td>
+                        <td style={{ padding: "4px 6px", whiteSpace: "nowrap" }}>
+                          <button onClick={() => iniciarEdicion(f)} className="btn-icono" title="Editar"><Pencil size={14} /></button>
+                          <button onClick={() => eliminarFila(f.id)} className="btn-icono" title="Eliminar"><Trash2 size={14} /></button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
