@@ -4958,48 +4958,101 @@ function ActaEntregaRecepcionVista({ checklist, saliente, entrante, imprimible }
   );
 }
 
-function InformeBimestralImprimible({ bimestre, periodo, filas, saldoFinal, imprimible }) {
+function InformeBimestralImprimible({ periodo, etiquetaCorte, fechaElaboracion, filas, arrastre, totalIngreso, totalEgreso, saldoFinal, firmas, datosEscuela, imprimible }) {
   const claseExterna = imprimible ? "solo-impresion" : "card";
+  const de = datosEscuela || {};
+  const zonaNum = (DATOS_PLANTEL.zona.match(/\d+/) || [DATOS_PLANTEL.zona])[0];
   return (
-    <div className={claseExterna}>
+    <div className={claseExterna} style={{ fontFamily: "Georgia, 'Times New Roman', serif", color: "#1c1c1c" }}>
       {imprimible && (
         <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "1rem" }}>
           <img src={ESCUDO_ESCUELA} alt="" style={{ width: "48px" }} />
           <div>
-            <div style={{ fontWeight: 800, fontSize: "1rem" }}>Telesecundaria Estatal "Amado Nervo"</div>
-            <div style={{ fontSize: "0.75rem" }}>CCT 21ETV0473W · Xoyatla, Tepeojuma, Puebla · C.P. 74394</div>
+            <div style={{ fontWeight: 800, fontSize: "1rem" }}>{DATOS_PLANTEL.nombre}</div>
+            <div style={{ fontSize: "0.75rem" }}>CCT {DATOS_PLANTEL.cct} · Corte de Caja Bimestral · Mesa Directiva APF</div>
           </div>
         </div>
       )}
-      {!imprimible && <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Vista previa — Informe Bimestral</div>}
-      <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.6rem" }}>
-        Informe bimestral: {bimestre || "____"} · Período: {periodo || "________________"}
-      </div>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+      {!imprimible && <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem", fontFamily: "inherit" }}>Vista previa — Corte de Caja Bimestral</div>}
+
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0.7rem", fontSize: "0.74rem" }}>
+        <tbody>
+          <tr>
+            <td style={celdaOficial}><span style={lblOficial}>Escuela</span>{DATOS_PLANTEL.nombre}</td>
+            <td style={{ ...celdaOficial, maxWidth: "140px" }}><span style={lblOficial}>Clave</span>{DATOS_PLANTEL.cct}</td>
+          </tr>
+          <tr>
+            <td style={celdaOficial}><span style={lblOficial}>Domicilio</span>{de.domicilio || "—"}</td>
+            <td style={celdaOficial}><span style={lblOficial}>Teléfono</span>{de.telefono || "—"}</td>
+          </tr>
+          <tr>
+            <td style={celdaOficial}><span style={lblOficial}>Nivel</span>{DATOS_PLANTEL.modalidad}</td>
+            <td style={celdaOficial}><span style={lblOficial}>Zona</span>{zonaNum}</td>
+          </tr>
+          <tr>
+            <td style={celdaOficial}><span style={lblOficial}>CORDE</span>{de.corde || "—"}</td>
+            <td style={celdaOficial}><span style={lblOficial}>Localidad</span>{DATOS_PLANTEL.localidad}</td>
+          </tr>
+          <tr>
+            <td style={celdaOficial}><span style={lblOficial}>Municipio</span>{DATOS_PLANTEL.municipio}</td>
+            <td style={celdaOficial}></td>
+          </tr>
+          <tr>
+            <td style={celdaOficial} colSpan={2}>
+              <span style={lblOficial}>Lugar y fecha</span>{DATOS_PLANTEL.localidad}, {DATOS_PLANTEL.municipio}, Puebla, a {fechaElaboracion || "______________________"}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table className="firma-grupo" style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0.9rem" }}>
+        <tbody>
+          <tr><td style={{ ...celdaOficial, fontWeight: 700 }}>Corte de caja bimestral: <span style={{ fontWeight: 400 }}>{etiquetaCorte || "____________"}</span></td></tr>
+          <tr><td style={{ ...celdaOficial, fontWeight: 700 }}>Período: <span style={{ fontWeight: 400 }}>{periodo || "____________"}</span></td></tr>
+        </tbody>
+      </table>
+
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.74rem" }}>
         <thead>
           <tr>
-            {["#", "Descripción", "Ingreso", "Egreso", "Saldo"].map((h) => (
-              <th key={h} style={{ textAlign: h === "Descripción" ? "left" : "right", borderBottom: "1.5px solid #000", padding: "0.25rem 0.4rem" }}>{h}</th>
+            {["N/P", "Descripción", "Ingreso", "Egreso", "Saldo"].map((h) => (
+              <th key={h} style={{ ...celdaOficial, fontWeight: 700, textAlign: h === "Descripción" ? "left" : "right" }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
+          <tr>
+            <td style={celdaOficial}>{" "}</td>
+            <td style={celdaOficial}>Existencia en caja</td>
+            <td style={{ ...celdaOficial, textAlign: "right" }}>{" "}</td>
+            <td style={{ ...celdaOficial, textAlign: "right" }}>{" "}</td>
+            <td style={{ ...celdaOficial, textAlign: "right" }}>{(arrastre || 0).toFixed(2)}</td>
+          </tr>
           {filas.map((f, i) => (
             <tr key={f.id}>
-              <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.4rem" }}>{i + 1}</td>
-              <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.4rem" }}>{f.descripcion}</td>
-              <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.4rem", textAlign: "right" }}>{f.ingreso ? `$${Number(f.ingreso).toFixed(2)}` : ""}</td>
-              <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.4rem", textAlign: "right" }}>{f.egreso ? `$${Number(f.egreso).toFixed(2)}` : ""}</td>
-              <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.4rem", textAlign: "right" }}>${f.saldo.toFixed(2)}</td>
+              <td style={celdaOficial}>{i + 1}</td>
+              <td style={celdaOficial}>{f.descripcion}</td>
+              <td style={{ ...celdaOficial, textAlign: "right" }}>{f.ingreso ? Number(f.ingreso).toFixed(2) : " "}</td>
+              <td style={{ ...celdaOficial, textAlign: "right" }}>{f.egreso ? Number(f.egreso).toFixed(2) : " "}</td>
+              <td style={{ ...celdaOficial, textAlign: "right" }}>{f.saldo.toFixed(2)}</td>
             </tr>
           ))}
+          <tr>
+            <td style={{ ...celdaOficial, fontWeight: 700 }} colSpan={2}>Total</td>
+            <td style={{ ...celdaOficial, fontWeight: 700, textAlign: "right" }}>{totalIngreso.toFixed(2)}</td>
+            <td style={{ ...celdaOficial, fontWeight: 700, textAlign: "right" }}>{totalEgreso.toFixed(2)}</td>
+            <td style={{ ...celdaOficial, fontWeight: 700, textAlign: "right" }}>{saldoFinal.toFixed(2)}</td>
+          </tr>
         </tbody>
       </table>
-      <div style={{ fontWeight: 700, fontSize: "0.85rem", marginTop: "0.6rem" }}>SALDO FINAL $ {saldoFinal.toFixed(2)}</div>
-      <div style={{ display: "flex", justifyContent: "space-around", marginTop: "2rem", fontSize: "0.78rem" }}>
-        {["Presidente(a)", "Tesorero(a)", "Vo.Bo. Presidente Contraloría Social", "Director(a)"].map((r) => (
-          <div key={r} style={{ textAlign: "center" }}>
-            <div style={{ borderTop: "1px solid #000", width: "8rem", paddingTop: "0.3rem" }}>{r}</div>
+
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", marginTop: "0.7rem", marginBottom: "2rem" }}>Existencia en caja $ {saldoFinal.toFixed(2)}</div>
+
+      <div className="firma-grupo" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "1rem" }}>
+        {firmas.map((f) => (
+          <div key={f.etiqueta} style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "0.64rem", fontWeight: 700, minHeight: "1.1em" }}>{f.nombre || " "}</div>
+            <div style={{ borderTop: "1px solid #000", marginTop: "1.6rem", paddingTop: "0.25rem", fontSize: "0.6rem" }}>{f.etiqueta}</div>
           </div>
         ))}
       </div>
@@ -5007,9 +5060,13 @@ function InformeBimestralImprimible({ bimestre, periodo, filas, saldoFinal, impr
   );
 }
 
-function InformeBimestral({ onStamp }) {
+function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosEscuela }) {
   const [bimestre, setBimestre] = useState("1");
   const [periodo, setPeriodo] = useState("");
+  const [etiquetaCorte, setEtiquetaCorte] = useState("");
+  const [fechaElaboracion, setFechaElaboracion] = useState("");
+  const [saldoInicialUno, setSaldoInicialUno] = useState("");
+  const [arrastreCargado, setArrastreCargado] = useState(0);
   const [filas, setFilas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [form, setForm] = useState({ descripcion: "", ingreso: "", egreso: "" });
@@ -5017,31 +5074,80 @@ function InformeBimestral({ onStamp }) {
 
   const claveBimestre = `apf:informeBimestral:${bimestre}`;
 
-  const cargar = () => {
-    setCargando(true);
-    getStorage(claveBimestre, { periodo: "", filas: [] }).then((v) => {
-      setPeriodo((v && v.periodo) || "");
-      setFilas((v && v.filas) || []);
-      setCargando(false);
-    });
+  // El saldo de "Existencia en caja" de cada bimestre es el saldo final del
+  // bimestre anterior (como una chequera real): se parte del saldo inicial
+  // capturado a mano en el Bimestre 1 y se le suman/restan los movimientos
+  // de cada bimestre anterior hasta llegar al actual. Así no hay que volver
+  // a escribir el saldo a mano cada vez — solo una vez, al principio del ciclo.
+  const calcularArrastre = async (bimestreActual) => {
+    const actual = Number(bimestreActual);
+    const uno = await getStorage("apf:informeBimestral:1", { periodo: "", filas: [], saldoInicial: "" });
+    let saldo = Number(uno.saldoInicial) || 0;
+    for (let b = 1; b < actual; b++) {
+      const datos = b === 1 ? uno : await getStorage(`apf:informeBimestral:${b}`, { periodo: "", filas: [] });
+      (datos.filas || []).forEach((f) => {
+        saldo += (Number(f.ingreso) || 0) - (Number(f.egreso) || 0);
+      });
+    }
+    return saldo;
   };
-  useEffect(() => { cargar(); }, [bimestre]);
+
+  useEffect(() => {
+    let vivo = true;
+    setCargando(true);
+    (async () => {
+      const v = await getStorage(claveBimestre, { periodo: "", filas: [], etiquetaCorte: "", fechaElaboracion: "", saldoInicial: "" });
+      if (!vivo) return;
+      setPeriodo((v && v.periodo) || "");
+      setEtiquetaCorte((v && v.etiquetaCorte) || "");
+      setFechaElaboracion((v && v.fechaElaboracion) || "");
+      setFilas((v && v.filas) || []);
+      setSaldoInicialUno(v && v.saldoInicial !== undefined ? v.saldoInicial : "");
+      if (bimestre === "1") {
+        setCargando(false);
+      } else {
+        const a = await calcularArrastre(bimestre);
+        if (!vivo) return;
+        setArrastreCargado(a);
+        setCargando(false);
+      }
+    })();
+    return () => { vivo = false; };
+  }, [bimestre]);
+
   useEffect(() => {
     window.onafterprint = () => setImprimiendo(false);
     return () => { window.onafterprint = null; };
   }, []);
 
+  // En el Bimestre 1 el arrastre es literalmente lo que esté en el campo de
+  // "Saldo inicial" en ese momento (así la vista previa se actualiza al
+  // instante mientras se escribe, sin esperar a recargar); en los demás
+  // bimestres viene calculado de los bimestres anteriores.
+  const arrastre = bimestre === "1" ? (Number(saldoInicialUno) || 0) : arrastreCargado;
+
   const conSaldo = (() => {
-    let acumulado = 0;
+    let acumulado = arrastre || 0;
     return filas.map((f) => {
       acumulado += (Number(f.ingreso) || 0) - (Number(f.egreso) || 0);
       return { ...f, saldo: acumulado };
     });
   })();
-  const saldoFinal = conSaldo.length ? conSaldo[conSaldo.length - 1].saldo : 0;
+  const totalIngreso = filas.reduce((s, f) => s + (Number(f.ingreso) || 0), 0);
+  const totalEgreso = filas.reduce((s, f) => s + (Number(f.egreso) || 0), 0);
+  const saldoFinal = (arrastre || 0) + totalIngreso - totalEgreso;
 
-  const guardarTodo = async (nuevasFilas, nuevoPeriodo) => {
-    const ok = await setStorage(claveBimestre, { periodo: nuevoPeriodo !== undefined ? nuevoPeriodo : periodo, filas: nuevasFilas });
+  const guardarTodo = async (cambios) => {
+    const payload = {
+      periodo: cambios.periodo !== undefined ? cambios.periodo : periodo,
+      etiquetaCorte: cambios.etiquetaCorte !== undefined ? cambios.etiquetaCorte : etiquetaCorte,
+      fechaElaboracion: cambios.fechaElaboracion !== undefined ? cambios.fechaElaboracion : fechaElaboracion,
+      filas: cambios.filas !== undefined ? cambios.filas : filas,
+    };
+    if (bimestre === "1") {
+      payload.saldoInicial = cambios.saldoInicial !== undefined ? cambios.saldoInicial : saldoInicialUno;
+    }
+    const ok = await setStorage(claveBimestre, payload);
     if (ok && onStamp) onStamp("Guardado");
     return ok;
   };
@@ -5052,18 +5158,25 @@ function InformeBimestral({ onStamp }) {
     const nuevasFilas = [...filas, nueva];
     setFilas(nuevasFilas);
     setForm({ descripcion: "", ingreso: "", egreso: "" });
-    await guardarTodo(nuevasFilas);
+    await guardarTodo({ filas: nuevasFilas });
   };
 
   const eliminarFila = async (id) => {
     const nuevasFilas = filas.filter((f) => f.id !== id);
     setFilas(nuevasFilas);
-    await guardarTodo(nuevasFilas);
+    await guardarTodo({ filas: nuevasFilas });
   };
 
-  const guardarPeriodo = async () => {
-    await guardarTodo(filas, periodo);
+  const guardarEncabezado = async () => {
+    await guardarTodo({ periodo, etiquetaCorte, fechaElaboracion, saldoInicial: saldoInicialUno });
   };
+
+  const firmas = [
+    { etiqueta: "Presidente(a)", nombre: (mesaDirectiva && mesaDirectiva.presidente) || "" },
+    { etiqueta: "Tesorero(a)", nombre: (mesaDirectiva && mesaDirectiva.tesorero) || "" },
+    { etiqueta: "Vo.Bo. Presidente Contraloría Social", nombre: (contraloria && contraloria.presidente) || "" },
+    { etiqueta: "Director(a)", nombre: NOMBRE_COMPLETO.directora },
+  ];
 
   return (
     <div className="flex flex-col gap-4">
@@ -5078,10 +5191,31 @@ function InformeBimestral({ onStamp }) {
       ) : (
         <>
           <div className="card">
-            <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Período</label>
-            <div className="flex gap-2">
-              <input className="campo" type="text" value={periodo} onChange={(e) => setPeriodo(e.target.value)} placeholder="Ej. septiembre - octubre 2026" />
-              <button onClick={guardarPeriodo} className="btn-secundario" style={{ fontSize: "0.75rem" }}>Guardar</button>
+            <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Datos de este corte</div>
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Corte de caja bimestral</label>
+                  <input className="campo" type="text" value={etiquetaCorte} onChange={(e) => setEtiquetaCorte(e.target.value)} placeholder="Ej. Septiembre 2026" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Período</label>
+                  <input className="campo" type="text" value={periodo} onChange={(e) => setPeriodo(e.target.value)} placeholder="Ej. julio y agosto" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Fecha de elaboración</label>
+                <input className="campo" type="text" value={fechaElaboracion} onChange={(e) => setFechaElaboracion(e.target.value)} placeholder="Ej. 06 de mayo de 2026" />
+              </div>
+              {bimestre === "1" ? (
+                <div>
+                  <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Saldo inicial de caja (existencia al comenzar el ciclo)</label>
+                  <input className="campo" type="number" step="0.01" value={saldoInicialUno} onChange={(e) => setSaldoInicialUno(e.target.value)} placeholder="0.00" />
+                </div>
+              ) : (
+                <p className="text-sm" style={{ opacity: 0.6 }}>La existencia en caja de este bimestre (${(arrastre || 0).toFixed(2)}) se toma automáticamente del saldo final del bimestre anterior — no hay que volver a escribirla.</p>
+              )}
+              <button onClick={guardarEncabezado} className="btn-secundario" style={{ alignSelf: "flex-start", fontSize: "0.75rem" }}>Guardar</button>
             </div>
           </div>
 
@@ -5100,9 +5234,6 @@ function InformeBimestral({ onStamp }) {
           <div className="card">
             <div className="flex items-center justify-between mb-2">
               <div className="font-display" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Movimientos — Bimestre {bimestre}</div>
-              <button onClick={() => { setImprimiendo(true); onStamp && onStamp("Preparando"); setTimeout(() => window.print(), 150); }} className="btn-primario" style={{ fontSize: "0.75rem" }}>
-                <Download size={14} /> Imprimir / PDF
-              </button>
             </div>
             {conSaldo.length === 0 ? (
               <p className="text-sm" style={{ opacity: 0.5 }}>Sin movimientos capturados en este bimestre.</p>
@@ -5134,7 +5265,40 @@ function InformeBimestral({ onStamp }) {
             <div className="font-display mt-3" style={{ fontWeight: 700, fontSize: "0.9rem" }}>SALDO FINAL: ${saldoFinal.toFixed(2)}</div>
           </div>
 
-          {imprimiendo && <InformeBimestralImprimible bimestre={bimestre} periodo={periodo} filas={conSaldo} saldoFinal={saldoFinal} imprimible={true} />}
+          <div className="flex items-center justify-between" style={{ marginTop: "0.5rem" }}>
+            <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem" }}>Vista previa del Corte de Caja</div>
+            <button onClick={() => { setImprimiendo(true); onStamp && onStamp("Preparando"); setTimeout(() => window.print(), 150); }} className="btn-secundario" style={{ fontSize: "0.75rem" }}>
+              <Printer size={14} /> Vista / imprimir
+            </button>
+          </div>
+          <InformeBimestralImprimible
+            periodo={periodo}
+            etiquetaCorte={etiquetaCorte}
+            fechaElaboracion={fechaElaboracion}
+            filas={conSaldo}
+            arrastre={arrastre}
+            totalIngreso={totalIngreso}
+            totalEgreso={totalEgreso}
+            saldoFinal={saldoFinal}
+            firmas={firmas}
+            datosEscuela={datosEscuela}
+            imprimible={false}
+          />
+          {imprimiendo && (
+            <InformeBimestralImprimible
+              periodo={periodo}
+              etiquetaCorte={etiquetaCorte}
+              fechaElaboracion={fechaElaboracion}
+              filas={conSaldo}
+              arrastre={arrastre}
+              totalIngreso={totalIngreso}
+              totalEgreso={totalEgreso}
+              saldoFinal={saldoFinal}
+              firmas={firmas}
+              datosEscuela={datosEscuela}
+              imprimible={true}
+            />
+          )}
         </>
       )}
     </div>
@@ -5331,7 +5495,7 @@ function DocumentosDireccion({ alumnos, onStamp }) {
   const SUBTABS = [
     { id: "apf", label: "APF · Padrón" },
     { id: "convivencia", label: "Convivencia Escolar" },
-    { id: "bimestral", label: "Informe Bimestral" },
+    { id: "bimestral", label: "Corte de Caja" },
     { id: "otros", label: "Otros comités" },
   ];
 
@@ -5681,7 +5845,15 @@ function DocumentosDireccion({ alumnos, onStamp }) {
         </div>
       )}
 
-      {subTab === "bimestral" && <InformeBimestral onStamp={onStamp} />}
+      {subTab === "bimestral" && (
+        <InformeBimestral
+          onStamp={onStamp}
+          tutores={tutores}
+          mesaDirectiva={vistaActa.mesaDirectiva}
+          contraloria={vistaActa.contraloria}
+          datosEscuela={vistaActa.datosEscuela}
+        />
+      )}
 
       {subTab === "otros" && (
         <div className="card">
