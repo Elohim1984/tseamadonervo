@@ -4655,6 +4655,111 @@ function FirmaActaConvivencia({ nombre, etiqueta }) {
   );
 }
 
+// Nombres de tutores que ya ocupan un puesto en la Mesa Directiva o la Contraloría
+// Social de la APF, o en el otro renglón "Madre o Padre de Familia" de este mismo
+// Comité de Convivencia — para no ofrecerlos dos veces en los selects de abajo.
+// "clave" es cuál de los dos renglones propios se está calculando (para no
+// excluirse a sí mismo), y "propios" trae el valor actual de AMBOS renglones.
+function nombresOcupadosComites(mesaDirectiva, contraloria, clave, propios) {
+  const ocupados = new Set();
+  Object.values(mesaDirectiva || {}).forEach((n) => { if (n && n.trim()) ocupados.add(n.trim()); });
+  Object.values(contraloria || {}).forEach((n) => { if (n && n.trim()) ocupados.add(n.trim()); });
+  Object.entries(propios || {}).forEach(([k, n]) => {
+    if (k !== clave && n && n.trim()) ocupados.add(n.trim());
+  });
+  return ocupados;
+}
+
+function IntegrantesConvivenciaForm({ claveStorage, tutores, mesaDirectiva, contraloria, onStamp }) {
+  const [valores, setValores] = useState({});
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [guardadoOk, setGuardadoOk] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    setCargando(true);
+    getStorage(claveStorage, {}).then((v) => { if (vivo) { setValores(v || {}); setCargando(false); } });
+    return () => { vivo = false; };
+  }, [claveStorage]);
+
+  const cambiar = (key, val) => setValores((prev) => ({ ...prev, [key]: val }));
+
+  const guardar = async () => {
+    setGuardando(true);
+    const ok = await setStorage(claveStorage, valores);
+    setGuardando(false);
+    setGuardadoOk(ok);
+    if (ok && onStamp) onStamp("Guardado");
+    setTimeout(() => setGuardadoOk(false), 2500);
+  };
+
+  if (cargando) {
+    return <div className="card"><p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p></div>;
+  }
+
+  const propios = { presidente: valores.INTEGRANTE_PRESIDENTE, vocal: valores.INTEGRANTE_VOCAL_PADRE };
+  const ocupadosPresidente = nombresOcupadosComites(mesaDirectiva, contraloria, "presidente", propios);
+  const ocupadosVocal = nombresOcupadosComites(mesaDirectiva, contraloria, "vocal", propios);
+  const disponiblesPresidente = (tutores || []).filter((t) => !ocupadosPresidente.has(t.nombre) || t.nombre === valores.INTEGRANTE_PRESIDENTE);
+  const disponiblesVocal = (tutores || []).filter((t) => !ocupadosVocal.has(t.nombre) || t.nombre === valores.INTEGRANTE_VOCAL_PADRE);
+
+  const CampoTexto = ({ etiqueta, campo, placeholder }) => (
+    <div>
+      <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{etiqueta}</label>
+      <input className="campo" type="text" value={valores[campo] || ""} onChange={(e) => cambiar(campo, e.target.value)} placeholder={placeholder || "Escribe aquí…"} />
+    </div>
+  );
+
+  const SelectTutor = ({ etiqueta, campo, opciones }) => (
+    <div>
+      <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{etiqueta}</label>
+      <select className="campo" value={valores[campo] || ""} onChange={(e) => cambiar(campo, e.target.value)}>
+        <option value="">Selecciona un tutor del padrón…</option>
+        {opciones.map((t) => <option key={t.nombre} value={t.nombre}>{t.nombre}</option>)}
+      </select>
+      {opciones.length === 0 && <p className="text-sm" style={{ opacity: 0.5, marginTop: "0.2rem" }}>No hay tutores disponibles — todos los del padrón ya tienen un puesto en otro comité.</p>}
+    </div>
+  );
+
+  return (
+    <div className="card">
+      <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Integrantes del Comité</div>
+      <p className="text-sm mb-2" style={{ opacity: 0.6 }}>
+        El Directivo y la Maestra/Maestro se toman de Datos Esc.; si ahí todavía no tienen correo o celular capturado, se pueden escribir aquí y se usan mientras tanto. Para los 2 integrantes "Madre o Padre de Familia" se elige del padrón de tutores — solo aparecen los que aún no tienen un puesto en la Mesa Directiva o la Contraloría Social de la APF, ni en este mismo Comité.
+      </p>
+      <div className="flex flex-col gap-2.5">
+        <div style={{ fontWeight: 700, fontSize: "0.8rem", marginTop: "0.3rem" }}>Directivo — Secretario Técnico</div>
+        <div className="grid grid-cols-2 gap-2">
+          <CampoTexto etiqueta="Correo" campo="CORREO_DIRECTIVO" placeholder="correo@ejemplo.com" />
+          <CampoTexto etiqueta="Teléfono" campo="TELEFONO_DIRECTIVO" placeholder="Ej. 2381234567" />
+        </div>
+
+        <div style={{ fontWeight: 700, fontSize: "0.8rem", marginTop: "0.5rem" }}>Madre o Padre de Familia — Presidente(a)</div>
+        <SelectTutor etiqueta="Nombre" campo="INTEGRANTE_PRESIDENTE" opciones={disponiblesPresidente} />
+        <CampoTexto etiqueta="Correo" campo="CORREO_PRESIDENTE" placeholder="correo@ejemplo.com" />
+
+        <div style={{ fontWeight: 700, fontSize: "0.8rem", marginTop: "0.5rem" }}>Madre o Padre de Familia — Vocal</div>
+        <SelectTutor etiqueta="Nombre" campo="INTEGRANTE_VOCAL_PADRE" opciones={disponiblesVocal} />
+        <CampoTexto etiqueta="Correo" campo="CORREO_VOCAL_PADRE" placeholder="correo@ejemplo.com" />
+
+        <div style={{ fontWeight: 700, fontSize: "0.8rem", marginTop: "0.5rem" }}>Maestra/Maestro — Vocal</div>
+        <div className="grid grid-cols-2 gap-2">
+          <CampoTexto etiqueta="Correo" campo="CORREO_MAESTRO" placeholder="correo@ejemplo.com" />
+          <CampoTexto etiqueta="Teléfono" campo="TELEFONO_MAESTRO" placeholder="Ej. 2381234567" />
+        </div>
+
+        <div className="flex items-center gap-2" style={{ marginTop: "0.4rem" }}>
+          <button onClick={guardar} disabled={guardando} className="btn-primario">
+            {guardando ? "Guardando…" : <><Check size={16} /> Guardar</>}
+          </button>
+          {guardadoOk && <span className="text-sm" style={{ color: "var(--verde)" }}>✓ Guardado en tu Hoja</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ActaConvivenciaVista({ datos, datosEscuela, tutores, imprimible }) {
   const d = datos || {};
   const de = datosEscuela || {};
@@ -4666,10 +4771,10 @@ function ActaConvivenciaVista({ datos, datosEscuela, tutores, imprimible }) {
   const tutorVocalPadre = buscarTutorPorNombre(tutores || [], d.INTEGRANTE_VOCAL_PADRE);
 
   const filas = [
-    { nombre: NOMBRE_COMPLETO.directora, calidad: "Directivo", cargo: "Secretario Técnico", correo: contactoDirector.correo, telefono: contactoDirector.telefono },
+    { nombre: NOMBRE_COMPLETO.directora, calidad: "Directivo", cargo: "Secretario Técnico", correo: contactoDirector.correo || d.CORREO_DIRECTIVO || "", telefono: contactoDirector.telefono || d.TELEFONO_DIRECTIVO || "" },
     { nombre: d.INTEGRANTE_PRESIDENTE || "", calidad: "Madre o Padre de Familia", cargo: "Presidente", correo: d.CORREO_PRESIDENTE || "", telefono: tutorPresidente ? tutorPresidente.telefono : "" },
     { nombre: d.INTEGRANTE_VOCAL_PADRE || "", calidad: "Madre o Padre de Familia", cargo: "Vocal", correo: d.CORREO_VOCAL_PADRE || "", telefono: tutorVocalPadre ? tutorVocalPadre.telefono : "" },
-    { nombre: NOMBRE_COMPLETO.maestro, calidad: "Maestra/Maestro", cargo: "Vocal", correo: contactoMaestro.correo, telefono: contactoMaestro.telefono },
+    { nombre: NOMBRE_COMPLETO.maestro, calidad: "Maestra/Maestro", cargo: "Vocal", correo: contactoMaestro.correo || d.CORREO_MAESTRO || "", telefono: contactoMaestro.telefono || d.TELEFONO_MAESTRO || "" },
   ];
 
   const cuerpo = (
@@ -5165,7 +5270,7 @@ function DocumentosDireccion({ alumnos, onStamp }) {
       getStorage("apf:asamblea", {}),
       getStorage("apf:entregaRecepcionFecha", {}),
       getStorage("convivencia:sesion", {}),
-      getStorage("convivencia:integrantesPadres", {}),
+      getStorage("convivencia:integrantes", {}),
     ]).then(([md, cs, sal, chk, conv, cons, de, mb, asa, ef, convSesion, convIntegrantes]) => {
       setVistaActa({ mesaDirectiva: md || {}, contraloria: cs || {}, saliente: sal || {}, checklist: chk || {}, convocatoria: conv || {}, constancia: cons || {}, datosEscuela: de || {}, mesaDebates: mb || {}, asamblea: asa || {}, entregaFecha: ef || {}, convivencia: { ...(convSesion || {}), ...(convIntegrantes || {}) }, cargando: false });
     });
@@ -5512,7 +5617,7 @@ function DocumentosDireccion({ alumnos, onStamp }) {
           <div className="card">
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Acta de Conformación del Comité de Convivencia Escolar (SEP Puebla)</div>
             <p className="text-sm mb-2" style={{ opacity: 0.6 }}>
-              Es el mismo formato oficial que subiste — nombre, CCT, nivel, domicilio, teléfono y el nombre del director se toman solos de lo ya capturado. Aquí solo faltan la fecha/hora de la sesión y los 2 integrantes "Madre o Padre de Familia" (los otros 2 — Directivo y Maestra/Maestro — se toman de Datos Esc.).
+              Es el mismo formato oficial que subiste — nombre, CCT, nivel, domicilio, teléfono y el nombre del director se toman solos de lo ya capturado. Aquí solo faltan la fecha/hora de la sesión y los integrantes del Comité.
             </p>
           </div>
 
@@ -5530,17 +5635,12 @@ function DocumentosDireccion({ alumnos, onStamp }) {
             ]}
           />
 
-          <FormularioAutoguardado
-            claveStorage="convivencia:integrantesPadres"
-            titulo='Integrantes "Madre o Padre de Familia"'
-            ayuda='Escribe el nombre EXACTAMENTE igual que aparece en el padrón de tutores (Inscripciones) para que su domicilio y teléfono se completen solos, igual que en la Mesa Directiva de la APF. El correo no está en el padrón, así que se escribe aquí.'
+          <IntegrantesConvivenciaForm
+            claveStorage="convivencia:integrantes"
+            tutores={tutores}
+            mesaDirectiva={vistaActa.mesaDirectiva}
+            contraloria={vistaActa.contraloria}
             onStamp={onStamp}
-            campos={[
-              { key: "INTEGRANTE_PRESIDENTE", etiqueta: "Nombre — Presidente(a)", tipo: "texto", placeholder: "Nombre igual que en el padrón de tutores" },
-              { key: "CORREO_PRESIDENTE", etiqueta: "Correo — Presidente(a)", tipo: "texto", placeholder: "correo@ejemplo.com" },
-              { key: "INTEGRANTE_VOCAL_PADRE", etiqueta: "Nombre — Vocal", tipo: "texto", placeholder: "Nombre igual que en el padrón de tutores" },
-              { key: "CORREO_VOCAL_PADRE", etiqueta: "Correo — Vocal", tipo: "texto", placeholder: "correo@ejemplo.com" },
-            ]}
           />
 
           <div className="flex items-center justify-between" style={{ marginTop: "0.5rem" }}>
