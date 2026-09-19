@@ -1256,19 +1256,33 @@ function mapaCorteCajaEncabezado(datosEscuela, etiquetaCorte, periodo, fechaElab
   };
 }
 
-async function descargarCorteCajaPDF(datosEscuela, etiquetaCorte, periodo, fechaElaboracion, filasConSaldo, arrastre, saldoFinal, firmas) {
+// Núcleo compartido de llenado del PDF oficial del Corte de Caja: recibe ya
+// los renglones a imprimir (uno por movimiento para la versión completa APF,
+// uno por categoría para la versión compacta de supervisión) y hace todo lo
+// demás igual en ambos casos — agrega "Saldo anterior", numera solo los
+// egresos, calcula el saldo corrido, pagina si no caben en una hoja, y llena
+// el PDF oficial reutilizando el mismo mapeo de campos.
+async function llenarYDescargarCorteCajaPDF(filasBase, arrastre, encabezado, firmas, nombreArchivo) {
   const { PDFDocument, StandardFonts, PDFName, PDFDict } = window.PDFLib;
 
   const filas = [];
-  if (arrastre) filas.push({ descripcion: "Saldo anterior", ingreso: "", egreso: "", saldo: arrastre });
-  (filasConSaldo || []).forEach((f) => filas.push(f));
+  if (arrastre) filas.push({ descripcion: "Saldo anterior", ingreso: "", egreso: "" });
+  (filasBase || []).forEach((f) => filas.push(f));
   // Numeración progresiva solo para egresos (mismo criterio que la captura en
   // pantalla): "Saldo anterior" y los ingresos se imprimen sin número en N/P.
   const filasNumeradas = numerarSoloEgresos(filas);
 
+  // Saldo corrido: se calcula aquí mismo a partir del arrastre y de cada
+  // ingreso/egreso, en el mismo orden en que se van a imprimir los renglones.
+  let acumulado = arrastre || 0;
+  filasNumeradas.forEach((f) => {
+    acumulado += (Number(f.ingreso) || 0) - (Number(f.egreso) || 0);
+    f.saldo = acumulado;
+  });
+  const saldoFinal = acumulado;
+
   const porPagina = CORTE_CAJA_FILAS_POR_PAGINA;
   const totalPaginas = Math.max(1, Math.ceil(filasNumeradas.length / porPagina));
-  const encabezado = mapaCorteCajaEncabezado(datosEscuela, etiquetaCorte, periodo, fechaElaboracion);
 
   const documentoFinal = await PDFDocument.create();
   for (let pag = 0; pag < totalPaginas; pag++) {
@@ -1319,7 +1333,33 @@ async function descargarCorteCajaPDF(datosEscuela, etiquetaCorte, periodo, fecha
   formFinal.acroForm.dict.set(PDFName.of("NeedAppearances"), documentoFinal.context.obj(false));
 
   const pdfBytes = await documentoFinal.save();
-  descargarBytesPDF(pdfBytes, `Corte_de_Caja_APF_${(etiquetaCorte || "").replace(/[^\w]+/g, "_") || hoyISO()}.pdf`);
+  descargarBytesPDF(pdfBytes, nombreArchivo);
+}
+
+async function descargarCorteCajaPDF(datosEscuela, etiquetaCorte, periodo, fechaElaboracion, filasConSaldo, arrastre, firmas) {
+  const encabezado = mapaCorteCajaEncabezado(datosEscuela, etiquetaCorte, periodo, fechaElaboracion);
+  await llenarYDescargarCorteCajaPDF(
+    filasConSaldo,
+    arrastre,
+    encabezado,
+    firmas,
+    `Corte_de_Caja_APF_${(etiquetaCorte || "").replace(/[^\w]+/g, "_") || hoyISO()}.pdf`
+  );
+}
+
+// Versión "compacta" del mismo PDF oficial, para entregar a supervisión: un
+// renglón por categoría (sumada) en vez de un renglón por movimiento — ver
+// agruparFilasPorCategoria más abajo para el criterio exacto.
+async function descargarCorteCajaSupervisionPDF(datosEscuela, etiquetaCorte, periodo, fechaElaboracion, filasConSaldo, arrastre, firmas) {
+  const encabezado = mapaCorteCajaEncabezado(datosEscuela, etiquetaCorte, periodo, fechaElaboracion);
+  const filasAgrupadas = agruparFilasPorCategoria(filasConSaldo);
+  await llenarYDescargarCorteCajaPDF(
+    filasAgrupadas,
+    arrastre,
+    encabezado,
+    firmas,
+    `Corte_de_Caja_Supervision_${(etiquetaCorte || "").replace(/[^\w]+/g, "_") || hoyISO()}.pdf`
+  );
 }
 
 // Determinación inicial del R-01, calculada del Nivel de la falta (Leve/Grave/Muy grave)
@@ -5089,6 +5129,46 @@ function numerarSoloEgresos(filas) {
   });
 }
 
+// Corte de Caja "compacto" para entregar a supervisión (mismo formato oficial,
+// a petición del director): en vez de un renglón por cada movimiento capturado,
+// un renglón por CATEGORÍA con el monto sumado — tanto de ingresos como de
+// egresos. Solo aparecen las categorías con movimientos reales en el bimestre;
+// una categoría sin actividad (ej. "Seguro escolar" si nunca se usó) simplemente
+// no sale en el documento. El orden sigue el de las listas oficiales de
+// categorías; cualquier movimiento capturado sin categoría (o con una que ya no
+// esté en la lista) se agrupa aparte en "Sin categoría" para que ningún monto se
+// pierda y el saldo siga cuadrando exacto.
+function agruparFilasPorCategoria(filasConSaldo) {
+  const sumaIngreso = {};
+  const sumaEgreso = {};
+  (filasConSaldo || []).forEach((f) => {
+    const cat = (f.categoria || "").trim() || "Sin categoría";
+    const ing = Number(f.ingreso) || 0;
+    const egr = Number(f.egreso) || 0;
+    if (ing > 0) sumaIngreso[cat] = (sumaIngreso[cat] || 0) + ing;
+    if (egr > 0) sumaEgreso[cat] = (sumaEgreso[cat] || 0) + egr;
+  });
+
+  const ordenarCategorias = (suma, ordenOficial) => {
+    const vistos = new Set();
+    const orden = [];
+    [...ordenOficial, "Sin categoría"].forEach((cat) => {
+      if (suma[cat] > 0 && !vistos.has(cat)) { vistos.add(cat); orden.push(cat); }
+    });
+    Object.keys(suma).forEach((cat) => {
+      if (!vistos.has(cat)) { vistos.add(cat); orden.push(cat); }
+    });
+    return orden;
+  };
+
+  const filasIngreso = ordenarCategorias(sumaIngreso, CATEGORIAS_INGRESO_APF)
+    .map((cat) => ({ descripcion: cat, ingreso: sumaIngreso[cat], egreso: "" }));
+  const filasEgreso = ordenarCategorias(sumaEgreso, CATEGORIAS_EGRESO_APF)
+    .map((cat) => ({ descripcion: cat, ingreso: "", egreso: sumaEgreso[cat] }));
+
+  return [...filasIngreso, ...filasEgreso];
+}
+
 function InformeBimestralImprimible({ periodo, etiquetaCorte, fechaElaboracion, filas, arrastre, totalIngreso, totalEgreso, saldoFinal, firmas, datosEscuela, imprimible }) {
   const claseExterna = imprimible ? "solo-impresion" : "card";
   const de = datosEscuela || {};
@@ -5205,6 +5285,7 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
   const [editandoId, setEditandoId] = useState(null);
   const [imprimiendo, setImprimiendo] = useState(false);
   const [generandoPDF, setGenerandoPDF] = useState(false);
+  const [generandoPDFSupervision, setGenerandoPDFSupervision] = useState(false);
   const [errorPDF, setErrorPDF] = useState("");
 
   const claveBimestre = `apf:informeBimestral:${bimestre}`;
@@ -5343,13 +5424,31 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
     setGenerandoPDF(true);
     setErrorPDF("");
     try {
-      await descargarCorteCajaPDF(datosEscuela, etiquetaCorte, periodo, fechaElaboracion, conSaldo, arrastre, saldoFinal, firmas);
+      await descargarCorteCajaPDF(datosEscuela, etiquetaCorte, periodo, fechaElaboracion, conSaldo, arrastre, firmas);
       onStamp && onStamp("Descargado");
     } catch (e) {
       console.error("Descarga de PDF oficial del Corte de Caja falló:", e);
       setErrorPDF("No se pudo generar el PDF del Corte de Caja. Intenta de nuevo.");
     } finally {
       setGenerandoPDF(false);
+    }
+  };
+
+  // Mismo PDF oficial, pero compacto por categoría — para entregar a supervisión
+  // (a petición del director, 19 sept 2026). No se toca la Hoja de Google ni se
+  // agrega nada nuevo del lado del Apps Script: reutiliza los mismos datos ya
+  // capturados (incluida la categoría de cada movimiento).
+  const descargarPDFSupervision = async () => {
+    setGenerandoPDFSupervision(true);
+    setErrorPDF("");
+    try {
+      await descargarCorteCajaSupervisionPDF(datosEscuela, etiquetaCorte, periodo, fechaElaboracion, filas, arrastre, firmas);
+      onStamp && onStamp("Descargado");
+    } catch (e) {
+      console.error("Descarga de PDF de supervisión del Corte de Caja falló:", e);
+      setErrorPDF("No se pudo generar el PDF de supervisión. Intenta de nuevo.");
+    } finally {
+      setGenerandoPDFSupervision(false);
     }
   };
 
@@ -5468,6 +5567,9 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
               </button>
               <button onClick={descargarPDFOficial} disabled={generandoPDF} className="btn-primario" style={{ fontSize: "0.75rem" }}>
                 <Download size={14} /> {generandoPDF ? "Generando…" : "Descargar PDF oficial"}
+              </button>
+              <button onClick={descargarPDFSupervision} disabled={generandoPDFSupervision} className="btn-secundario" style={{ fontSize: "0.75rem" }} title="Mismo formato oficial, compactado por categoría — para entregar a supervisión">
+                <Download size={14} /> {generandoPDFSupervision ? "Generando…" : "Descargar PDF (supervisión)"}
               </button>
             </div>
           </div>
@@ -7120,7 +7222,7 @@ function App() {
         })}
       </nav>
 
-      <main className="px-4 py-5 max-w-lg mx-auto">
+      <main className="px-4 py-5 max-w-lg sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full">
         {tab === "inicio" && <Inicio rol={rol} alumnos={alumnos} asistencia={asistencia} avisos={avisos} eventos={eventos} gradosPermitidos={gradosPermitidos} />}
         {tab === "diagnostico" && <DiagnosticoTab />}
         {tab === "eia" && <EIAEmbebido />}
