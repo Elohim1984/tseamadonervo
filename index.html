@@ -4635,7 +4635,7 @@ function ActaConstitutivaVista({ mesaDirectiva, contraloria, tutores, imprimible
 // para que domicilio/teléfono se completen solos.
 function FilaIntegranteActa({ nombre, calidad, cargo, correo, telefono }) {
   return (
-    <tr>
+    <tr style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
       <td style={celdaOficial}>{nombre || " "}</td>
       <td style={celdaOficial}>{calidad}</td>
       <td style={celdaOficial}>{cargo}</td>
@@ -4648,7 +4648,7 @@ function FilaIntegranteActa({ nombre, calidad, cargo, correo, telefono }) {
 
 function FirmaActaConvivencia({ nombre, etiqueta }) {
   return (
-    <div style={{ textAlign: "center" }}>
+    <div className="firma-grupo" style={{ textAlign: "center" }}>
       <div style={{ fontSize: "0.68rem", fontWeight: 700, minHeight: "1.1em" }}>{nombre || " "}</div>
       <div style={{ borderTop: "1px solid #000", marginTop: "1.8rem", paddingTop: "0.25rem", fontSize: "0.64rem" }}>{etiqueta}</div>
     </div>
@@ -4668,6 +4668,33 @@ function nombresOcupadosComites(mesaDirectiva, contraloria, clave, propios) {
     if (k !== clave && n && n.trim()) ocupados.add(n.trim());
   });
   return ocupados;
+}
+
+// Definidos a nivel de módulo (no dentro de IntegrantesConvivenciaForm) para que
+// React conserve el mismo tipo de componente entre renders: si se definieran
+// dentro del render, cada tecleo (que cambia el estado y vuelve a renderizar)
+// crearía una función nueva y React desmontaría/remontaría el <input>/<select>,
+// perdiendo el foco después de cada carácter.
+function CampoTextoConvivencia({ etiqueta, valor, onChange, placeholder }) {
+  return (
+    <div>
+      <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{etiqueta}</label>
+      <input className="campo" type="text" value={valor || ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder || "Escribe aquí…"} />
+    </div>
+  );
+}
+
+function SelectTutorConvivencia({ etiqueta, valor, onChange, opciones }) {
+  return (
+    <div>
+      <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{etiqueta}</label>
+      <select className="campo" value={valor || ""} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Selecciona un tutor del padrón…</option>
+        {opciones.map((t) => <option key={t.nombre} value={t.nombre}>{t.nombre}</option>)}
+      </select>
+      {opciones.length === 0 && <p className="text-sm" style={{ opacity: 0.5, marginTop: "0.2rem" }}>No hay tutores disponibles — todos los del padrón ya tienen un puesto en otro comité.</p>}
+    </div>
+  );
 }
 
 function IntegrantesConvivenciaForm({ claveStorage, tutores, mesaDirectiva, contraloria, onStamp }) {
@@ -4704,23 +4731,11 @@ function IntegrantesConvivenciaForm({ claveStorage, tutores, mesaDirectiva, cont
   const disponiblesPresidente = (tutores || []).filter((t) => !ocupadosPresidente.has(t.nombre) || t.nombre === valores.INTEGRANTE_PRESIDENTE);
   const disponiblesVocal = (tutores || []).filter((t) => !ocupadosVocal.has(t.nombre) || t.nombre === valores.INTEGRANTE_VOCAL_PADRE);
 
-  const CampoTexto = ({ etiqueta, campo, placeholder }) => (
-    <div>
-      <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{etiqueta}</label>
-      <input className="campo" type="text" value={valores[campo] || ""} onChange={(e) => cambiar(campo, e.target.value)} placeholder={placeholder || "Escribe aquí…"} />
-    </div>
-  );
-
-  const SelectTutor = ({ etiqueta, campo, opciones }) => (
-    <div>
-      <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{etiqueta}</label>
-      <select className="campo" value={valores[campo] || ""} onChange={(e) => cambiar(campo, e.target.value)}>
-        <option value="">Selecciona un tutor del padrón…</option>
-        {opciones.map((t) => <option key={t.nombre} value={t.nombre}>{t.nombre}</option>)}
-      </select>
-      {opciones.length === 0 && <p className="text-sm" style={{ opacity: 0.5, marginTop: "0.2rem" }}>No hay tutores disponibles — todos los del padrón ya tienen un puesto en otro comité.</p>}
-    </div>
-  );
+  const copiarCorreoATodos = () => {
+    const correo = valores.CORREO_DIRECTIVO || "";
+    if (!correo) return;
+    setValores((prev) => ({ ...prev, CORREO_PRESIDENTE: correo, CORREO_VOCAL_PADRE: correo, CORREO_MAESTRO: correo }));
+  };
 
   return (
     <div className="card">
@@ -4731,22 +4746,27 @@ function IntegrantesConvivenciaForm({ claveStorage, tutores, mesaDirectiva, cont
       <div className="flex flex-col gap-2.5">
         <div style={{ fontWeight: 700, fontSize: "0.8rem", marginTop: "0.3rem" }}>Directivo — Secretario Técnico</div>
         <div className="grid grid-cols-2 gap-2">
-          <CampoTexto etiqueta="Correo" campo="CORREO_DIRECTIVO" placeholder="correo@ejemplo.com" />
-          <CampoTexto etiqueta="Teléfono" campo="TELEFONO_DIRECTIVO" placeholder="Ej. 2381234567" />
+          <CampoTextoConvivencia etiqueta="Correo" valor={valores.CORREO_DIRECTIVO} onChange={(v) => cambiar("CORREO_DIRECTIVO", v)} placeholder="correo@ejemplo.com" />
+          <CampoTextoConvivencia etiqueta="Teléfono" valor={valores.TELEFONO_DIRECTIVO} onChange={(v) => cambiar("TELEFONO_DIRECTIVO", v)} placeholder="Ej. 2381234567" />
         </div>
+        {valores.CORREO_DIRECTIVO && (
+          <button type="button" onClick={copiarCorreoATodos} className="text-sm" style={{ alignSelf: "flex-start", opacity: 0.7, background: "none", border: "none", textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: "-0.4rem" }}>
+            Usar este mismo correo para los otros 3 integrantes
+          </button>
+        )}
 
         <div style={{ fontWeight: 700, fontSize: "0.8rem", marginTop: "0.5rem" }}>Madre o Padre de Familia — Presidente(a)</div>
-        <SelectTutor etiqueta="Nombre" campo="INTEGRANTE_PRESIDENTE" opciones={disponiblesPresidente} />
-        <CampoTexto etiqueta="Correo" campo="CORREO_PRESIDENTE" placeholder="correo@ejemplo.com" />
+        <SelectTutorConvivencia etiqueta="Nombre" valor={valores.INTEGRANTE_PRESIDENTE} onChange={(v) => cambiar("INTEGRANTE_PRESIDENTE", v)} opciones={disponiblesPresidente} />
+        <CampoTextoConvivencia etiqueta="Correo" valor={valores.CORREO_PRESIDENTE} onChange={(v) => cambiar("CORREO_PRESIDENTE", v)} placeholder="correo@ejemplo.com" />
 
         <div style={{ fontWeight: 700, fontSize: "0.8rem", marginTop: "0.5rem" }}>Madre o Padre de Familia — Vocal</div>
-        <SelectTutor etiqueta="Nombre" campo="INTEGRANTE_VOCAL_PADRE" opciones={disponiblesVocal} />
-        <CampoTexto etiqueta="Correo" campo="CORREO_VOCAL_PADRE" placeholder="correo@ejemplo.com" />
+        <SelectTutorConvivencia etiqueta="Nombre" valor={valores.INTEGRANTE_VOCAL_PADRE} onChange={(v) => cambiar("INTEGRANTE_VOCAL_PADRE", v)} opciones={disponiblesVocal} />
+        <CampoTextoConvivencia etiqueta="Correo" valor={valores.CORREO_VOCAL_PADRE} onChange={(v) => cambiar("CORREO_VOCAL_PADRE", v)} placeholder="correo@ejemplo.com" />
 
         <div style={{ fontWeight: 700, fontSize: "0.8rem", marginTop: "0.5rem" }}>Maestra/Maestro — Vocal</div>
         <div className="grid grid-cols-2 gap-2">
-          <CampoTexto etiqueta="Correo" campo="CORREO_MAESTRO" placeholder="correo@ejemplo.com" />
-          <CampoTexto etiqueta="Teléfono" campo="TELEFONO_MAESTRO" placeholder="Ej. 2381234567" />
+          <CampoTextoConvivencia etiqueta="Correo" valor={valores.CORREO_MAESTRO} onChange={(v) => cambiar("CORREO_MAESTRO", v)} placeholder="correo@ejemplo.com" />
+          <CampoTextoConvivencia etiqueta="Teléfono" valor={valores.TELEFONO_MAESTRO} onChange={(v) => cambiar("TELEFONO_MAESTRO", v)} placeholder="Ej. 2381234567" />
         </div>
 
         <div className="flex items-center gap-2" style={{ marginTop: "0.4rem" }}>
@@ -4797,7 +4817,7 @@ function ActaConvivenciaVista({ datos, datosEscuela, tutores, imprimible }) {
         Una vez constituido, el Comité de Convivencia Escolar da a conocer las actividades que realizará durante el ciclo escolar 2026-2027.
       </p>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0.9rem" }}>
+      <table className="firma-grupo" style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0.9rem" }}>
         <tbody>
           <tr><td style={{ ...celdaOficial, fontWeight: 700, textAlign: "center" }} colSpan={2}>Datos del Centro Escolar</td></tr>
           <tr><td style={celdaOficial}><span style={lblOficial}>Nombre de la Escuela</span></td><td style={celdaOficial}>{DATOS_PLANTEL.nombre}</td></tr>
@@ -4809,7 +4829,7 @@ function ActaConvivenciaVista({ datos, datosEscuela, tutores, imprimible }) {
         </tbody>
       </table>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0.9rem" }}>
+      <table className="firma-grupo" style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0.9rem" }}>
         <tbody>
           <tr><td style={{ ...celdaOficial, fontWeight: 700, textAlign: "center" }}>Acciones por realizar</td></tr>
           <tr><td style={celdaOficial}>EJE 1: Prevención de adicciones; Concientizar sobre los riesgos de las drogas, Tener hábitos de vida saludables, Vivir en un buen ambiente.</td></tr>
@@ -4838,15 +4858,15 @@ function ActaConvivenciaVista({ datos, datosEscuela, tutores, imprimible }) {
         No habiendo otro asunto que tratar, se declara terminada la instalación y primera sesión del Comité de Convivencia escolar, siendo las <b>{d.HORA_CIERRE || "_______"}</b> horas del mismo día y año de su inicio y se levanta la presente acta, firmando al margen y al calce el Presidente(a) de dicho comité y los integrantes.
       </p>
 
-      <div style={{ marginTop: "2rem", marginBottom: "1.6rem", maxWidth: "260px" }}>
+      <div className="firma-grupo" style={{ marginTop: "2rem", marginBottom: "1.6rem", maxWidth: "260px" }}>
         <FirmaActaConvivencia nombre={d.INTEGRANTE_PRESIDENTE} etiqueta="Presidente (a)" />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2.2rem", marginBottom: "1.8rem" }}>
+      <div className="firma-grupo" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2.2rem", marginBottom: "1.8rem" }}>
         <FirmaActaConvivencia nombre={NOMBRE_COMPLETO.directora} etiqueta="Secretario (a) Técnico" />
         <FirmaActaConvivencia nombre={d.INTEGRANTE_VOCAL_PADRE} etiqueta="Vocal" />
       </div>
       <div style={{ textAlign: "right", fontSize: "0.72rem", fontWeight: 700, marginBottom: "0.4rem" }}>Vo.Bo.</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2.2rem", marginBottom: "1rem" }}>
+      <div className="firma-grupo" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2.2rem", marginBottom: "1rem" }}>
         <FirmaActaConvivencia nombre={NOMBRE_COMPLETO.maestro} etiqueta="Vocal" />
         <FirmaActaConvivencia nombre={de.supervisorZona || ""} etiqueta="Supervisora Escolar" />
       </div>
@@ -6502,6 +6522,10 @@ function App() {
       body * { visibility: hidden; }
       .solo-impresion, .solo-impresion * { visibility: visible; }
       .solo-impresion { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 1rem; }
+      .solo-impresion table { page-break-inside: auto; break-inside: auto; }
+      .solo-impresion tr, .solo-impresion thead { page-break-inside: avoid; break-inside: avoid; }
+      .solo-impresion thead { display: table-header-group; }
+      .solo-impresion .firma-grupo { page-break-inside: avoid; break-inside: avoid; }
     }
     /* ---- Cédula de Registro y Actualización de Datos (vista previa + impresión) ---- */
     .ced-modal-fondo { position: fixed; inset: 0; background: rgba(20,10,10,.55); display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; z-index: 60; }
