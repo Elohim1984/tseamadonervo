@@ -2805,6 +2805,17 @@ function finMes(fechaISO) {
 function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
   const [periodo, setPeriodo] = useState("semanal");
   const [fechaRef, setFechaRef] = useState(hoyISO());
+  // Justificaciones de TODO el grado (todas las fechas), para poder mostrar el
+  // motivo junto a cada día de falta justificada sin tener que pedirlas fecha
+  // por fecha — se listan una sola vez por grado con el mismo storage genérico.
+  const [justificacionesGrado, setJustificacionesGrado] = useState([]);
+  const [expandidos, setExpandidos] = useState({});
+
+  useEffect(() => {
+    let vivo = true;
+    listarStorage(`asistJustifica:${grado}_`).then((lista) => { if (vivo) setJustificacionesGrado(lista); });
+    return () => { vivo = false; };
+  }, [grado]);
 
   let desde, hasta, etiquetaPeriodo;
   if (periodo === "semanal") { desde = inicioSemana(fechaRef); hasta = finSemana(fechaRef); etiquetaPeriodo = `Semana del ${desde} al ${hasta}`; }
@@ -2813,18 +2824,33 @@ function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
 
   const listaGrado = alumnos.filter((a) => a.grado === grado).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
 
+  // Además de los totales, se arma la lista de los días EXACTOS en que cada
+  // alumno faltó (con o sin justificar) dentro del período — para que se
+  // pueda ver qué día concreto no vino, y aclararlo con su tutor, en vez de
+  // solo ver un número acumulado.
   const filas = listaGrado.map((a) => {
     const c = { presente: 0, retardo: 0, falta: 0, falta_justificada: 0, diasRegistrados: 0 };
+    const diasFalta = [];
     Object.keys(asistencia).forEach((clave) => {
       const [g, f] = clave.split("_");
       if (g !== String(grado) || f < desde || f > hasta) return;
       const estado = asistencia[clave][a.id];
-      if (estado) { c[estado] = (c[estado] || 0) + 1; c.diasRegistrados++; }
+      if (estado) {
+        c[estado] = (c[estado] || 0) + 1;
+        c.diasRegistrados++;
+        if (estado === "falta" || estado === "falta_justificada") {
+          const j = justificacionesGrado.find((x) => x.alumnoId === a.id && x.fecha === f);
+          diasFalta.push({ fecha: f, justificada: estado === "falta_justificada", motivo: j ? j.tipo : "", detalle: j ? j.detalle : "" });
+        }
+      }
     });
+    diasFalta.sort((x, y) => x.fecha.localeCompare(y.fecha));
     const asistidos = c.presente + c.retardo;
     const pct = c.diasRegistrados > 0 ? Math.round((asistidos / c.diasRegistrados) * 100) : null;
-    return { alumno: a, ...c, pct };
+    return { alumno: a, ...c, pct, diasFalta };
   });
+
+  const alternar = (id) => setExpandidos((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
     <div className="flex flex-col gap-4">
@@ -2846,6 +2872,9 @@ function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
             <Download size={14} /> Imprimir / PDF
           </button>
         </div>
+        <p className="text-sm mb-2" style={{ opacity: 0.55 }}>
+          Toca el nombre de un alumno con faltas para ver los días exactos en que faltó.
+        </p>
         <div style={{ overflowX: "auto" }}>
           <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -2860,14 +2889,45 @@ function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
             </thead>
             <tbody>
               {filas.map((r) => (
-                <tr key={r.alumno.id} style={{ borderBottom: "1px solid var(--borde)" }}>
-                  <td style={{ padding: "4px 6px" }}>{nombreAlumno(r.alumno)}</td>
-                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.presente}</td>
-                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.retardo}</td>
-                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.falta}</td>
-                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.falta_justificada}</td>
-                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.pct === null ? "—" : `${r.pct}%`}</td>
-                </tr>
+                <React.Fragment key={r.alumno.id}>
+                  <tr style={{ borderBottom: expandidos[r.alumno.id] && r.diasFalta.length > 0 ? "none" : "1px solid var(--borde)" }}>
+                    <td style={{ padding: "4px 6px" }}>
+                      {r.diasFalta.length > 0 ? (
+                        <button
+                          onClick={() => alternar(r.alumno.id)}
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", color: "inherit", font: "inherit", textAlign: "left" }}
+                        >
+                          <ChevronDown size={13} style={{ transform: expandidos[r.alumno.id] ? "none" : "rotate(-90deg)", transition: "transform 0.15s", flexShrink: 0, opacity: 0.6 }} />
+                          {nombreAlumno(r.alumno)}
+                        </button>
+                      ) : nombreAlumno(r.alumno)}
+                    </td>
+                    <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.presente}</td>
+                    <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.retardo}</td>
+                    <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.falta}</td>
+                    <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.falta_justificada}</td>
+                    <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.pct === null ? "—" : `${r.pct}%`}</td>
+                  </tr>
+                  {expandidos[r.alumno.id] && r.diasFalta.length > 0 && (
+                    <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+                      <td colSpan={6} style={{ padding: "2px 6px 10px 26px", background: "var(--fondo-resaltado, #faf7f0)" }}>
+                        <div className="flex flex-col gap-1 mt-1">
+                          {r.diasFalta.map((d, i) => (
+                            <div key={i} className="flex items-center gap-2" style={{ fontSize: "0.78rem" }}>
+                              <span style={{ fontWeight: 600 }}>{fechaBonita(d.fecha)}</span>
+                              <span className={`pastilla ${d.justificada ? "falta_justificada" : "falta"}`} style={{ fontSize: "0.66rem" }}>
+                                {d.justificada ? "Falta justificada" : "Falta"}
+                              </span>
+                              {d.justificada && (d.motivo || d.detalle) && (
+                                <span style={{ opacity: 0.65 }}>— {d.motivo}{d.detalle ? `: ${d.detalle}` : ""}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -2880,6 +2940,7 @@ function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
 function InformeAsistenciaImprimible({ datos }) {
   if (!datos) return null;
   const { filas, etiquetaPeriodo, grado } = datos;
+  const conFaltas = (filas || []).filter((r) => r.diasFalta && r.diasFalta.length > 0);
   return (
     <div className="solo-impresion">
       <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "1rem" }}>
@@ -2911,6 +2972,23 @@ function InformeAsistenciaImprimible({ datos }) {
           ))}
         </tbody>
       </table>
+      {conFaltas.length > 0 && (
+        <div style={{ marginTop: "1rem" }}>
+          <div style={{ fontWeight: 700, fontSize: "0.82rem", marginBottom: "0.4rem", borderTop: "1.5px solid #000", paddingTop: "0.5rem" }}>
+            Detalle de días de falta — por si hace falta aclarar con el tutor
+          </div>
+          {conFaltas.map((r) => (
+            <div key={r.alumno.id} style={{ marginBottom: "0.45rem", fontSize: "0.75rem", pageBreakInside: "avoid" }}>
+              <span style={{ fontWeight: 600 }}>{nombreAlumno(r.alumno)}:</span>{" "}
+              {r.diasFalta.map((d, i) => (
+                <span key={i} style={{ marginRight: "0.8rem" }}>
+                  {fechaBonita(d.fecha)}{d.justificada ? ` (justificada${d.motivo ? `: ${d.motivo}` : ""})` : ""}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -6731,10 +6809,82 @@ function ListadoTutoresImprimible({ tutores }) {
   );
 }
 
+// Edad exacta (años, meses y días) de un alumno a una fecha de referencia
+// determinada — no la edad "hoy", sino la que tenía o tendrá en cualquier
+// fecha que se elija (ej. "¿cuántos años cumplidos tenía cada alumno al 16
+// de septiembre de 2026?"). Devuelve null si no hay fecha de nacimiento
+// capturada en Inscripciones.
+function calcularEdadExacta(fechaNacISO, fechaRefISO) {
+  if (!fechaNacISO || !fechaRefISO) return null;
+  const partesNac = String(fechaNacISO).split("-").map(Number);
+  const partesRef = String(fechaRefISO).split("-").map(Number);
+  if (partesNac.length !== 3 || partesRef.length !== 3) return null;
+  const [an, mn, dn] = partesNac;
+  const [ar, mr, dr] = partesRef;
+  let anios = ar - an;
+  let meses = mr - mn;
+  let dias = dr - dn;
+  if (dias < 0) {
+    meses -= 1;
+    // días del mes anterior a la fecha de referencia — con Math.max(0, …) como
+    // resguardo: si el nacimiento fue un día 31 y el mes que se le resta es más
+    // corto (ej. nace el 31 de enero, referencia el 1° de marzo), la resta
+    // podría quedar negativa otra vez; el día exacto no se muestra en pantalla
+    // (solo años y meses), así que aquí simplemente no se deja bajar de 0.
+    dias = Math.max(0, dias + new Date(ar, mr - 1, 0).getDate());
+  }
+  if (meses < 0) {
+    anios -= 1;
+    meses += 12;
+  }
+  if (anios < 0) return null; // fecha de referencia anterior al nacimiento
+  return { anios, meses, dias };
+}
+function textoEdad(edad) {
+  if (!edad) return "—";
+  const partes = [`${edad.anios} año${edad.anios === 1 ? "" : "s"}`];
+  if (edad.meses > 0) partes.push(`${edad.meses} mes${edad.meses === 1 ? "" : "es"}`);
+  return partes.join(", ");
+}
+
+function EdadesImprimible({ filas, fechaRef }) {
+  return (
+    <div className="solo-impresion">
+      <EncabezadoImpresionEstadistica subtitulo={`Edad exacta al ${fechaBonita(fechaRef)}`} />
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+        <thead>
+          <tr>
+            {["Alumno", "Grado", "Fecha de nacimiento", `Edad al ${fechaBonita(fechaRef)}`].map((h) => (
+              <th key={h} style={{ textAlign: "left", borderBottom: "1.5px solid #000", padding: "0.25rem 0.4rem" }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map((r) => (
+            <tr key={r.alumno.id}>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.4rem" }}>{nombreAlumno(r.alumno)}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.4rem" }}>{r.alumno.grado}°</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.4rem" }}>{r.alumno.ALUMNO_FECHA_NACIMIENTO ? fechaCedula(r.alumno.ALUMNO_FECHA_NACIMIENTO) : "—"}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.25rem 0.4rem" }}>{textoEdad(r.edad)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function Estadistica({ alumnos, gradosPermitidos }) {
-  const [modoImpresion, setModoImpresion] = useState(null); // null | "estadistica" | "tutores"
+  const [modoImpresion, setModoImpresion] = useState(null); // null | "estadistica" | "tutores" | "edades"
+  const [fechaRefEdad, setFechaRefEdad] = useState(hoyISO());
   const alumnosVisibles = alumnos.filter((a) => gradosPermitidos.includes(a.grado));
   const stats = calcularEstadisticas(alumnosVisibles, gradosPermitidos);
+
+  const filasEdad = alumnosVisibles
+    .slice()
+    .sort((a, b) => (a.grado - b.grado) || nombreAlumno(a).localeCompare(nombreAlumno(b)))
+    .map((a) => ({ alumno: a, edad: calcularEdadExacta(a.ALUMNO_FECHA_NACIMIENTO, fechaRefEdad) }));
+  const sinFechaNacimiento = filasEdad.filter((r) => !r.edad).length;
 
   const imprimir = (modo) => {
     setModoImpresion(modo);
@@ -6745,6 +6895,7 @@ function Estadistica({ alumnos, gradosPermitidos }) {
     <div className="flex flex-col gap-4">
       {modoImpresion === "estadistica" && <EstadisticaImprimible stats={stats} />}
       {modoImpresion === "tutores" && <ListadoTutoresImprimible tutores={stats.listaTutores} />}
+      {modoImpresion === "edades" && <EdadesImprimible filas={filasEdad} fechaRef={fechaRefEdad} />}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="card">
@@ -6796,6 +6947,47 @@ function Estadistica({ alumnos, gradosPermitidos }) {
         </table>
         <button onClick={() => imprimir("estadistica")} className="btn-secundario mt-3" style={{ width: "100%" }}>
           <Printer size={14} /> Imprimir estadística
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Edad exacta a una fecha</div>
+        <p className="text-sm mb-2" style={{ opacity: 0.6 }}>
+          Elige cualquier fecha (por ejemplo, un corte de ciclo o un trámite) y aquí sale la edad exacta de cada alumno a ese día — no la edad de hoy. Se calcula con la fecha de nacimiento capturada en Inscripciones.
+        </p>
+        <div className="flex items-center justify-between mb-2">
+          <label className="font-mono" style={{ fontSize: "0.7rem", opacity: 0.6 }}>FECHA DE REFERENCIA</label>
+          <input className="campo" style={{ maxWidth: "10rem" }} type="date" value={fechaRefEdad} onChange={(e) => setFechaRefEdad(e.target.value)} />
+        </div>
+        {sinFechaNacimiento > 0 && (
+          <p className="text-sm mb-2" style={{ opacity: 0.6 }}>
+            {sinFechaNacimiento} alumno(s) sin fecha de nacimiento capturada en Inscripciones — su edad sale en blanco.
+          </p>
+        )}
+        <div style={{ overflowX: "auto", maxHeight: "320px", overflowY: "auto" }}>
+          <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+                <th style={{ textAlign: "left", padding: "4px 6px" }}>Alumno</th>
+                <th style={{ padding: "4px 6px" }}>Grado</th>
+                <th style={{ padding: "4px 6px" }}>Fecha de nacimiento</th>
+                <th style={{ padding: "4px 6px" }}>Edad</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filasEdad.map((r) => (
+                <tr key={r.alumno.id} style={{ borderBottom: "1px solid var(--borde)" }}>
+                  <td style={{ padding: "4px 6px" }}>{nombreAlumno(r.alumno)}</td>
+                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.alumno.grado}°</td>
+                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.alumno.ALUMNO_FECHA_NACIMIENTO ? fechaCedula(r.alumno.ALUMNO_FECHA_NACIMIENTO) : "—"}</td>
+                  <td style={{ padding: "4px 6px", textAlign: "center" }}>{textoEdad(r.edad)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <button onClick={() => imprimir("edades")} className="btn-secundario mt-3" style={{ width: "100%" }}>
+          <Printer size={14} /> Imprimir edades
         </button>
       </div>
 
