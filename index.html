@@ -7123,7 +7123,72 @@ const PREGUNTAS_CONSEJO = [
 
 /* Lista genérica de agregar/listar/borrar (un renglón por registro), reutilizada
    por Integrantes, Asuntos y Acuerdos, Programas y Acciones del Consejo. */
-function ListaCRUDConsejo({ prefijo, campos, itemVacio, renderItem, tituloForm, ayudaForm, onStamp, validar }) {
+/* Arma un integrante a partir de un alumno ya inscrito o de su madre/padre/tutor(a),
+   para no volver a teclear nombres, CURP o contacto que ya están en Inscripciones. */
+function SelectorFamiliaConsejo({ alumnos, gradosPermitidos, onElegir }) {
+  const [grado, setGrado] = useState("");
+  const [alumnoId, setAlumnoId] = useState("");
+  const [persona, setPersona] = useState("alumno");
+
+  const alumnosDelGrado = alumnos
+    .filter((a) => gradosPermitidos.includes(a.grado) && (!grado || String(a.grado) === String(grado)))
+    .sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
+
+  const alumnoElegido = alumnos.find((a) => a.id === alumnoId);
+
+  const PERSONAS = [
+    { id: "alumno", label: "El/la alumno(a)" },
+    { id: "madre", label: "Madre" },
+    { id: "padre", label: "Padre" },
+    { id: "tutor", label: "Tutor(a)" },
+  ];
+
+  const armarDatos = () => {
+    if (!alumnoElegido) return null;
+    const a = alumnoElegido;
+    const mapa = {
+      alumno: { nombre: a.ALUMNO_NOMBRES, apellidoPaterno: a.ALUMNO_APELLIDO_PATERNO, apellidoMaterno: a.ALUMNO_APELLIDO_MATERNO, curp: a.ALUMNO_CURP, correo: "", telefono: "" },
+      madre: { nombre: a.MADRE_NOMBRES, apellidoPaterno: a.MADRE_APELLIDO_PATERNO, apellidoMaterno: a.MADRE_APELLIDO_MATERNO, curp: a.MADRE_CURP, correo: a.MADRE_EMAIL, telefono: a.MADRE_CELULAR || a.MADRE_TELEFONO_FIJO },
+      padre: { nombre: a.PADRE_NOMBRES, apellidoPaterno: a.PADRE_APELLIDO_PATERNO, apellidoMaterno: a.PADRE_APELLIDO_MATERNO, curp: a.PADRE_CURP, correo: a.PADRE_EMAIL, telefono: a.PADRE_CELULAR || a.PADRE_TELEFONO_FIJO },
+      tutor: { nombre: a.TUTOR_NOMBRES, apellidoPaterno: a.TUTOR_APELLIDO_PATERNO, apellidoMaterno: a.TUTOR_APELLIDO_MATERNO, curp: a.TUTOR_CURP, correo: a.TUTOR_EMAIL, telefono: a.TUTOR_CELULAR || a.TUTOR_TELEFONO_FIJO },
+    };
+    const d = mapa[persona] || mapa.alumno;
+    return {
+      nombre: d.nombre || "", apellidoPaterno: d.apellidoPaterno || "", apellidoMaterno: d.apellidoMaterno || "",
+      curp: d.curp || "", correo: d.correo || "", telefono: d.telefono || "",
+    };
+  };
+
+  const usar = () => {
+    const datos = armarDatos();
+    if (!datos || !datos.nombre) return;
+    onElegir(datos);
+  };
+
+  return (
+    <div style={{ background: "#F6F1E4", border: "1px solid var(--linea)", borderRadius: "10px", padding: "0.7rem", marginBottom: "0.7rem" }}>
+      <div className="text-sm font-medium mb-2" style={{ opacity: 0.8 }}>Jalar datos de un alumno o su familia ya registrados en Inscripciones</div>
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <select className="campo" value={grado} onChange={(e) => { setGrado(e.target.value); setAlumnoId(""); }}>
+          <option value="">Todos los grados</option>
+          {gradosPermitidos.map((g) => (<option key={g} value={g}>{g}° grado</option>))}
+        </select>
+        <select className="campo" value={alumnoId} onChange={(e) => setAlumnoId(e.target.value)}>
+          <option value="">Selecciona alumno(a)…</option>
+          {alumnosDelGrado.map((a) => (<option key={a.id} value={a.id}>{nombreAlumno(a)} · {a.grado}°{a.ESCUELA_GRUPO || ""}</option>))}
+        </select>
+      </div>
+      <div className="flex gap-2 flex-wrap items-center">
+        <select className="campo" style={{ flex: 1, minWidth: "140px" }} value={persona} onChange={(e) => setPersona(e.target.value)}>
+          {PERSONAS.map((p) => (<option key={p.id} value={p.id}>{p.label}</option>))}
+        </select>
+        <button onClick={usar} disabled={!alumnoId} className="btn-secundario" style={{ fontSize: "0.78rem" }}>Aceptar y usar estos datos</button>
+      </div>
+    </div>
+  );
+}
+
+function ListaCRUDConsejo({ prefijo, campos, itemVacio, renderItem, tituloForm, ayudaForm, onStamp, validar, extra }) {
   const [items, setItems] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [form, setForm] = useState(itemVacio);
@@ -7153,6 +7218,7 @@ function ListaCRUDConsejo({ prefijo, campos, itemVacio, renderItem, tituloForm, 
       <div className="card">
         {tituloForm && <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>{tituloForm}</div>}
         {ayudaForm && <p className="text-sm mb-2" style={{ opacity: 0.6 }}>{ayudaForm}</p>}
+        {extra && extra(form, setForm)}
         <div className="flex flex-col gap-2">
           {campos.map((c) => (
             <div key={c.key}>
@@ -7584,7 +7650,7 @@ function ResumenConsejo({ onStamp }) {
   );
 }
 
-function ConsejoEscolar({ onStamp }) {
+function ConsejoEscolar({ onStamp, alumnos, gradosPermitidos }) {
   const [subTab, setSubTab] = useState("datos");
   const SUBTABS = [
     { id: "datos", label: "Datos Generales" },
@@ -7638,6 +7704,13 @@ function ConsejoEscolar({ onStamp }) {
             { key: "telefono", etiqueta: "Teléfono" },
           ]}
           validar={(f) => f.nombre.trim() && f.apellidoPaterno.trim()}
+          extra={(form, setForm) => (
+            <SelectorFamiliaConsejo
+              alumnos={alumnos}
+              gradosPermitidos={gradosPermitidos}
+              onElegir={(datos) => setForm((prev) => ({ ...prev, ...datos }))}
+            />
+          )}
           renderItem={(i) => (
             <div>
               <div className="font-medium text-sm">{i.nombre} {i.apellidoPaterno} {i.apellidoMaterno} {i.cargo ? `· ${i.cargo}` : ""}</div>
@@ -8120,7 +8193,7 @@ function App() {
           />
         )}
         {tab === "pic" && <ProgramaAnaliticoPIC onStamp={fireStamp} />}
-        {tab === "consejo" && <ConsejoEscolar onStamp={fireStamp} />}
+        {tab === "consejo" && <ConsejoEscolar onStamp={fireStamp} alumnos={alumnos} gradosPermitidos={gradosPermitidos} />}
         {tab === "documentos" && <DocumentosDireccion alumnos={alumnos} onStamp={fireStamp} />}
         {tab === "personal" && <DatosPersonal personal={personal} setPersonal={setPersonal} onStamp={fireStamp} />}
         {tab === "recursos" && (
