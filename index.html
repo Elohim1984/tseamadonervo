@@ -7138,62 +7138,89 @@ const PREGUNTAS_CONSEJO = [
 
 /* Lista genérica de agregar/listar/borrar (un renglón por registro), reutilizada
    por Integrantes, Asuntos y Acuerdos, Programas y Acciones del Consejo. */
+const PERSONAS_FAMILIA_CONSEJO = [
+  { id: "alumno", label: "El/la alumno(a)" },
+  { id: "madre", label: "Madre" },
+  { id: "padre", label: "Padre" },
+  { id: "tutor", label: "Tutor(a)" },
+];
+
+// Arma { nombre, apellidoPaterno, apellidoMaterno, curp, correo, telefono } para
+// una persona (alumno/madre/padre/tutor) de un alumno dado, sin depender de estado.
+function datosDeAlumnoPersona(a, persona) {
+  const mapa = {
+    alumno: { nombre: a.ALUMNO_NOMBRES, apellidoPaterno: a.ALUMNO_APELLIDO_PATERNO, apellidoMaterno: a.ALUMNO_APELLIDO_MATERNO, curp: a.ALUMNO_CURP, correo: "", telefono: "" },
+    madre: { nombre: a.MADRE_NOMBRES, apellidoPaterno: a.MADRE_APELLIDO_PATERNO, apellidoMaterno: a.MADRE_APELLIDO_MATERNO, curp: a.MADRE_CURP, correo: a.MADRE_EMAIL, telefono: a.MADRE_CELULAR || a.MADRE_TELEFONO_FIJO },
+    padre: { nombre: a.PADRE_NOMBRES, apellidoPaterno: a.PADRE_APELLIDO_PATERNO, apellidoMaterno: a.PADRE_APELLIDO_MATERNO, curp: a.PADRE_CURP, correo: a.PADRE_EMAIL, telefono: a.PADRE_CELULAR || a.PADRE_TELEFONO_FIJO },
+    tutor: { nombre: a.TUTOR_NOMBRES, apellidoPaterno: a.TUTOR_APELLIDO_PATERNO, apellidoMaterno: a.TUTOR_APELLIDO_MATERNO, curp: a.TUTOR_CURP, correo: a.TUTOR_EMAIL, telefono: a.TUTOR_CELULAR || a.TUTOR_TELEFONO_FIJO },
+  };
+  const d = mapa[persona] || mapa.alumno;
+  return { nombre: (d.nombre || "").trim(), apellidoPaterno: (d.apellidoPaterno || "").trim(), apellidoMaterno: (d.apellidoMaterno || "").trim(), curp: (d.curp || "").trim(), correo: (d.correo || "").trim(), telefono: (d.telefono || "").trim() };
+}
+
+function datosDePersonal(p) {
+  return {
+    nombre: (p.PERSONAL_NOMBRES || "").trim(), apellidoPaterno: (p.PERSONAL_APELLIDO_PATERNO || "").trim(), apellidoMaterno: (p.PERSONAL_APELLIDO_MATERNO || "").trim(),
+    curp: (p.PERSONAL_CURP || "").trim(), correo: (p.PERSONAL_CORREO_INSTITUCIONAL || p.PERSONAL_CORREO_PERSONAL || "").trim(), telefono: (p.PERSONAL_CELULAR || p.PERSONAL_TELEFONO_EMERGENCIA || "").trim(),
+  };
+}
+
 /* Arma un integrante a partir de un alumno ya inscrito (o su madre/padre/tutor-a),
    o del personal de la escuela (director/docentes) ya capturado en Datos Esc.,
-   para no volver a teclear nombres, CURP o contacto que ya están en el sistema. */
-function SelectorFamiliaConsejo({ alumnos, gradosPermitidos, personal, onElegir }) {
+   para no volver a teclear nombres, CURP o contacto que ya están en el sistema.
+   `yaAgregados` es la lista de integrantes ya guardados en el Consejo: a quien ya
+   se agregó no se le vuelve a ofrecer, para no repetirlo por accidente. */
+function SelectorFamiliaConsejo({ alumnos, gradosPermitidos, personal, yaAgregados, onElegir }) {
   const [fuente, setFuente] = useState("alumno"); // "alumno" | "personal"
   const [grado, setGrado] = useState("");
   const [alumnoId, setAlumnoId] = useState("");
   const [persona, setPersona] = useState("alumno");
   const [personalId, setPersonalId] = useState("");
 
+  const normalizar = (s) => (s || "").trim().toUpperCase();
+  const usadosPorCurp = new Set((yaAgregados || []).map((i) => normalizar(i.curp)).filter(Boolean));
+  const usadosPorNombre = new Set((yaAgregados || []).map((i) => normalizar(`${i.nombre} ${i.apellidoPaterno} ${i.apellidoMaterno}`)).filter(Boolean));
+  const yaFueAgregado = (datos) => {
+    if (!datos || !datos.nombre) return false;
+    if (datos.curp && usadosPorCurp.has(normalizar(datos.curp))) return true;
+    return usadosPorNombre.has(normalizar(`${datos.nombre} ${datos.apellidoPaterno} ${datos.apellidoMaterno}`));
+  };
+
   const alumnosDelGrado = alumnos
     .filter((a) => gradosPermitidos.includes(a.grado) && (!grado || String(a.grado) === String(grado)))
     .sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
 
+  // Solo se ofrecen alumnos cuya persona elegida (alumno/madre/padre/tutor) tenga
+  // nombre capturado Y aún no haya sido usada como integrante del Consejo.
+  const alumnosDisponibles = alumnosDelGrado.filter((a) => {
+    const datos = datosDeAlumnoPersona(a, persona);
+    return datos.nombre && !yaFueAgregado(datos);
+  });
+
   const alumnoElegido = alumnos.find((a) => a.id === alumnoId);
   const personalOrdenado = [...(personal || [])].sort((a, b) => nombrePersonal(a).localeCompare(nombrePersonal(b)));
+  const personalDisponible = personalOrdenado.filter((p) => !yaFueAgregado(datosDePersonal(p)));
   const personalElegido = (personal || []).find((p) => p.id === personalId);
 
-  const PERSONAS = [
-    { id: "alumno", label: "El/la alumno(a)" },
-    { id: "madre", label: "Madre" },
-    { id: "padre", label: "Padre" },
-    { id: "tutor", label: "Tutor(a)" },
-  ];
-
-  const armarDatosAlumno = () => {
-    if (!alumnoElegido) return null;
-    const a = alumnoElegido;
-    const mapa = {
-      alumno: { nombre: a.ALUMNO_NOMBRES, apellidoPaterno: a.ALUMNO_APELLIDO_PATERNO, apellidoMaterno: a.ALUMNO_APELLIDO_MATERNO, curp: a.ALUMNO_CURP, correo: "", telefono: "" },
-      madre: { nombre: a.MADRE_NOMBRES, apellidoPaterno: a.MADRE_APELLIDO_PATERNO, apellidoMaterno: a.MADRE_APELLIDO_MATERNO, curp: a.MADRE_CURP, correo: a.MADRE_EMAIL, telefono: a.MADRE_CELULAR || a.MADRE_TELEFONO_FIJO },
-      padre: { nombre: a.PADRE_NOMBRES, apellidoPaterno: a.PADRE_APELLIDO_PATERNO, apellidoMaterno: a.PADRE_APELLIDO_MATERNO, curp: a.PADRE_CURP, correo: a.PADRE_EMAIL, telefono: a.PADRE_CELULAR || a.PADRE_TELEFONO_FIJO },
-      tutor: { nombre: a.TUTOR_NOMBRES, apellidoPaterno: a.TUTOR_APELLIDO_PATERNO, apellidoMaterno: a.TUTOR_APELLIDO_MATERNO, curp: a.TUTOR_CURP, correo: a.TUTOR_EMAIL, telefono: a.TUTOR_CELULAR || a.TUTOR_TELEFONO_FIJO },
-    };
-    const d = mapa[persona] || mapa.alumno;
-    return { nombre: d.nombre || "", apellidoPaterno: d.apellidoPaterno || "", apellidoMaterno: d.apellidoMaterno || "", curp: d.curp || "", correo: d.correo || "", telefono: d.telefono || "" };
-  };
-
-  const armarDatosPersonal = () => {
-    if (!personalElegido) return null;
-    const p = personalElegido;
-    return {
-      nombre: p.PERSONAL_NOMBRES || "", apellidoPaterno: p.PERSONAL_APELLIDO_PATERNO || "", apellidoMaterno: p.PERSONAL_APELLIDO_MATERNO || "",
-      curp: p.PERSONAL_CURP || "", correo: (p.PERSONAL_CORREO_INSTITUCIONAL || p.PERSONAL_CORREO_PERSONAL || ""), telefono: (p.PERSONAL_CELULAR || p.PERSONAL_TELEFONO_EMERGENCIA || ""),
-    };
-  };
-
   const usar = () => {
-    const datos = fuente === "personal" ? armarDatosPersonal() : armarDatosAlumno();
+    const datos = fuente === "personal"
+      ? (personalElegido ? datosDePersonal(personalElegido) : null)
+      : (alumnoElegido ? datosDeAlumnoPersona(alumnoElegido, persona) : null);
     if (!datos || !datos.nombre) return;
     onElegir(datos);
+    setAlumnoId(""); setPersonalId("");
   };
 
   return (
     <div style={{ background: "#F6F1E4", border: "1px solid var(--linea)", borderRadius: "10px", padding: "0.7rem", marginBottom: "0.7rem" }}>
-      <div className="text-sm font-medium mb-2" style={{ opacity: 0.8 }}>Jalar datos ya registrados en el sistema</div>
+      <div className="text-sm font-medium mb-1" style={{ opacity: 0.8 }}>Jalar datos ya registrados en el sistema</div>
+      <ul className="text-sm mb-2" style={{ opacity: 0.65, paddingLeft: "1.1rem", listStyle: "disc" }}>
+        <li>El/la Presidente(a) debe ser madre, padre de familia o tutor(a) — nunca docente ni directivo.</li>
+        <li>El Director(a) normalmente funge como Secretario(a) Técnico(a), no como Presidente(a).</li>
+        <li>Se necesitan entre 2 y 25 integrantes, y la mitad más uno deben ser madres/padres/tutores.</li>
+        <li>REPASE exige CURP validado de al menos 2 integrantes, incluido el Presidente(a).</li>
+        <li>Aquí ya no se repiten personas: en cuanto agregas a alguien, deja de aparecer en estas listas.</li>
+      </ul>
       <div className="flex gap-2 mb-2">
         {[{ id: "alumno", label: "Alumno o familia" }, { id: "personal", label: "Personal de la escuela" }].map((f) => (
           <button key={f.id} onClick={() => setFuente(f.id)} className={`chip-grado ${fuente === f.id ? "activo" : ""}`} style={{ fontSize: "0.74rem" }}>{f.label}</button>
@@ -7207,14 +7234,14 @@ function SelectorFamiliaConsejo({ alumnos, gradosPermitidos, personal, onElegir 
               <option value="">Todos los grados</option>
               {gradosPermitidos.map((g) => (<option key={g} value={g}>{g}° grado</option>))}
             </select>
-            <select className="campo" value={alumnoId} onChange={(e) => setAlumnoId(e.target.value)}>
-              <option value="">Selecciona alumno(a)…</option>
-              {alumnosDelGrado.map((a) => (<option key={a.id} value={a.id}>{nombreAlumno(a)} · {a.grado}°{a.ESCUELA_GRUPO || ""}</option>))}
+            <select className="campo" value={persona} onChange={(e) => { setPersona(e.target.value); setAlumnoId(""); }}>
+              {PERSONAS_FAMILIA_CONSEJO.map((p) => (<option key={p.id} value={p.id}>{p.label}</option>))}
             </select>
           </div>
           <div className="flex gap-2 flex-wrap items-center">
-            <select className="campo" style={{ flex: 1, minWidth: "140px" }} value={persona} onChange={(e) => setPersona(e.target.value)}>
-              {PERSONAS.map((p) => (<option key={p.id} value={p.id}>{p.label}</option>))}
+            <select className="campo" style={{ flex: 1, minWidth: "180px" }} value={alumnoId} onChange={(e) => setAlumnoId(e.target.value)}>
+              <option value="">{alumnosDisponibles.length === 0 ? "Ya no queda nadie disponible con este filtro" : "Selecciona alumno(a)…"}</option>
+              {alumnosDisponibles.map((a) => (<option key={a.id} value={a.id}>{nombreAlumno(a)} · {a.grado}°{a.ESCUELA_GRUPO || ""}</option>))}
             </select>
             <button onClick={usar} disabled={!alumnoId} className="btn-secundario" style={{ fontSize: "0.78rem" }}>Aceptar y usar estos datos</button>
           </div>
@@ -7226,8 +7253,8 @@ function SelectorFamiliaConsejo({ alumnos, gradosPermitidos, personal, onElegir 
           ) : (
             <div className="flex gap-2 flex-wrap items-center">
               <select className="campo" style={{ flex: 1, minWidth: "200px" }} value={personalId} onChange={(e) => setPersonalId(e.target.value)}>
-                <option value="">Selecciona a la persona…</option>
-                {personalOrdenado.map((p) => (<option key={p.id} value={p.id}>{nombrePersonal(p)}{p.PERSONAL_PUESTO ? ` — ${p.PERSONAL_PUESTO}` : ""}</option>))}
+                <option value="">{personalDisponible.length === 0 ? "Ya se agregó a todo el personal capturado" : "Selecciona a la persona…"}</option>
+                {personalDisponible.map((p) => (<option key={p.id} value={p.id}>{nombrePersonal(p)}{p.PERSONAL_PUESTO ? ` — ${p.PERSONAL_PUESTO}` : ""}</option>))}
               </select>
               <button onClick={usar} disabled={!personalId} className="btn-secundario" style={{ fontSize: "0.78rem" }}>Aceptar y usar estos datos</button>
             </div>
@@ -7268,7 +7295,7 @@ function ListaCRUDConsejo({ prefijo, campos, itemVacio, renderItem, tituloForm, 
       <div className="card">
         {tituloForm && <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>{tituloForm}</div>}
         {ayudaForm && <p className="text-sm mb-2" style={{ opacity: 0.6 }}>{ayudaForm}</p>}
-        {extra && extra(form, setForm)}
+        {extra && extra(form, setForm, items)}
         <div className="flex flex-col gap-2">
           {campos.map((c) => (
             <div key={c.key}>
@@ -7754,11 +7781,12 @@ function ConsejoEscolar({ onStamp, alumnos, gradosPermitidos, personal }) {
             { key: "telefono", etiqueta: "Teléfono" },
           ]}
           validar={(f) => f.nombre.trim() && f.apellidoPaterno.trim()}
-          extra={(form, setForm) => (
+          extra={(form, setForm, items) => (
             <SelectorFamiliaConsejo
               alumnos={alumnos}
               gradosPermitidos={gradosPermitidos}
               personal={personal}
+              yaAgregados={items}
               onElegir={(datos) => setForm((prev) => ({ ...prev, ...datos }))}
             />
           )}
