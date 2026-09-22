@@ -1420,6 +1420,21 @@ const RECURSOS = [
     descripcion: "Orientaciones y guías de trabajo de cada sesión ordinaria del CTE, Subsecretaría de Educación Básica.",
     url: "https://educacionbasica.sep.gob.mx/inicio/consejos-tecnicos-escolares/",
   },
+  {
+    titulo: "INEGI — Portal general",
+    descripcion: "Estadística y geografía oficial de México. Difusión solicitada por el Mtro. Omar de Jesús Villa Bravo, Director de Telesecundarias, por instrucción de la Subsecretaría de Educación Obligatoria.",
+    url: "https://www.inegi.org.mx/",
+  },
+  {
+    titulo: "Cuéntame de México (INEGI)",
+    descripcion: "Micrositio del INEGI para niñas, niños y jóvenes: mapas, población, economía y cultura explicados de forma visual e interactiva. El más útil para trabajar directamente con los alumnos.",
+    url: "https://cuentame.inegi.org.mx/",
+  },
+  {
+    titulo: "Datos en Acción (INEGI)",
+    descripcion: "Micrositio del INEGI para aprender a leer e interpretar datos oficiales con ejercicios prácticos, útil sobre todo en 2° y 3er grado.",
+    url: "https://datosenaccion.inegi.org.mx/",
+  },
 ];
 
 const PROYECTOS_DIAGNOSTICO = [
@@ -7123,18 +7138,23 @@ const PREGUNTAS_CONSEJO = [
 
 /* Lista genérica de agregar/listar/borrar (un renglón por registro), reutilizada
    por Integrantes, Asuntos y Acuerdos, Programas y Acciones del Consejo. */
-/* Arma un integrante a partir de un alumno ya inscrito o de su madre/padre/tutor(a),
-   para no volver a teclear nombres, CURP o contacto que ya están en Inscripciones. */
-function SelectorFamiliaConsejo({ alumnos, gradosPermitidos, onElegir }) {
+/* Arma un integrante a partir de un alumno ya inscrito (o su madre/padre/tutor-a),
+   o del personal de la escuela (director/docentes) ya capturado en Datos Esc.,
+   para no volver a teclear nombres, CURP o contacto que ya están en el sistema. */
+function SelectorFamiliaConsejo({ alumnos, gradosPermitidos, personal, onElegir }) {
+  const [fuente, setFuente] = useState("alumno"); // "alumno" | "personal"
   const [grado, setGrado] = useState("");
   const [alumnoId, setAlumnoId] = useState("");
   const [persona, setPersona] = useState("alumno");
+  const [personalId, setPersonalId] = useState("");
 
   const alumnosDelGrado = alumnos
     .filter((a) => gradosPermitidos.includes(a.grado) && (!grado || String(a.grado) === String(grado)))
     .sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
 
   const alumnoElegido = alumnos.find((a) => a.id === alumnoId);
+  const personalOrdenado = [...(personal || [])].sort((a, b) => nombrePersonal(a).localeCompare(nombrePersonal(b)));
+  const personalElegido = (personal || []).find((p) => p.id === personalId);
 
   const PERSONAS = [
     { id: "alumno", label: "El/la alumno(a)" },
@@ -7143,7 +7163,7 @@ function SelectorFamiliaConsejo({ alumnos, gradosPermitidos, onElegir }) {
     { id: "tutor", label: "Tutor(a)" },
   ];
 
-  const armarDatos = () => {
+  const armarDatosAlumno = () => {
     if (!alumnoElegido) return null;
     const a = alumnoElegido;
     const mapa = {
@@ -7153,37 +7173,67 @@ function SelectorFamiliaConsejo({ alumnos, gradosPermitidos, onElegir }) {
       tutor: { nombre: a.TUTOR_NOMBRES, apellidoPaterno: a.TUTOR_APELLIDO_PATERNO, apellidoMaterno: a.TUTOR_APELLIDO_MATERNO, curp: a.TUTOR_CURP, correo: a.TUTOR_EMAIL, telefono: a.TUTOR_CELULAR || a.TUTOR_TELEFONO_FIJO },
     };
     const d = mapa[persona] || mapa.alumno;
+    return { nombre: d.nombre || "", apellidoPaterno: d.apellidoPaterno || "", apellidoMaterno: d.apellidoMaterno || "", curp: d.curp || "", correo: d.correo || "", telefono: d.telefono || "" };
+  };
+
+  const armarDatosPersonal = () => {
+    if (!personalElegido) return null;
+    const p = personalElegido;
     return {
-      nombre: d.nombre || "", apellidoPaterno: d.apellidoPaterno || "", apellidoMaterno: d.apellidoMaterno || "",
-      curp: d.curp || "", correo: d.correo || "", telefono: d.telefono || "",
+      nombre: p.PERSONAL_NOMBRES || "", apellidoPaterno: p.PERSONAL_APELLIDO_PATERNO || "", apellidoMaterno: p.PERSONAL_APELLIDO_MATERNO || "",
+      curp: p.PERSONAL_CURP || "", correo: (p.PERSONAL_CORREO_INSTITUCIONAL || p.PERSONAL_CORREO_PERSONAL || ""), telefono: (p.PERSONAL_CELULAR || p.PERSONAL_TELEFONO_EMERGENCIA || ""),
     };
   };
 
   const usar = () => {
-    const datos = armarDatos();
+    const datos = fuente === "personal" ? armarDatosPersonal() : armarDatosAlumno();
     if (!datos || !datos.nombre) return;
     onElegir(datos);
   };
 
   return (
     <div style={{ background: "#F6F1E4", border: "1px solid var(--linea)", borderRadius: "10px", padding: "0.7rem", marginBottom: "0.7rem" }}>
-      <div className="text-sm font-medium mb-2" style={{ opacity: 0.8 }}>Jalar datos de un alumno o su familia ya registrados en Inscripciones</div>
-      <div className="grid grid-cols-2 gap-2 mb-2">
-        <select className="campo" value={grado} onChange={(e) => { setGrado(e.target.value); setAlumnoId(""); }}>
-          <option value="">Todos los grados</option>
-          {gradosPermitidos.map((g) => (<option key={g} value={g}>{g}° grado</option>))}
-        </select>
-        <select className="campo" value={alumnoId} onChange={(e) => setAlumnoId(e.target.value)}>
-          <option value="">Selecciona alumno(a)…</option>
-          {alumnosDelGrado.map((a) => (<option key={a.id} value={a.id}>{nombreAlumno(a)} · {a.grado}°{a.ESCUELA_GRUPO || ""}</option>))}
-        </select>
+      <div className="text-sm font-medium mb-2" style={{ opacity: 0.8 }}>Jalar datos ya registrados en el sistema</div>
+      <div className="flex gap-2 mb-2">
+        {[{ id: "alumno", label: "Alumno o familia" }, { id: "personal", label: "Personal de la escuela" }].map((f) => (
+          <button key={f.id} onClick={() => setFuente(f.id)} className={`chip-grado ${fuente === f.id ? "activo" : ""}`} style={{ fontSize: "0.74rem" }}>{f.label}</button>
+        ))}
       </div>
-      <div className="flex gap-2 flex-wrap items-center">
-        <select className="campo" style={{ flex: 1, minWidth: "140px" }} value={persona} onChange={(e) => setPersona(e.target.value)}>
-          {PERSONAS.map((p) => (<option key={p.id} value={p.id}>{p.label}</option>))}
-        </select>
-        <button onClick={usar} disabled={!alumnoId} className="btn-secundario" style={{ fontSize: "0.78rem" }}>Aceptar y usar estos datos</button>
-      </div>
+
+      {fuente === "alumno" ? (
+        <>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <select className="campo" value={grado} onChange={(e) => { setGrado(e.target.value); setAlumnoId(""); }}>
+              <option value="">Todos los grados</option>
+              {gradosPermitidos.map((g) => (<option key={g} value={g}>{g}° grado</option>))}
+            </select>
+            <select className="campo" value={alumnoId} onChange={(e) => setAlumnoId(e.target.value)}>
+              <option value="">Selecciona alumno(a)…</option>
+              {alumnosDelGrado.map((a) => (<option key={a.id} value={a.id}>{nombreAlumno(a)} · {a.grado}°{a.ESCUELA_GRUPO || ""}</option>))}
+            </select>
+          </div>
+          <div className="flex gap-2 flex-wrap items-center">
+            <select className="campo" style={{ flex: 1, minWidth: "140px" }} value={persona} onChange={(e) => setPersona(e.target.value)}>
+              {PERSONAS.map((p) => (<option key={p.id} value={p.id}>{p.label}</option>))}
+            </select>
+            <button onClick={usar} disabled={!alumnoId} className="btn-secundario" style={{ fontSize: "0.78rem" }}>Aceptar y usar estos datos</button>
+          </div>
+        </>
+      ) : (
+        <>
+          {personalOrdenado.length === 0 ? (
+            <p className="text-sm" style={{ opacity: 0.6 }}>Aún no hay nadie capturado en "Datos Esc." (Director, docentes). Ve primero a esa pestaña para dar de alta al personal.</p>
+          ) : (
+            <div className="flex gap-2 flex-wrap items-center">
+              <select className="campo" style={{ flex: 1, minWidth: "200px" }} value={personalId} onChange={(e) => setPersonalId(e.target.value)}>
+                <option value="">Selecciona a la persona…</option>
+                {personalOrdenado.map((p) => (<option key={p.id} value={p.id}>{nombrePersonal(p)}{p.PERSONAL_PUESTO ? ` — ${p.PERSONAL_PUESTO}` : ""}</option>))}
+              </select>
+              <button onClick={usar} disabled={!personalId} className="btn-secundario" style={{ fontSize: "0.78rem" }}>Aceptar y usar estos datos</button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -7650,7 +7700,7 @@ function ResumenConsejo({ onStamp }) {
   );
 }
 
-function ConsejoEscolar({ onStamp, alumnos, gradosPermitidos }) {
+function ConsejoEscolar({ onStamp, alumnos, gradosPermitidos, personal }) {
   const [subTab, setSubTab] = useState("datos");
   const SUBTABS = [
     { id: "datos", label: "Datos Generales" },
@@ -7708,6 +7758,7 @@ function ConsejoEscolar({ onStamp, alumnos, gradosPermitidos }) {
             <SelectorFamiliaConsejo
               alumnos={alumnos}
               gradosPermitidos={gradosPermitidos}
+              personal={personal}
               onElegir={(datos) => setForm((prev) => ({ ...prev, ...datos }))}
             />
           )}
@@ -8193,7 +8244,7 @@ function App() {
           />
         )}
         {tab === "pic" && <ProgramaAnaliticoPIC onStamp={fireStamp} />}
-        {tab === "consejo" && <ConsejoEscolar onStamp={fireStamp} alumnos={alumnos} gradosPermitidos={gradosPermitidos} />}
+        {tab === "consejo" && <ConsejoEscolar onStamp={fireStamp} alumnos={alumnos} gradosPermitidos={gradosPermitidos} personal={personal} />}
         {tab === "documentos" && <DocumentosDireccion alumnos={alumnos} onStamp={fireStamp} />}
         {tab === "personal" && <DatosPersonal personal={personal} setPersonal={setPersonal} onStamp={fireStamp} />}
         {tab === "recursos" && (
