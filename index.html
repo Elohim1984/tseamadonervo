@@ -519,6 +519,7 @@ const ShieldAlert = crearIcono('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8
 const Printer = crearIcono('<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>');
 const IdCard = crearIcono('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h3"/><path d="M15 12h3"/><path d="M6 16c0-1.5 1.3-2.5 3-2.5s3 1 3 2.5"/>');
 const BarChart3 = crearIcono('<path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12.5" y="8" width="3" height="10"/><rect x="18" y="5" width="3" height="13"/>');
+const Vote = crearIcono('<path d="m9 12 2 2 4-4"/><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z"/><path d="M22 19H2"/>');
 
 
 /* ---------- estados de México (para campos de entidad) ---------- */
@@ -7080,6 +7081,627 @@ function Estadistica({ alumnos, gradosPermitidos }) {
   );
 }
 
+/* ---------- Consejo Escolar de Participación Social · Ciclo 2026-2027 ----------
+   Espacio para ir organizando aquí, con calma, todo lo que después se teclea
+   en la plataforma oficial REPASE (repase.sep.gob.mx). No sustituye REPASE:
+   solo sirve para tener todo listo antes de capturarlo allá. Usa el mismo
+   almacenamiento genérico de siempre (getStorage/setStorage/listarStorage/
+   borrarStorage), sin acciones ni hojas nuevas. */
+const COMITES_CATALOGO = [
+  { id: "salud", numero: "I", nombre: "Salud escolar y prevención del consumo de sustancias nocivas para la salud", prioritario: true },
+  { id: "proteccion", numero: "II", nombre: "Protección civil y seguridad (emergencia) escolar", prioritario: true },
+  { id: "lectura", numero: "III", nombre: "Lectura y mejora de los aprendizajes", prioritario: true },
+  { id: "alimentacion", numero: "IV", nombre: "Alimentación saludable y establecimiento de consumo escolar", prioritario: true },
+  { id: "convivencia", numero: "V", nombre: "Convivencia escolar y desaliento de las prácticas que generan violencia", prioritario: true },
+  { id: "artisticas", numero: "VI", nombre: "Actividades físicas, recreativas, artísticas y culturales", prioritario: false },
+  { id: "ambiente", numero: "VII", nombre: "Cuidado al medio ambiente y limpieza del entorno escolar", prioritario: false },
+  { id: "infraestructura", numero: "VIII", nombre: "Infraestructura escolar", prioritario: false },
+  { id: "contraloria", numero: "IX", nombre: "Contraloría social", prioritario: true },
+  { id: "mujeres", numero: "X", nombre: "Mujeres constructoras de paz", prioritario: false },
+  { id: "reinsercion", numero: "XI", nombre: "Reinserción y permanencia de alumnos(as)", prioritario: false },
+];
+const CARGOS_CONSEJO = ["Presidente(a)", "Secretario(a) Técnico(a)", "Consejero(a)"];
+const CALIDADES_CONSEJERO = [
+  "Representante de asociación de padres de familia",
+  "Madre/Padre de familia o tutor(a)",
+  "Docente",
+  "Directivo",
+  "Miembro de la comunidad",
+];
+const TIPOS_PROGRAMA_CONSEJO = ["Federal", "Estatal", "Municipal", "Proy OSC"];
+const PREGUNTAS_CONSEJO = [
+  { key: "planTrabajo", texto: "¿El Consejo de Participación Escolar elaboró su Plan de Trabajo para el ciclo escolar 2026-2027?" },
+  { key: "calendario", texto: "¿El directivo presentó al consejo escolar el calendario escolar para el ciclo 2026-2027?" },
+  { key: "plantilla", texto: "¿El directivo presentó a la comunidad escolar la plantilla de personal docente y administrativo?" },
+  { key: "vinculacion", texto: "¿Existe vinculación con otras instancias que promuevan estrategias que respalden el bienestar de la comunidad escolar?" },
+  { key: "comiteAdm", texto: "¿Con el Comité Escolar de Administración Participativa?" },
+  { key: "cte", texto: "¿Con el Consejo Técnico Escolar?" },
+  { key: "osc", texto: "¿Con Organizaciones de la Sociedad Civil?" },
+  { key: "cooperativa", texto: "¿Con Cooperativa Escolar?" },
+  { key: "comiteSalud", texto: "¿La escuela instaló el Comité Participativo de Salud Escolar?" },
+];
+
+/* Lista genérica de agregar/listar/borrar (un renglón por registro), reutilizada
+   por Integrantes, Asuntos y Acuerdos, Programas y Acciones del Consejo. */
+function ListaCRUDConsejo({ prefijo, campos, itemVacio, renderItem, tituloForm, ayudaForm, onStamp, validar }) {
+  const [items, setItems] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [form, setForm] = useState(itemVacio);
+
+  useEffect(() => {
+    let vivo = true;
+    listarStorage(prefijo).then((v) => { if (vivo) { setItems(v); setCargando(false); } });
+    return () => { vivo = false; };
+  }, [prefijo]);
+
+  const agregar = async () => {
+    if (validar && !validar(form)) return;
+    const nuevo = { id: uid(), ...form };
+    const ok = await setStorage(`${prefijo}${nuevo.id}`, nuevo);
+    setItems((prev) => [nuevo, ...prev]);
+    setForm(itemVacio);
+    if (ok && onStamp) onStamp("Guardado");
+  };
+
+  const eliminar = async (id) => {
+    await borrarStorage(`${prefijo}${id}`);
+    setItems((prev) => prev.filter((x) => x.id !== id));
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="card">
+        {tituloForm && <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>{tituloForm}</div>}
+        {ayudaForm && <p className="text-sm mb-2" style={{ opacity: 0.6 }}>{ayudaForm}</p>}
+        <div className="flex flex-col gap-2">
+          {campos.map((c) => (
+            <div key={c.key}>
+              {c.etiqueta && <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{c.etiqueta}</label>}
+              {c.tipo === "select" ? (
+                <select className="campo" value={form[c.key] || ""} onChange={(e) => setForm({ ...form, [c.key]: e.target.value })}>
+                  <option value="">Selecciona…</option>
+                  {(c.opciones || []).map((op) => <option key={op} value={op}>{op}</option>)}
+                </select>
+              ) : c.tipo === "area" ? (
+                <textarea className="campo" rows={c.filas || 2} value={form[c.key] || ""} onChange={(e) => setForm({ ...form, [c.key]: e.target.value })} placeholder={c.placeholder || ""} />
+              ) : (
+                <input className="campo" type="text" value={form[c.key] || ""} onChange={(e) => setForm({ ...form, [c.key]: e.target.value })} placeholder={c.placeholder || ""} />
+              )}
+            </div>
+          ))}
+          <button onClick={agregar} className="btn-primario"><Plus size={16} /> Agregar</button>
+        </div>
+      </div>
+      <div className="flex flex-col gap-3">
+        {cargando ? (
+          <p className="text-sm text-center py-4" style={{ opacity: 0.5 }}>Cargando…</p>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-center py-6" style={{ opacity: 0.55 }}>Aún no hay registros.</p>
+        ) : (
+          items.map((it) => (
+            <div key={it.id} className="card">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">{renderItem(it)}</div>
+                <button onClick={() => eliminar(it.id)} className="btn-icono shrink-0"><Trash2 size={14} /></button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DatosGeneralesConsejo({ onStamp }) {
+  const claveStorage = "consejo-datos";
+  const [valores, setValores] = useState({});
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [guardadoOk, setGuardadoOk] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    getStorage(claveStorage, {}).then((v) => { if (vivo) { setValores(v || {}); setCargando(false); } });
+    return () => { vivo = false; };
+  }, []);
+
+  const cambiar = (k, v) => setValores((prev) => ({ ...prev, [k]: v }));
+  const guardar = async () => {
+    setGuardando(true);
+    const ok = await setStorage(claveStorage, valores);
+    setGuardando(false); setGuardadoOk(ok);
+    if (ok && onStamp) onStamp("Guardado");
+    setTimeout(() => setGuardadoOk(false), 2500);
+  };
+
+  if (cargando) return <div className="card"><p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p></div>;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="card">
+        <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Datos fijos del centro de trabajo</div>
+        <p className="text-sm mb-2" style={{ opacity: 0.6 }}>Igual que en el SIGED — vienen precargados en REPASE y no se pueden modificar allá. Aquí solo son tu referencia.</p>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div><b>Nombre:</b> Tse. "Amado Nervo"</div>
+          <div><b>CCT:</b> 21ETV0473W</div>
+          <div><b>Turno:</b> Matutino</div>
+          <div><b>Nivel:</b> Telesecundaria</div>
+          <div><b>Zona Escolar:</b> 052</div>
+          <div><b>CORDE:</b> Izúcar de Matamoros</div>
+          <div className="col-span-2"><b>Domicilio:</b> Calle Cerro del Vigilante S/N, Xoyatla, Tepeojuma, Puebla</div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Datos del acta de instalación</div>
+        <p className="text-sm mb-3" style={{ opacity: 0.6 }}>Estos sí son los que vas a teclear en la pestaña "Datos Generales" de REPASE.</p>
+        <div className="flex flex-col gap-2.5">
+          <div>
+            <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Correo de la escuela</label>
+            <input className="campo" type="email" value={valores.correoEscuela || ""} onChange={(e) => cambiar("correoEscuela", e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Lugar de publicación de la convocatoria</label>
+            <input className="campo" value={valores.lugarPublicacion || ""} onChange={(e) => cambiar("lugarPublicacion", e.target.value)} placeholder="Ej. Puerta de la entrada" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Fecha de publicación</label>
+              <input className="campo" type="date" value={valores.fechaPublicacion || ""} onChange={(e) => cambiar("fechaPublicacion", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Fecha de la sesión</label>
+              <input className="campo" type="date" value={valores.fechaSesion || ""} onChange={(e) => cambiar("fechaSesion", e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Hora de inicio</label>
+              <input className="campo" type="time" value={valores.horaInicio || ""} onChange={(e) => cambiar("horaInicio", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Hora final</label>
+              <input className="campo" type="time" value={valores.horaFinal || ""} onChange={(e) => cambiar("horaFinal", e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>No. de asistentes</label>
+              <input className="campo" type="number" min="0" value={valores.numAsistentes || ""} onChange={(e) => cambiar("numAsistentes", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>No. de integrantes del consejo</label>
+              <input className="campo" type="number" min="0" value={valores.numIntegrantesConsejo || ""} onChange={(e) => cambiar("numIntegrantesConsejo", e.target.value)} />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={guardar} disabled={guardando} className="btn-primario">{guardando ? "Guardando…" : <><Check size={16} /> Guardar</>}</button>
+            {guardadoOk && <span className="text-sm" style={{ color: "var(--verde)" }}>✓ Guardado en tu Hoja</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TarjetaComiteConsejo({ idComite, nombre, numero, prioritario, registro, onGuardar, onQuitar }) {
+  const [abierto, setAbierto] = useState(false);
+  const vacio = { presentaronPlanTrabajo: "", integrantesTexto: "", actividadesTexto: "" };
+  const [borrador, setBorrador] = useState(registro || vacio);
+  const [guardando, setGuardando] = useState(false);
+  const [guardadoOk, setGuardadoOk] = useState(false);
+
+  useEffect(() => { setBorrador(registro || vacio); }, [registro]);
+
+  const instalado = !!registro;
+
+  const activar = () => { onGuardar({ id: idComite, nombre, numero, instalado: true, ...vacio }); setAbierto(true); };
+  const quitar = () => onQuitar(idComite);
+  const cambiar = (k, v) => setBorrador((prev) => ({ ...prev, [k]: v }));
+  const guardar = async () => {
+    setGuardando(true);
+    const ok = await onGuardar({ id: idComite, nombre, numero, instalado: true, ...borrador });
+    setGuardando(false); setGuardadoOk(ok);
+    setTimeout(() => setGuardadoOk(false), 2500);
+  };
+
+  return (
+    <div className="card" style={prioritario ? { borderColor: "var(--amarillo)" } : undefined}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-mono" style={{ fontSize: "0.62rem", opacity: 0.5 }}>{numero}</span>
+            <span className="font-display" style={{ fontWeight: 700, fontSize: "0.85rem" }}>{nombre}</span>
+            {prioritario && <span className="pastilla" style={{ background: "rgba(197,130,51,0.18)", color: "var(--ambar)" }}>Prioritario</span>}
+          </div>
+        </div>
+        {instalado ? (
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => setAbierto((a) => !a)} className="btn-icono" style={{ color: "var(--azul)" }}>{abierto ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+            <button onClick={quitar} className="btn-icono"><Trash2 size={14} /></button>
+          </div>
+        ) : (
+          <button onClick={activar} className="btn-secundario" style={{ fontSize: "0.72rem", padding: "0.4rem 0.7rem" }}><Plus size={13} /> Instalar</button>
+        )}
+      </div>
+
+      {instalado && abierto && (
+        <div className="flex flex-col gap-2.5 mt-3" style={{ borderTop: "1px solid var(--linea)", paddingTop: "0.7rem" }}>
+          <div>
+            <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>¿Presentaron plan de trabajo?</label>
+            <select className="campo" value={borrador.presentaronPlanTrabajo || ""} onChange={(e) => cambiar("presentaronPlanTrabajo", e.target.value)}>
+              <option value="">Selecciona…</option>
+              <option value="Sí">Sí</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Integrantes del comité (nombre y correo, uno por línea)</label>
+            <textarea className="campo" rows={3} value={borrador.integrantesTexto || ""} onChange={(e) => cambiar("integrantesTexto", e.target.value)} placeholder={"Alberto Martínez Hidalgo — anad@gmail.com"} />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Actividades que realizará (una por línea)</label>
+            <textarea className="campo" rows={3} value={borrador.actividadesTexto || ""} onChange={(e) => cambiar("actividadesTexto", e.target.value)} />
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={guardar} disabled={guardando} className="btn-primario">{guardando ? "Guardando…" : <><Check size={16} /> Guardar</>}</button>
+            {guardadoOk && <span className="text-sm" style={{ color: "var(--verde)" }}>✓ Guardado en tu Hoja</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ComitesConsejo({ onStamp }) {
+  const [registros, setRegistros] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [nombreOtro, setNombreOtro] = useState("");
+
+  useEffect(() => {
+    let vivo = true;
+    listarStorage("consejo-comite:").then((v) => { if (vivo) { setRegistros(v); setCargando(false); } });
+    return () => { vivo = false; };
+  }, []);
+
+  const porId = new Map(registros.map((r) => [r.id, r]));
+  const idsCatalogo = new Set(COMITES_CATALOGO.map((c) => c.id));
+  const otros = registros.filter((r) => !idsCatalogo.has(r.id));
+
+  const guardarRegistro = async (registro) => {
+    const ok = await setStorage(`consejo-comite:${registro.id}`, registro);
+    setRegistros((prev) => [...prev.filter((r) => r.id !== registro.id), registro]);
+    if (ok && onStamp) onStamp("Guardado");
+    return ok;
+  };
+
+  const quitarRegistro = async (id) => {
+    await borrarStorage(`consejo-comite:${id}`);
+    setRegistros((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const agregarOtro = () => {
+    const nombre = nombreOtro.trim();
+    if (!nombre) return;
+    guardarRegistro({ id: "otro-" + uid(), nombre, numero: "Otro", instalado: true, presentaronPlanTrabajo: "", integrantesTexto: "", actividadesTexto: "" });
+    setNombreOtro("");
+  };
+
+  if (cargando) return <p className="text-sm text-center py-6" style={{ opacity: 0.5 }}>Cargando…</p>;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm" style={{ opacity: 0.65 }}>Marca "Instalar" en los comités que sí operarán este ciclo en tu escuela. Los marcados como Prioritario fueron pedidos por tu supervisión de zona.</p>
+      {COMITES_CATALOGO.map((c) => (
+        <TarjetaComiteConsejo key={c.id} idComite={c.id} nombre={c.nombre} numero={c.numero} prioritario={c.prioritario}
+          registro={porId.get(c.id) || null} onGuardar={guardarRegistro} onQuitar={quitarRegistro} />
+      ))}
+      {otros.map((r) => (
+        <TarjetaComiteConsejo key={r.id} idComite={r.id} nombre={r.nombre} numero="Otro" prioritario={false}
+          registro={r} onGuardar={guardarRegistro} onQuitar={quitarRegistro} />
+      ))}
+      <div className="card">
+        <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Agregar otro comité (fuera del catálogo)</label>
+        <div className="flex gap-2">
+          <input className="campo" value={nombreOtro} onChange={(e) => setNombreOtro(e.target.value)} placeholder="Nombre del comité" />
+          <button onClick={agregarOtro} className="btn-secundario shrink-0"><Plus size={15} /> Agregar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PreguntasConsejo({ onStamp }) {
+  const claveStorage = "consejo-pregunta";
+  const [valores, setValores] = useState({});
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [guardadoOk, setGuardadoOk] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    getStorage(claveStorage, {}).then((v) => { if (vivo) { setValores(v || {}); setCargando(false); } });
+    return () => { vivo = false; };
+  }, []);
+
+  const cambiar = (k, v) => setValores((prev) => ({ ...prev, [k]: v }));
+  const guardar = async () => {
+    setGuardando(true);
+    const ok = await setStorage(claveStorage, valores);
+    setGuardando(false); setGuardadoOk(ok);
+    if (ok && onStamp) onStamp("Guardado");
+    setTimeout(() => setGuardadoOk(false), 2500);
+  };
+
+  if (cargando) return <p className="text-sm text-center py-6" style={{ opacity: 0.5 }}>Cargando…</p>;
+
+  return (
+    <div className="card">
+      <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Preguntas de la sesión</div>
+      <p className="text-sm mb-3" style={{ opacity: 0.6 }}>Las mismas que pide REPASE en su pestaña "Preguntas".</p>
+      <div className="flex flex-col gap-3">
+        {PREGUNTAS_CONSEJO.map((p) => (
+          <div key={p.key} className="flex items-center justify-between gap-2" style={{ borderBottom: "1px solid var(--linea)", paddingBottom: "0.5rem" }}>
+            <span className="text-sm flex-1">{p.texto}</span>
+            <div className="flex gap-1 shrink-0">
+              {["Sí", "No"].map((op) => (
+                <button key={op} onClick={() => cambiar(p.key, op)}
+                  className={`chip-grado ${valores[p.key] === op ? "activo" : ""}`}
+                  style={{ fontSize: "0.75rem", padding: "0.3rem 0.7rem" }}>{op}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div className="flex items-center gap-2 mt-1">
+          <button onClick={guardar} disabled={guardando} className="btn-primario">{guardando ? "Guardando…" : <><Check size={16} /> Guardar</>}</button>
+          {guardadoOk && <span className="text-sm" style={{ color: "var(--verde)" }}>✓ Guardado en tu Hoja</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResumenImprimibleConsejo({ datos, preguntas, integrantes, comites, asuntos, programas, acciones }) {
+  const comitesInstalados = comites.filter((c) => c.instalado);
+  return (
+    <div className="solo-impresion">
+      <EncabezadoImpresionEstadistica subtitulo="Consejo de Participación Escolar 2026-2027" />
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem", marginBottom: "0.8rem" }}>
+        <tbody>
+          <tr>
+            <td style={{ fontWeight: 700, padding: "0.15rem 0.3rem" }}>CCT</td><td style={{ padding: "0.15rem 0.3rem" }}>21ETV0473W</td>
+            <td style={{ fontWeight: 700, padding: "0.15rem 0.3rem" }}>Fecha de sesión</td><td style={{ padding: "0.15rem 0.3rem" }}>{datos.fechaSesion ? fechaBonita(datos.fechaSesion) : "—"}</td>
+          </tr>
+          <tr>
+            <td style={{ fontWeight: 700, padding: "0.15rem 0.3rem" }}>Horario</td><td style={{ padding: "0.15rem 0.3rem" }}>{datos.horaInicio || "—"} a {datos.horaFinal || "—"}</td>
+            <td style={{ fontWeight: 700, padding: "0.15rem 0.3rem" }}>Asistentes</td><td style={{ padding: "0.15rem 0.3rem" }}>{datos.numAsistentes || "—"}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", margin: "0.6rem 0 0.3rem" }}>Integrantes del Consejo ({integrantes.length})</div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem", marginBottom: "0.8rem" }}>
+        <thead><tr>{["Nombre", "CURP", "Cargo", "Calidad"].map((h) => (<th key={h} style={{ textAlign: "left", borderBottom: "1.5px solid #000", padding: "0.2rem 0.3rem" }}>{h}</th>))}</tr></thead>
+        <tbody>
+          {integrantes.map((i) => (
+            <tr key={i.id}>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.3rem" }}>{i.nombre} {i.apellidoPaterno} {i.apellidoMaterno}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.3rem" }}>{i.curp || "—"}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.3rem" }}>{i.cargo || "—"}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.3rem" }}>{i.calidad || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", margin: "0.6rem 0 0.3rem" }}>Comités instalados ({comitesInstalados.length})</div>
+      {comitesInstalados.map((c) => (
+        <div key={c.id} style={{ marginBottom: "0.5rem", fontSize: "0.72rem" }}>
+          <div style={{ fontWeight: 700 }}>{c.numero} — {c.nombre}{c.presentaronPlanTrabajo ? ` (plan de trabajo: ${c.presentaronPlanTrabajo})` : ""}</div>
+          {c.integrantesTexto && <div>Integrantes: {c.integrantesTexto.replace(/\n/g, "; ")}</div>}
+          {c.actividadesTexto && <div>Actividades: {c.actividadesTexto.replace(/\n/g, "; ")}</div>}
+        </div>
+      ))}
+
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", margin: "0.6rem 0 0.3rem" }}>Asuntos y Acuerdos</div>
+      {asuntos.length === 0 && <div style={{ fontSize: "0.72rem" }}>—</div>}
+      {asuntos.map((a) => (<div key={a.id} style={{ fontSize: "0.72rem", marginBottom: "0.3rem" }}><b>{a.asuntoGeneral}</b> — {a.acuerdoAprobado}</div>))}
+
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", margin: "0.6rem 0 0.3rem" }}>Preguntas</div>
+      {PREGUNTAS_CONSEJO.map((p) => (<div key={p.key} style={{ fontSize: "0.72rem" }}>{p.texto} — <b>{preguntas[p.key] || "—"}</b></div>))}
+
+      {programas.length > 0 && (<>
+        <div style={{ fontWeight: 700, fontSize: "0.85rem", margin: "0.6rem 0 0.3rem" }}>Programas</div>
+        {programas.map((pr) => (<div key={pr.id} style={{ fontSize: "0.72rem" }}>{pr.tipoPrograma}: {pr.programa}{pr.otroPrograma ? " — " + pr.otroPrograma : ""}</div>))}
+      </>)}
+
+      {acciones.length > 0 && (<>
+        <div style={{ fontWeight: 700, fontSize: "0.85rem", margin: "0.6rem 0 0.3rem" }}>Acciones del Comité de Salud Escolar</div>
+        {acciones.map((ac) => (<div key={ac.id} style={{ fontSize: "0.72rem" }}>• {ac.accion}</div>))}
+      </>)}
+    </div>
+  );
+}
+
+function ResumenConsejo({ onStamp }) {
+  const [cargando, setCargando] = useState(true);
+  const [datos, setDatos] = useState({});
+  const [preguntas, setPreguntas] = useState({});
+  const [integrantes, setIntegrantes] = useState([]);
+  const [comites, setComites] = useState([]);
+  const [asuntos, setAsuntos] = useState([]);
+  const [programas, setProgramas] = useState([]);
+  const [acciones, setAcciones] = useState([]);
+  const [imprimiendo, setImprimiendo] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      const [d, p, ints, coms, asu, progs, acc] = await Promise.all([
+        getStorage("consejo-datos", {}),
+        getStorage("consejo-pregunta", {}),
+        listarStorage("consejo-integrante:"),
+        listarStorage("consejo-comite:"),
+        listarStorage("consejo-asunto:"),
+        listarStorage("consejo-programa:"),
+        listarStorage("consejo-accion:"),
+      ]);
+      if (!vivo) return;
+      setDatos(d || {}); setPreguntas(p || {}); setIntegrantes(ints); setComites(coms);
+      setAsuntos(asu); setProgramas(progs); setAcciones(acc);
+      setCargando(false);
+    })();
+    return () => { vivo = false; };
+  }, []);
+
+  const imprimir = () => { setImprimiendo(true); onStamp && onStamp("Preparando"); setTimeout(() => window.print(), 150); };
+
+  if (cargando) return <p className="text-sm text-center py-6" style={{ opacity: 0.5 }}>Cargando…</p>;
+
+  const comitesInstalados = comites.filter((c) => c.instalado);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {imprimiendo && <ResumenImprimibleConsejo datos={datos} preguntas={preguntas} integrantes={integrantes} comites={comites} asuntos={asuntos} programas={programas} acciones={acciones} />}
+      <div className="card">
+        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Resumen del Consejo Escolar 2026-2027</div>
+          <button onClick={imprimir} className="btn-secundario" style={{ fontSize: "0.75rem" }}><Printer size={14} /> Imprimir resumen</button>
+        </div>
+        <p className="text-sm" style={{ opacity: 0.65 }}>Esto es lo que vas a teclear en repase.sep.gob.mx: {integrantes.length} integrante(s), {comitesInstalados.length} comité(s) instalado(s), {asuntos.length} asunto(s) y acuerdo(s).</p>
+      </div>
+      <div className="card">
+        <div className="font-medium text-sm mb-1">Comités instalados</div>
+        {comitesInstalados.length === 0 ? (
+          <p className="text-sm" style={{ opacity: 0.55 }}>Aún no marcas ningún comité como instalado.</p>
+        ) : (
+          <ul className="text-sm flex flex-col gap-1">
+            {comitesInstalados.map((c) => (<li key={c.id}>{c.numero} — {c.nombre}</li>))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ConsejoEscolar({ onStamp }) {
+  const [subTab, setSubTab] = useState("datos");
+  const SUBTABS = [
+    { id: "datos", label: "Datos Generales" },
+    { id: "integrantes", label: "Integrantes" },
+    { id: "comites", label: "Comités" },
+    { id: "asuntos", label: "Asuntos y Acuerdos" },
+    { id: "preguntas", label: "Preguntas" },
+    { id: "programas", label: "Programas" },
+    { id: "acciones", label: "Acciones Salud Escolar" },
+    { id: "resumen", label: "Resumen / Imprimir" },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="card" style={{ borderColor: "var(--amarillo)" }}>
+        <div className="flex items-center gap-2 mb-1">
+          <Vote size={16} color="var(--ambar)" />
+          <span className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Consejo Escolar de Participación Social · Ciclo 2026-2027</span>
+        </div>
+        <p className="text-sm" style={{ opacity: 0.6 }}>
+          Captura aquí toda la información antes de subirla a{" "}
+          <a href="https://repase.sep.gob.mx/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--azul)", textDecoration: "underline" }}>repase.sep.gob.mx</a>.
+          {" "}Convocatoria: 17–23 sept · Constitución: a partir del 24 sept · Registro de instalación en REPASE: 28 sept–30 oct.
+        </p>
+      </div>
+
+      <div className="flex gap-2 flex-wrap">
+        {SUBTABS.map((t) => (
+          <button key={t.id} onClick={() => setSubTab(t.id)} className={`chip-grado ${subTab === t.id ? "activo" : ""}`} style={{ fontSize: "0.76rem" }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === "datos" && <DatosGeneralesConsejo onStamp={onStamp} />}
+      {subTab === "integrantes" && (
+        <ListaCRUDConsejo
+          prefijo="consejo-integrante:"
+          onStamp={onStamp}
+          tituloForm="Agregar integrante"
+          ayudaForm='Máximo 25 integrantes; el Presidente(a) debe ser madre/padre de familia. REPASE exige CURP validado de al menos 2 integrantes, incluido el Presidente.'
+          itemVacio={{ nombre: "", apellidoPaterno: "", apellidoMaterno: "", curp: "", cargo: "", calidad: "", correo: "", telefono: "" }}
+          campos={[
+            { key: "nombre", etiqueta: "Nombre(s)" },
+            { key: "apellidoPaterno", etiqueta: "Apellido paterno" },
+            { key: "apellidoMaterno", etiqueta: "Apellido materno" },
+            { key: "curp", etiqueta: "CURP" },
+            { key: "cargo", etiqueta: "Cargo en el consejo", tipo: "select", opciones: CARGOS_CONSEJO },
+            { key: "calidad", etiqueta: "Calidad de consejero(a)", tipo: "select", opciones: CALIDADES_CONSEJERO },
+            { key: "correo", etiqueta: "Correo electrónico" },
+            { key: "telefono", etiqueta: "Teléfono" },
+          ]}
+          validar={(f) => f.nombre.trim() && f.apellidoPaterno.trim()}
+          renderItem={(i) => (
+            <div>
+              <div className="font-medium text-sm">{i.nombre} {i.apellidoPaterno} {i.apellidoMaterno} {i.cargo ? `· ${i.cargo}` : ""}</div>
+              <div className="text-sm" style={{ opacity: 0.65 }}>{i.calidad || "—"}</div>
+              <div className="font-mono mt-1" style={{ fontSize: "0.65rem", opacity: 0.5 }}>{i.curp || "sin CURP"} {i.correo ? `· ${i.correo}` : ""} {i.telefono ? `· ${i.telefono}` : ""}</div>
+            </div>
+          )}
+        />
+      )}
+      {subTab === "comites" && <ComitesConsejo onStamp={onStamp} />}
+      {subTab === "asuntos" && (
+        <ListaCRUDConsejo
+          prefijo="consejo-asunto:"
+          onStamp={onStamp}
+          tituloForm="Agregar asunto y acuerdo"
+          ayudaForm="REPASE solo permite registrar hasta 3. Al registrar un asunto es obligatorio su acuerdo."
+          itemVacio={{ asuntoGeneral: "", acuerdoAprobado: "" }}
+          campos={[
+            { key: "asuntoGeneral", etiqueta: "Asunto general", tipo: "area", filas: 2 },
+            { key: "acuerdoAprobado", etiqueta: "Acuerdo aprobado", tipo: "area", filas: 2 },
+          ]}
+          validar={(f) => f.asuntoGeneral.trim() && f.acuerdoAprobado.trim()}
+          renderItem={(a) => (
+            <div>
+              <div className="font-medium text-sm">{a.asuntoGeneral}</div>
+              <div className="text-sm mt-1" style={{ opacity: 0.7 }}><span className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.6 }}>ACUERDO </span>{a.acuerdoAprobado}</div>
+            </div>
+          )}
+        />
+      )}
+      {subTab === "preguntas" && <PreguntasConsejo onStamp={onStamp} />}
+      {subTab === "programas" && (
+        <ListaCRUDConsejo
+          prefijo="consejo-programa:"
+          onStamp={onStamp}
+          tituloForm="Agregar programa"
+          ayudaForm="Programas federales, estatales, municipales o de OSC con los que cuenta la escuela."
+          itemVacio={{ tipoPrograma: "", programa: "", otroPrograma: "" }}
+          campos={[
+            { key: "tipoPrograma", etiqueta: "Tipo de programa", tipo: "select", opciones: TIPOS_PROGRAMA_CONSEJO },
+            { key: "programa", etiqueta: "Programa" },
+            { key: "otroPrograma", etiqueta: 'Si elegiste "Otro", especifica' },
+          ]}
+          validar={(f) => f.tipoPrograma && f.programa.trim()}
+          renderItem={(p) => (<div><div className="font-medium text-sm">{p.tipoPrograma} — {p.programa}</div>{p.otroPrograma && <div className="text-sm" style={{ opacity: 0.65 }}>{p.otroPrograma}</div>}</div>)}
+        />
+      )}
+      {subTab === "acciones" && (
+        <ListaCRUDConsejo
+          prefijo="consejo-accion:"
+          onStamp={onStamp}
+          tituloForm="Agregar acción del Comité de Salud Escolar"
+          ayudaForm="Solo aplica si instalaste el Comité Participativo de Salud Escolar."
+          itemVacio={{ accion: "" }}
+          campos={[{ key: "accion", etiqueta: "Acción", tipo: "area", filas: 2 }]}
+          validar={(f) => f.accion.trim()}
+          renderItem={(a) => (<div className="text-sm">{a.accion}</div>)}
+        />
+      )}
+      {subTab === "resumen" && <ResumenConsejo onStamp={onStamp} />}
+    </div>
+  );
+}
+
 /* ---------- app principal ---------- */
 function App() {
   const [liga, setLigaState] = useState(obtenerLigaGuardada());
@@ -7357,6 +7979,7 @@ function App() {
     { id: "cte", label: "CTE", icon: Landmark },
     { id: "reglamento", label: "Reglamento", icon: Scale },
     { id: "pic", label: "Programa Analítico y PIC", icon: Sprout },
+    { id: "consejo", label: "Consejo Escolar", icon: Vote },
     { id: "documentos", label: "Documentos de Dirección", icon: FolderKanban },
     { id: "personal", label: "Datos Esc.", icon: IdCard },
     { id: "recursos", label: "Recursos", icon: FileText },
@@ -7367,7 +7990,7 @@ function App() {
     { id: "alumnos", label: "Alumnos", tabs: ["inscripciones", "directorio", "estadistica", "asistencia", "calificaciones", "incidencias"] },
     { id: "diagnosticos", label: "Diagnósticos", tabs: ["diagnostico", "eia"] },
     { id: "comunicacion", label: "Comunicación", tabs: ["avisos", "calendario"] },
-    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "pic", "documentos", "personal"] },
+    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "pic", "consejo", "documentos", "personal"] },
     { id: "recursos", tabs: ["recursos"] },
   ];
 
@@ -7497,6 +8120,7 @@ function App() {
           />
         )}
         {tab === "pic" && <ProgramaAnaliticoPIC onStamp={fireStamp} />}
+        {tab === "consejo" && <ConsejoEscolar onStamp={fireStamp} />}
         {tab === "documentos" && <DocumentosDireccion alumnos={alumnos} onStamp={fireStamp} />}
         {tab === "personal" && <DatosPersonal personal={personal} setPersonal={setPersonal} onStamp={fireStamp} />}
         {tab === "recursos" && (
