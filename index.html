@@ -6889,13 +6889,146 @@ function EdadesImprimible({ filas, fechaRef, etiquetaFiltro }) {
   );
 }
 
+// Estadística 911.5 (SEP) — apoyo de captura de la sección IV. Alumnado y
+// Grupos, a partir del padrón ya capturado en Inscripciones. No sustituye la
+// plataforma oficial del 911: solo calcula, con las mismas reglas del manual
+// oficial (edad al 1° de septiembre del ciclo, corte de matrícula al 30 de
+// septiembre), los números que ya se pueden sacar del padrón para copiarlos
+// allá — igual que el espacio de Consejo Escolar no sustituye REPASE.
+const BUCKETS_EDAD_911 = ["Menos de 12", "12", "13", "14", "15", "16", "17", "18 y más"];
+function bucketEdad911(anios) {
+  if (anios == null) return null;
+  if (anios < 12) return "Menos de 12";
+  if (anios >= 18) return "18 y más";
+  return String(anios);
+}
+function anioCicloInicio911() {
+  return new Date(CICLO_INICIO + "T00:00:00").getFullYear();
+}
+function calcularEstadistica911(alumnosVisibles, gradosPermitidos) {
+  const anio = anioCicloInicio911();
+  const fechaEdadRef = `${anio}-09-01`;
+  const fechaCorteMatricula = `${anio}-09-30`;
+
+  const porGrado = GRADOS.filter((g) => gradosPermitidos.includes(g)).map((g) => {
+    const delGrado = alumnosVisibles.filter((a) => a.grado === g);
+    const filas = ["H", "M"].map((sexo) => {
+      const delSexo = delGrado.filter((a) => a.ALUMNO_GENERO === sexo);
+      const porBucket = {};
+      BUCKETS_EDAD_911.forEach((b) => { porBucket[b] = 0; });
+      let sinEdad = 0;
+      delSexo.forEach((a) => {
+        const edad = calcularEdadExacta(a.ALUMNO_FECHA_NACIMIENTO, fechaEdadRef);
+        const bucket = edad ? bucketEdad911(edad.anios) : null;
+        if (bucket) porBucket[bucket] += 1; else sinEdad += 1;
+      });
+      return { sexo, total: delSexo.length, porBucket, sinEdad };
+    });
+    const gruposDelGrado = Array.from(new Set(delGrado.map((a) => (a.ESCUELA_GRUPO || "").trim()).filter(Boolean)));
+    return { grado: g, filas, total: delGrado.length, grupos: gruposDelGrado.length || (delGrado.length > 0 ? 1 : 0) };
+  });
+
+  const sinFechaNacimiento = alumnosVisibles.filter((a) => !calcularEdadExacta(a.ALUMNO_FECHA_NACIMIENTO, fechaEdadRef)).length;
+
+  const esLenguaIndigena = (l) => {
+    const t = (l || "").trim().toLowerCase();
+    return Boolean(t) && !["español", "espanol", "castellano", "ninguna", "ninguno", "n/a", "no aplica"].includes(t);
+  };
+  const hablantes = alumnosVisibles.filter((a) => esLenguaIndigena(a.ALUMNO_LENGUA_MATERNA));
+  const lenguaIndigena = {
+    hombres: hablantes.filter((a) => a.ALUMNO_GENERO === "H").length,
+    mujeres: hablantes.filter((a) => a.ALUMNO_GENERO === "M").length,
+    total: hablantes.length,
+    lista: hablantes.map((a) => ({ nombre: nombreAlumno(a), lengua: a.ALUMNO_LENGUA_MATERNA, sexo: a.ALUMNO_GENERO })),
+  };
+
+  const esNacidoFuera = (p) => {
+    const t = (p || "").trim().toLowerCase();
+    return Boolean(t) && t !== "méxico" && t !== "mexico";
+  };
+  const nacidosFueraAlumnos = alumnosVisibles.filter((a) => esNacidoFuera(a.ALUMNO_PAIS_NACIMIENTO));
+  const paisesMap = {};
+  nacidosFueraAlumnos.forEach((a) => {
+    const p = (a.ALUMNO_PAIS_NACIMIENTO || "").trim();
+    if (!paisesMap[p]) paisesMap[p] = { pais: p, hombres: 0, mujeres: 0 };
+    if (a.ALUMNO_GENERO === "H") paisesMap[p].hombres += 1;
+    else if (a.ALUMNO_GENERO === "M") paisesMap[p].mujeres += 1;
+  });
+  const nacidosFuera = Object.values(paisesMap);
+
+  return { anio, fechaEdadRef, fechaCorteMatricula, porGrado, sinFechaNacimiento, lenguaIndigena, nacidosFuera };
+}
+
+function Estadistica911Imprimible({ e911 }) {
+  return (
+    <div className="solo-impresion">
+      <EncabezadoImpresionEstadistica subtitulo={`Apoyo de captura — Estadística 911.5 (edad al 1° sept ${e911.anio})`} />
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>IV. Alumnado y Grupos — por grado, sexo y edad</div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.66rem", marginBottom: "1rem" }}>
+        <thead>
+          <tr>
+            {["Grado", "Sexo", ...BUCKETS_EDAD_911, "Total", "Grupos"].map((h) => (
+              <th key={h} style={{ textAlign: "center", borderBottom: "1.5px solid #000", padding: "0.2rem" }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {e911.porGrado.map((g) => g.filas.map((f, i) => (
+            <tr key={g.grado + f.sexo}>
+              {i === 0 && <td rowSpan={2} style={{ borderBottom: "1px solid #ccc", padding: "0.2rem", fontWeight: 700, verticalAlign: "middle" }}>{g.grado}°</td>}
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem", textAlign: "center" }}>{f.sexo}</td>
+              {BUCKETS_EDAD_911.map((b) => <td key={b} style={{ borderBottom: "1px solid #ccc", padding: "0.2rem", textAlign: "center" }}>{f.porBucket[b] || ""}</td>)}
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem", textAlign: "center", fontWeight: 700 }}>{f.total}</td>
+              {i === 0 && <td rowSpan={2} style={{ borderBottom: "1px solid #ccc", padding: "0.2rem", textAlign: "center", verticalAlign: "middle" }}>{g.grupos}</td>}
+            </tr>
+          )))}
+        </tbody>
+      </table>
+      <p style={{ fontSize: "0.68rem", opacity: 0.65, marginBottom: "0.8rem" }}>
+        El 911 pide separar cada renglón en "Nuevo ingreso" y "Repetidor" — repártelo a mano al capturar en la plataforma oficial; Control Escolar no distingue esa condición todavía.
+      </p>
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>IV.2 — Hablantes de lengua indígena</div>
+      <table style={{ width: "60%", borderCollapse: "collapse", fontSize: "0.75rem", marginBottom: "0.8rem" }}>
+        <tbody>
+          <tr><td style={{ padding: "0.2rem 0.4rem" }}>Hombres</td><td style={{ padding: "0.2rem 0.4rem", textAlign: "right" }}>{e911.lenguaIndigena.hombres}</td></tr>
+          <tr><td style={{ padding: "0.2rem 0.4rem" }}>Mujeres</td><td style={{ padding: "0.2rem 0.4rem", textAlign: "right" }}>{e911.lenguaIndigena.mujeres}</td></tr>
+          <tr><td style={{ padding: "0.2rem 0.4rem", fontWeight: 700, borderTop: "1.5px solid #000" }}>Total</td><td style={{ padding: "0.2rem 0.4rem", textAlign: "right", fontWeight: 700, borderTop: "1.5px solid #000" }}>{e911.lenguaIndigena.total}</td></tr>
+        </tbody>
+      </table>
+      {e911.nacidosFuera.length > 0 && (
+        <>
+          <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>Nacidos fuera de México (por país capturado)</div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+            <thead>
+              <tr>{["País", "Hombres", "Mujeres"].map((h) => <th key={h} style={{ textAlign: "left", borderBottom: "1.5px solid #000", padding: "0.2rem 0.4rem" }}>{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {e911.nacidosFuera.map((p) => (
+                <tr key={p.pais}>
+                  <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.4rem" }}>{p.pais}</td>
+                  <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.4rem" }}>{p.hombres}</td>
+                  <td style={{ borderBottom: "1px solid #ccc", padding: "0.2rem 0.4rem" }}>{p.mujeres}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+      <p style={{ fontSize: "0.7rem", opacity: 0.6, marginTop: "0.8rem" }}>
+        Calculado con el padrón de Inscripciones al {fechaBonita(hoyISO())}. Verifica antes de capturar que la matrícula esté al corte oficial del 30 de septiembre de {e911.anio} (altas y bajas ya reflejadas).
+      </p>
+    </div>
+  );
+}
+
 function Estadistica({ alumnos, gradosPermitidos }) {
-  const [modoImpresion, setModoImpresion] = useState(null); // null | "estadistica" | "tutores" | "edades"
+  const [modoImpresion, setModoImpresion] = useState(null); // null | "estadistica" | "tutores" | "edades" | "e911"
   const [fechaRefEdad, setFechaRefEdad] = useState(hoyISO());
   const [filtroGradoEdad, setFiltroGradoEdad] = useState(""); // "" = todos los grados
   const [filtroGrupoEdad, setFiltroGrupoEdad] = useState(""); // "" = todos los grupos
   const alumnosVisibles = alumnos.filter((a) => gradosPermitidos.includes(a.grado));
   const stats = calcularEstadisticas(alumnosVisibles, gradosPermitidos);
+  const e911 = calcularEstadistica911(alumnosVisibles, gradosPermitidos);
 
   // Grupos disponibles para el filtro — solo los que existen dentro del grado
   // elegido (o de todos los grados permitidos, si no se eligió grado), para no
@@ -6938,6 +7071,7 @@ function Estadistica({ alumnos, gradosPermitidos }) {
       {modoImpresion === "estadistica" && <EstadisticaImprimible stats={stats} />}
       {modoImpresion === "tutores" && <ListadoTutoresImprimible tutores={stats.listaTutores} />}
       {modoImpresion === "edades" && <EdadesImprimible filas={filasEdad} fechaRef={fechaRefEdad} etiquetaFiltro={etiquetaFiltroEdad} />}
+      {modoImpresion === "e911" && <Estadistica911Imprimible e911={e911} />}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="card">
@@ -7065,6 +7199,95 @@ function Estadistica({ alumnos, gradosPermitidos }) {
         </div>
         <button onClick={() => imprimir("edades")} className="btn-secundario mt-3" style={{ width: "100%" }}>
           <Printer size={14} /> Imprimir edades
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Estadística 911.5 — apoyo de captura</div>
+        <p className="text-sm mb-2" style={{ opacity: 0.6 }}>
+          No sustituye la plataforma oficial del 911: calcula, con tu padrón actual y las mismas reglas del manual oficial (edad al 1° de septiembre de {e911.anio}, matrícula al corte del 30 de septiembre), los números de la sección <b>IV. Alumnado y Grupos</b> que ya se pueden sacar de Inscripciones, para que solo los copies allá.
+        </p>
+        {e911.sinFechaNacimiento > 0 && (
+          <p className="text-sm mb-2" style={{ opacity: 0.6 }}>
+            ⚠️ {e911.sinFechaNacimiento} alumno(s) sin fecha de nacimiento capturada — no están incluidos en ningún bucket de edad; complétala en Inscripciones antes de capturar en la plataforma oficial.
+          </p>
+        )}
+        <div style={{ overflowX: "auto" }}>
+          <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+                {["Grado", "Sexo", ...BUCKETS_EDAD_911, "Total", "Grupos"].map((h) => (
+                  <th key={h} style={{ padding: "3px 4px", textAlign: "center", whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {e911.porGrado.map((g) => g.filas.map((f, i) => (
+                <tr key={g.grado + f.sexo} style={{ borderBottom: i === 1 ? "1px solid var(--borde)" : "none" }}>
+                  {i === 0 && <td rowSpan={2} style={{ padding: "3px 4px", fontWeight: 700, verticalAlign: "middle" }}>{g.grado}°</td>}
+                  <td style={{ padding: "3px 4px", textAlign: "center" }}>{f.sexo}</td>
+                  {BUCKETS_EDAD_911.map((b) => <td key={b} style={{ padding: "3px 4px", textAlign: "center" }}>{f.porBucket[b] || "—"}</td>)}
+                  <td style={{ padding: "3px 4px", textAlign: "center", fontWeight: 700 }}>{f.total}</td>
+                  {i === 0 && <td rowSpan={2} style={{ padding: "3px 4px", textAlign: "center", verticalAlign: "middle" }}>{g.grupos}</td>}
+                </tr>
+              )))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-sm mt-2" style={{ opacity: 0.5 }}>
+          El 911 pide separar cada renglón en "Nuevo ingreso" y "Repetidor" — Control Escolar no distingue eso todavía, así que estos totales por grado/sexo/edad hay que repartirlos tú a mano entre las dos filas de la plataforma oficial.
+        </p>
+
+        <div className="font-display mt-4 mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>IV.2 — Hablantes de lengua indígena</div>
+        <div className="grid grid-cols-3 gap-2 mb-2">
+          <div className="card" style={{ padding: "0.5rem" }}>
+            <div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.6 }}>HOMBRES</div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>{e911.lenguaIndigena.hombres}</div>
+          </div>
+          <div className="card" style={{ padding: "0.5rem" }}>
+            <div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.6 }}>MUJERES</div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>{e911.lenguaIndigena.mujeres}</div>
+          </div>
+          <div className="card" style={{ padding: "0.5rem" }}>
+            <div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.6 }}>TOTAL</div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>{e911.lenguaIndigena.total}</div>
+          </div>
+        </div>
+        {e911.lenguaIndigena.lista.length > 0 && (
+          <p className="text-sm mb-2" style={{ opacity: 0.55 }}>
+            {e911.lenguaIndigena.lista.map((l) => `${l.nombre} (${l.lengua})`).join(" · ")}
+          </p>
+        )}
+
+        {e911.nacidosFuera.length > 0 && (
+          <>
+            <div className="font-display mt-4 mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Nacidos fuera de México</div>
+            <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", padding: "3px 5px" }}>País (según Inscripciones)</th>
+                  <th style={{ padding: "3px 5px" }}>H</th>
+                  <th style={{ padding: "3px 5px" }}>M</th>
+                </tr>
+              </thead>
+              <tbody>
+                {e911.nacidosFuera.map((p) => (
+                  <tr key={p.pais}>
+                    <td style={{ padding: "3px 5px" }}>{p.pais}</td>
+                    <td style={{ padding: "3px 5px", textAlign: "center" }}>{p.hombres}</td>
+                    <td style={{ padding: "3px 5px", textAlign: "center" }}>{p.mujeres}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="text-sm mt-1" style={{ opacity: 0.5 }}>
+              El 911 los agrupa por región (Estados Unidos, Canadá, Centroamérica y el Caribe, Sudamérica, África, Asia, Europa, Oceanía) — ubica cada país en su región al capturarlo allá.
+            </p>
+          </>
+        )}
+
+        <button onClick={() => imprimir("e911")} className="btn-secundario mt-3" style={{ width: "100%" }}>
+          <Printer size={14} /> Imprimir apoyo 911.5
         </button>
       </div>
 
