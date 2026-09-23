@@ -470,7 +470,7 @@
 <div id="volver-portal"><a href="#" id="volver-portal-link">&larr; Volver al portal</a></div>
 
 <script type="text/plain" id="codigo-fuente-app">
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useMemo } = React;
 
 /* ---------- íconos propios (sin depender de ninguna librería externa) ---------- */
 function crearIcono(contenidoSVG) {
@@ -597,6 +597,19 @@ function base64ABytes(base64) {
   const bytes = new Uint8Array(binario.length);
   for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
   return bytes;
+}
+
+// Inverso de base64ABytes: de bytes a texto base64. Se arma el string binario en
+// bloques (en vez de String.fromCharCode.apply(null, bytes) de un jalón) porque
+// un PDF real puede pesar varios cientos de miles de bytes y de un jalón se
+// desborda la pila del navegador en algunos casos.
+function bytesABase64(bytes) {
+  let binario = "";
+  const tamanoBloque = 0x8000;
+  for (let i = 0; i < bytes.length; i += tamanoBloque) {
+    binario += String.fromCharCode.apply(null, bytes.subarray(i, i + tamanoBloque));
+  }
+  return btoa(binario);
 }
 
 function mapaCamposPorNombreCorto(form) {
@@ -941,6 +954,107 @@ function descargarBytesPDF(pdfBytes, nombreArchivo) {
   enlace.click();
   document.body.removeChild(enlace);
   setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+/* ---------- Mapeador de formatos oficiales ---------- */
+/* Permite que el director suba CUALQUIER PDF oficial nuevo (no solo los 5 ya
+   integrados), Control Escolar detecte sus campos de texto rellenables, el
+   director los identifique con un PDF de prueba numerado, asigne cada uno a un
+   dato ya conocido (o a un texto que se escribe a mano) y de ahí en adelante lo
+   pueda rellenar y bajar cuando quiera, sin volver a pedir ayuda. Solo campos de
+   TEXTO por ahora (no casillas/desplegables), como se acordó con el director. */
+
+// Lee los campos de texto rellenables de un PDF (nombre interno, página y
+// posición) y los regresa en orden de lectura natural: por página, de arriba
+// hacia abajo y de izquierda a derecha. Los campos que no son de texto (casillas,
+// radios, desplegables) se descartan viendo si el campo tiene el método
+// setText propio de los campos de texto de pdf-lib.
+async function leerCamposTextoPDF(bytes) {
+  const { PDFDocument } = window.PDFLib;
+  const pdfDoc = await PDFDocument.load(bytes);
+  const form = pdfDoc.getForm();
+  const paginas = pdfDoc.getPages();
+  const refPagina = new Map(paginas.map((p, i) => [p.ref.toString(), i]));
+  const campos = [];
+  form.getFields().forEach((f) => {
+    if (typeof f.setText !== "function") return; // descarta casillas/radios/desplegables
+    const nombre = f.getName();
+    let pagina = 0, x = 0, y = 0;
+    try {
+      const widgets = f.acroField.getWidgets();
+      if (widgets.length) {
+        const w = widgets[0];
+        const rect = w.getRectangle();
+        x = rect.x;
+        y = rect.y;
+        const pRef = w.P();
+        if (pRef && refPagina.has(pRef.toString())) pagina = refPagina.get(pRef.toString());
+      }
+    } catch (e) {}
+    campos.push({ nombre, pagina, x, y });
+  });
+  campos.sort((a, b) => a.pagina - b.pagina || b.y - a.y || a.x - b.x);
+  return campos.map((c, i) => ({ ...c, orden: i }));
+}
+
+// "Huella" del documento: junta los nombres de campo (ordenados alfabéticamente,
+// no por posición, para que no le afecte el orden en que pdf-lib los entregue) y
+// la cuenta de campos, para poder reconocer si un PDF que se vuelve a subir es
+// "el mismo formato" que uno ya mapeado antes (p. ej. la versión del siguiente
+// ciclo escolar del mismo formato oficial) sin tener que compararlo byte a byte.
+function huellaDocumentoPDF(campos) {
+  const nombres = campos.map((c) => c.nombre).slice().sort();
+  return `${nombres.length}|${nombres.join("~")}`;
+}
+
+// Genera un PDF de prueba donde cada campo de texto detectado queda relleno con
+// su propio número de orden (el mismo "orden" de leerCamposTextoPDF). Así el
+// director puede abrir este PDF, leer a simple vista qué número aparece en cada
+// espacio en blanco del documento real, y usar esos números para decirle a
+// Control Escolar qué dato va en cada uno — sin depender de ninguna vista previa
+// gráfica dentro de la página, que sería mucho más frágil de construir bien.
+async function generarPDFNumeradoDePrueba(bytes, campos) {
+  const { PDFDocument, StandardFonts } = window.PDFLib;
+  const pdfDoc = await PDFDocument.load(bytes);
+  const form = pdfDoc.getForm();
+  const camposPorNombre = {};
+  form.getFields().forEach((f) => { camposPorNombre[f.getName()] = f; });
+  const fuente = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  campos.forEach((c) => {
+    setTextSafeCedula(camposPorNombre, c.nombre, String(c.orden + 1), fuente);
+  });
+  form.updateFieldAppearances(fuente);
+  return await pdfDoc.save();
+}
+
+// Fuentes de datos ya conocidas por Control Escolar que el director puede asignar
+// a un campo detectado en un PDF nuevo, en vez de escribirlo a mano cada vez que
+// lo rellena. "obtener" siempre se evalúa al momento de rellenar (no se guarda el
+// valor), así que si el director corrige su nombre o los datos de la escuela más
+// adelante, los documentos ya mapeados se siguen llenando con el dato actualizado.
+// datosEscuela (apf:datosEscuela) se recibe como parámetro porque es la única
+// fuente que no vive en una variable global síncrona.
+function construirFuentesMapeador(datosEscuela) {
+  const de = datosEscuela || {};
+  return [
+    { clave: "escuela.nombre", etiqueta: "Nombre de la escuela", obtener: () => DATOS_PLANTEL.nombre },
+    { clave: "escuela.cct", etiqueta: "Clave de Centro de Trabajo (CCT)", obtener: () => DATOS_PLANTEL.cct },
+    { clave: "escuela.nivel", etiqueta: "Nivel educativo", obtener: () => DATOS_PLANTEL.modalidad },
+    { clave: "escuela.turno", etiqueta: "Turno", obtener: () => DATOS_PLANTEL.turno },
+    { clave: "escuela.zona", etiqueta: "Zona escolar", obtener: () => "052" },
+    { clave: "escuela.sector", etiqueta: "Sector", obtener: () => DATOS_PLANTEL.sector },
+    { clave: "escuela.localidad", etiqueta: "Localidad", obtener: () => DATOS_PLANTEL.localidad },
+    { clave: "escuela.municipio", etiqueta: "Municipio", obtener: () => DATOS_PLANTEL.municipio },
+    { clave: "escuela.domicilio", etiqueta: "Domicilio de la escuela", obtener: () => de.domicilio || "" },
+    { clave: "escuela.telefono", etiqueta: "Teléfono de la escuela", obtener: () => de.telefono || "" },
+    { clave: "escuela.corde", etiqueta: "CORDE", obtener: () => de.corde || "" },
+    { clave: "director.nombre", etiqueta: "Nombre del director/a", obtener: () => NOMBRE_COMPLETO.directora },
+    { clave: "director.cargo", etiqueta: "Cargo del director/a", obtener: () => CARGO_USUARIO.directora },
+    { clave: "docente.nombre", etiqueta: "Nombre de quien atiende 2°/3er grado", obtener: () => NOMBRE_COMPLETO.maestro },
+    { clave: "docente.cargo", etiqueta: "Cargo de quien atiende 2°/3er grado", obtener: () => CARGO_USUARIO.maestro },
+    { clave: "fecha.hoy", etiqueta: "Fecha de hoy", obtener: () => fechaBonita(hoyISO()) },
+    { clave: "fecha.hoy.iso", etiqueta: "Fecha de hoy (AAAA-MM-DD)", obtener: () => hoyISO() },
+  ];
 }
 
 // Datos generales de la escuela que usan los 5 documentos (nombre, CCT, nivel,
@@ -1840,6 +1954,44 @@ async function cargarObjetoMigrando(prefijo, claveLegado) {
     return legado;
   }
   return {};
+}
+
+// --- Guardado de archivos grandes (PDF en base64) partidos en varios renglones ---
+// Un PDF real en base64 puede llegar a 200,000+ caracteres, muy por encima del
+// límite de 50,000 caracteres por celda de Google Sheets. Aquí se parte el texto
+// en trozos de TAMANO_PARTE_PDF caracteres y cada trozo se guarda en su propio
+// renglón (mapeador:pdfparte:<id>:<indice-con-ceros>), igual que ya se hace con
+// la lista de alumnos: un renglón por elemento en vez de un bloque gigante.
+const TAMANO_PARTE_PDF = 40000;
+
+async function guardarPDFPorPartes(id, base64) {
+  const prefijo = `mapeador:pdfparte:${id}:`;
+  const total = Math.max(1, Math.ceil(base64.length / TAMANO_PARTE_PDF));
+  for (let i = 0; i < total; i++) {
+    const indice = String(i).padStart(4, "0");
+    const trozo = base64.slice(i * TAMANO_PARTE_PDF, (i + 1) * TAMANO_PARTE_PDF);
+    const ok = await setStorage(`${prefijo}${indice}`, trozo);
+    if (!ok) throw new Error(`No se pudo guardar la parte ${indice} del PDF.`);
+  }
+  return total;
+}
+
+async function cargarPDFPorPartes(id) {
+  const prefijo = `mapeador:pdfparte:${id}:`;
+  const partes = await listarStorageObjeto(prefijo);
+  const indices = Object.keys(partes).sort();
+  if (indices.length === 0) return "";
+  return indices.map((i) => partes[i]).join("");
+}
+
+async function borrarPDFPorPartes(id) {
+  const prefijo = `mapeador:pdfparte:${id}:`;
+  const partes = await listarStorageObjeto(prefijo);
+  const indices = Object.keys(partes);
+  for (const i of indices) {
+    await borrarStorage(`${prefijo}${i}`);
+  }
+  return indices.length;
 }
 
 async function probarConexion(url) {
@@ -3374,6 +3526,14 @@ const EFEMERIDES = [
   { fecha: "2027-06-25", titulo: "Día Naranja: Acción por la No Violencia contra las Mujeres y Niñas" },
 ].map((e) => ({ ...e, tipo: "oficial" }));
 
+// Los eventos propios de la escuela (guardados con `evento:`) traen un id real,
+// pero las efemérides oficiales de EFEMERIDES no tienen id (son un arreglo fijo).
+// Para poder engancharles evidencia por igual a cualquier actividad del
+// calendario, se usa el id si existe y si no una llave hecha con fecha+título.
+function claveEvento(e) {
+  return e.id || `${e.fecha}::${e.titulo}`;
+}
+
 function generarCuadriculaMes(anio, mesIdx) {
   const primerDia = new Date(anio, mesIdx, 1);
   const diasEnMes = new Date(anio, mesIdx + 1, 0).getDate();
@@ -3427,7 +3587,7 @@ function emojiParaEvento(titulo, tipo) {
   return tipo === "oficial" ? "📌" : "⭐";
 }
 
-function Calendario({ eventos, setEventos, rolActual, onStamp }) {
+function Calendario({ eventos, setEventos, evidencias, setEvidencias, usuario, rolActual, onStamp }) {
   const ahora = new Date();
   const [anio, setAnio] = useState(ahora.getFullYear());
   const [mesIdx, setMesIdx] = useState(ahora.getMonth());
@@ -3435,6 +3595,39 @@ function Calendario({ eventos, setEventos, rolActual, onStamp }) {
   const [fecha, setFecha] = useState("");
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
   const [editandoId, setEditandoId] = useState(null);
+  const [evidenciaAbiertaDe, setEvidenciaAbiertaDe] = useState(null);
+  const [formEvidencia, setFormEvidencia] = useState({ enlace: "", descripcion: "" });
+
+  const listaEvidencias = Array.isArray(evidencias) ? evidencias : [];
+  const evidenciasDe = (e) => listaEvidencias.filter((ev) => ev.claveEvento === claveEvento(e));
+
+  const alternarEvidencia = (e) => {
+    const clave = claveEvento(e);
+    setEvidenciaAbiertaDe(evidenciaAbiertaDe === clave ? null : clave);
+    setFormEvidencia({ enlace: "", descripcion: "" });
+  };
+
+  const agregarEvidencia = (e) => {
+    if (!formEvidencia.enlace.trim()) return;
+    let enlace = formEvidencia.enlace.trim();
+    if (!/^https?:\/\//i.test(enlace)) enlace = "https://" + enlace;
+    const nueva = {
+      id: uid(),
+      claveEvento: claveEvento(e),
+      tituloEvento: e.titulo,
+      fechaEvento: e.fecha,
+      enlace,
+      descripcion: formEvidencia.descripcion.trim(),
+      autor: usuario || "",
+      autorRol: rolActual,
+      creado: hoyISO(),
+    };
+    setEvidencias([...listaEvidencias, nueva]);
+    setFormEvidencia({ enlace: "", descripcion: "" });
+    onStamp && onStamp("Evidencia guardada");
+  };
+
+  const eliminarEvidencia = (id) => setEvidencias(listaEvidencias.filter((ev) => ev.id !== id));
 
   const cambiarMes = (delta) => {
     let m = mesIdx + delta, a = anio;
@@ -3577,23 +3770,56 @@ function Calendario({ eventos, setEventos, rolActual, onStamp }) {
           )}
         </div>
         {listaAMostrar.length === 0 && <p className="text-sm text-center py-4" style={{ opacity: 0.5 }}>Sin eventos {diaSeleccionado ? "ese día" : "este mes"}.</p>}
-        {listaAMostrar.map((e) => (
-          <div key={e.id || e.fecha + e.titulo} className={`card flex items-center justify-between ${e.fecha < hoyStr ? "pasado" : ""}`}>
-            <div className="flex items-start gap-2">
-              <span style={{ fontSize: "1.15rem", lineHeight: 1.3 }} aria-hidden="true">{emojiParaEvento(e.titulo, e.tipo)}</span>
-              <div>
-                <div className="text-sm font-medium">{e.titulo}</div>
-                <div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.5 }}>{fechaBonita(e.fecha)}{e.tipo === "oficial" ? " · SEP" : ""}</div>
+        {listaAMostrar.map((e) => {
+          const clave = claveEvento(e);
+          const evidenciasEvento = evidenciasDe(e);
+          const evidenciaAbierta = evidenciaAbiertaDe === clave;
+          return (
+          <div key={clave} className={`card flex flex-col gap-2 ${e.fecha < hoyStr ? "pasado" : ""}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-start gap-2">
+                <span style={{ fontSize: "1.15rem", lineHeight: 1.3 }} aria-hidden="true">{emojiParaEvento(e.titulo, e.tipo)}</span>
+                <div>
+                  <div className="text-sm font-medium">{e.titulo}</div>
+                  <div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.5 }}>{fechaBonita(e.fecha)}{e.tipo === "oficial" ? " · SEP" : ""}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => alternarEvidencia(e)} className="font-mono" style={{ fontSize: "0.68rem", color: "var(--verde)", background: "transparent", border: "1px solid var(--linea)", borderRadius: "8px", padding: "0.35rem 0.6rem", cursor: "pointer" }}>
+                  <span className="flex items-center gap-1"><Cloud size={12} /> Evidencia{evidenciasEvento.length > 0 ? ` (${evidenciasEvento.length})` : ""}</span>
+                </button>
+                {e.tipo !== "oficial" && rolActual === "directora" && (
+                  <>
+                    <button onClick={() => iniciarEdicion(e)} className="font-mono" style={{ fontSize: "0.68rem", color: "var(--azul)", background: "transparent", border: "1px solid var(--linea)", borderRadius: "8px", padding: "0.35rem 0.6rem", cursor: "pointer" }}>Editar</button>
+                    <button onClick={() => eliminar(e.id)} className="btn-icono"><Trash2 size={14} /></button>
+                  </>
+                )}
               </div>
             </div>
-            {e.tipo !== "oficial" && rolActual === "directora" && (
-              <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => iniciarEdicion(e)} className="font-mono" style={{ fontSize: "0.68rem", color: "var(--azul)", background: "transparent", border: "1px solid var(--linea)", borderRadius: "8px", padding: "0.35rem 0.6rem", cursor: "pointer" }}>Editar</button>
-                <button onClick={() => eliminar(e.id)} className="btn-icono"><Trash2 size={14} /></button>
+
+            {evidenciaAbierta && (
+              <div className="flex flex-col gap-2" style={{ borderTop: "1px solid var(--linea)", paddingTop: "0.6rem" }}>
+                {evidenciasEvento.length === 0 && <p className="text-sm" style={{ opacity: 0.5 }}>Sin evidencia guardada todavía.</p>}
+                {evidenciasEvento.map((ev) => (
+                  <div key={ev.id} className="flex items-center justify-between gap-2">
+                    <a href={ev.enlace} target="_blank" rel="noopener noreferrer" className="text-sm flex items-center gap-1" style={{ color: "var(--azul)" }}>
+                      <ExternalLink size={12} /> {ev.descripcion || "Ver evidencia en Drive"}
+                    </a>
+                    {(rolActual === "directora" || ev.autorRol === rolActual) && (
+                      <button onClick={() => eliminarEvidencia(ev.id)} className="btn-icono"><Trash2 size={13} /></button>
+                    )}
+                  </div>
+                ))}
+                <div className="flex flex-col gap-2" style={{ background: "#FAF6EC", borderRadius: "10px", padding: "0.6rem" }}>
+                  <input className="campo" placeholder="Enlace de la carpeta o foto en Drive" value={formEvidencia.enlace} onChange={(ev) => setFormEvidencia((f) => ({ ...f, enlace: ev.target.value }))} />
+                  <input className="campo" placeholder="Descripción breve (opcional)" value={formEvidencia.descripcion} onChange={(ev) => setFormEvidencia((f) => ({ ...f, descripcion: ev.target.value }))} />
+                  <button onClick={() => agregarEvidencia(e)} className="btn-secundario" style={{ alignSelf: "flex-start", fontSize: "0.75rem" }}><Plus size={14} /> Agregar evidencia</button>
+                </div>
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
     </div>
@@ -5809,7 +6035,347 @@ function ListaAsistenciaImprimible({ tutores }) {
   );
 }
 
-function DocumentosDireccion({ alumnos, onStamp }) {
+// Deja que el director suba un PDF oficial nuevo (uno que Control Escolar no trae
+// integrado), detecte solo sus campos de TEXTO rellenables, los identifique con un
+// PDF de prueba numerado (cada campo se llena con su número; el director lo abre
+// y ve a simple vista qué número corresponde a qué espacio en blanco real), les
+// asigne un dato ya conocido o un texto manual, y guarde ese mapeo para poder
+// rellenar y descargar ese formato cuando quiera sin ayuda. El PDF se guarda
+// partido en varios renglones (ver guardarPDFPorPartes) para no toparse con el
+// límite de 50,000 caracteres por celda de Google Sheets.
+function MapeadorFormatos({ onStamp, rolActual, datosEscuela }) {
+  const esDirectora = rolActual === "directora";
+  const FUENTES = useMemo(() => construirFuentesMapeador(datosEscuela), [datosEscuela]);
+
+  const [documentos, setDocumentos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [pantalla, setPantalla] = useState("lista"); // "lista" | "asignando" | "rellenando"
+  const [error, setError] = useState("");
+  const [procesando, setProcesando] = useState(false);
+  const [edicion, setEdicion] = useState(null);
+  const [relleno, setRelleno] = useState(null);
+
+  const cargarDocumentos = () => {
+    setCargando(true);
+    listarStorage("mapeador:doc:").then((lista) => {
+      setDocumentos((lista || []).slice().sort((a, b) => (b.actualizado || "").localeCompare(a.actualizado || "")));
+      setCargando(false);
+    });
+  };
+  useEffect(() => { cargarDocumentos(); }, []);
+
+  const manejarArchivo = async (archivo) => {
+    if (!archivo) return;
+    setError("");
+    setProcesando(true);
+    try {
+      const buffer = await archivo.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const base64 = bytesABase64(bytes);
+      const campos = await leerCamposTextoPDF(bytes);
+      if (campos.length === 0) {
+        setError("Ese PDF no tiene campos de texto rellenables que Control Escolar pueda detectar (o son casillas/desplegables, que por ahora no se reconocen).");
+        setProcesando(false);
+        return;
+      }
+      const huella = huellaDocumentoPDF(campos);
+      const coincidencia = documentos.find((d) => d.huella === huella);
+      const asignaciones = {};
+      campos.forEach((c) => {
+        const previo = coincidencia && coincidencia.campos && coincidencia.campos.find((cc) => cc.nombre === c.nombre);
+        asignaciones[c.nombre] = previo ? { fuente: previo.fuente || "", etiqueta: previo.etiqueta || "" } : { fuente: "", etiqueta: "" };
+      });
+      setEdicion({
+        id: (coincidencia && coincidencia.id) || uid(),
+        nombre: (coincidencia && coincidencia.nombre) || archivo.name.replace(/\.pdf$/i, ""),
+        base64,
+        campos,
+        huella,
+        asignaciones,
+        coincidencia: coincidencia || null,
+      });
+      setPantalla("asignando");
+    } catch (e) {
+      console.error("Mapeador - no se pudo leer el PDF:", e);
+      setError("No se pudo leer ese archivo. Verifica que sea un PDF con formulario (campos rellenables).");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const abrirRemapeo = async (doc) => {
+    setError("");
+    setProcesando(true);
+    try {
+      const base64 = await cargarPDFPorPartes(doc.id);
+      if (!base64) { setError("No se pudo cargar el PDF guardado de este formato."); setProcesando(false); return; }
+      const bytes = base64ABytes(base64);
+      const campos = await leerCamposTextoPDF(bytes);
+      const asignaciones = {};
+      campos.forEach((c) => {
+        const previo = doc.campos && doc.campos.find((cc) => cc.nombre === c.nombre);
+        asignaciones[c.nombre] = previo ? { fuente: previo.fuente || "", etiqueta: previo.etiqueta || "" } : { fuente: "", etiqueta: "" };
+      });
+      setEdicion({ id: doc.id, nombre: doc.nombre, base64, campos, huella: huellaDocumentoPDF(campos), asignaciones, coincidencia: doc });
+      setPantalla("asignando");
+    } catch (e) {
+      console.error("Mapeador - no se pudo abrir el formato para volver a mapear:", e);
+      setError("No se pudo abrir este formato para volver a mapear sus campos.");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const descargarPruebaNumerada = async () => {
+    if (!edicion) return;
+    try {
+      const bytes = base64ABytes(edicion.base64);
+      const pdfBytes = await generarPDFNumeradoDePrueba(bytes, edicion.campos);
+      descargarBytesPDF(pdfBytes, `Prueba_numerada_${(edicion.nombre || "formato").trim().replace(/\s+/g, "_")}.pdf`);
+      onStamp && onStamp("Descargado");
+    } catch (e) {
+      console.error("Mapeador - PDF de prueba falló:", e);
+      setError("No se pudo generar el PDF de prueba numerado.");
+    }
+  };
+
+  const cambiarAsignacion = (nombreCampo, cambios) => {
+    setEdicion((ed) => ({ ...ed, asignaciones: { ...ed.asignaciones, [nombreCampo]: { ...ed.asignaciones[nombreCampo], ...cambios } } }));
+  };
+
+  const cancelarEdicion = () => { setEdicion(null); setError(""); setPantalla("lista"); };
+
+  const guardarMapeo = async () => {
+    if (!edicion) return;
+    if (!edicion.nombre.trim()) { setError("Ponle un nombre a este formato antes de guardarlo (por ejemplo, el título del documento)."); return; }
+    setProcesando(true);
+    setError("");
+    try {
+      if (edicion.coincidencia) await borrarPDFPorPartes(edicion.id);
+      const totalPartesPDF = await guardarPDFPorPartes(edicion.id, edicion.base64);
+      const campos = edicion.campos.map((c) => ({
+        nombre: c.nombre,
+        orden: c.orden,
+        pagina: c.pagina,
+        fuente: (edicion.asignaciones[c.nombre] && edicion.asignaciones[c.nombre].fuente) || "manual",
+        etiqueta: (edicion.asignaciones[c.nombre] && edicion.asignaciones[c.nombre].etiqueta) || "",
+      }));
+      const doc = {
+        id: edicion.id,
+        nombre: edicion.nombre.trim(),
+        huella: edicion.huella,
+        totalPartesPDF,
+        campos,
+        creado: (edicion.coincidencia && edicion.coincidencia.creado) || hoyISO(),
+        actualizado: hoyISO(),
+      };
+      await setStorage(`mapeador:doc:${edicion.id}`, doc);
+      setEdicion(null);
+      setPantalla("lista");
+      cargarDocumentos();
+      onStamp && onStamp("Guardado");
+    } catch (e) {
+      console.error("Mapeador - no se pudo guardar el mapeo:", e);
+      setError("No se pudo guardar el mapeo. Revisa tu conexión e intenta de nuevo.");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const eliminarDocumento = async (doc) => {
+    if (!window.confirm(`¿Borrar el formato "${doc.nombre}" y su mapeo? Esto no se puede deshacer.`)) return;
+    setProcesando(true);
+    setError("");
+    try {
+      await borrarPDFPorPartes(doc.id);
+      await borrarStorage(`mapeador:doc:${doc.id}`);
+      await borrarStorage(`mapeador:valores:${doc.id}`);
+      cargarDocumentos();
+      onStamp && onStamp("Eliminado");
+    } catch (e) {
+      console.error("Mapeador - no se pudo eliminar:", e);
+      setError("No se pudo eliminar este formato.");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const abrirRelleno = async (doc) => {
+    setError("");
+    setProcesando(true);
+    try {
+      const valoresManual = await getStorage(`mapeador:valores:${doc.id}`, {});
+      setRelleno({ doc, valoresManual: valoresManual || {} });
+      setPantalla("rellenando");
+    } catch (e) {
+      setError("No se pudo abrir este formato para rellenarlo.");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const cancelarRelleno = () => { setRelleno(null); setError(""); setPantalla("lista"); };
+  const cambiarValorManual = (nombreCampo, valor) => setRelleno((r) => ({ ...r, valoresManual: { ...r.valoresManual, [nombreCampo]: valor } }));
+
+  const rellenarYDescargar = async () => {
+    if (!relleno) return;
+    setProcesando(true);
+    setError("");
+    try {
+      const base64 = await cargarPDFPorPartes(relleno.doc.id);
+      if (!base64) { setError("No se pudo cargar el PDF guardado de este formato."); setProcesando(false); return; }
+      const camposTexto = {};
+      (relleno.doc.campos || []).forEach((c) => {
+        if (c.fuente === "manual") {
+          camposTexto[c.nombre] = relleno.valoresManual[c.nombre] || "";
+        } else {
+          const fuente = FUENTES.find((f) => f.clave === c.fuente);
+          camposTexto[c.nombre] = fuente ? String(fuente.obtener() || "") : "";
+        }
+      });
+      await llenarYDescargarPDFOficial(base64, camposTexto, `${relleno.doc.nombre.trim().replace(/\s+/g, "_")}_${hoyISO()}.pdf`);
+      await setStorage(`mapeador:valores:${relleno.doc.id}`, relleno.valoresManual);
+      onStamp && onStamp("Descargado");
+    } catch (e) {
+      console.error("Mapeador - no se pudo rellenar el PDF:", e);
+      setError("No se pudo generar el PDF rellenado.");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  if (!esDirectora && pantalla === "lista" && documentos.length === 0 && !cargando) {
+    return (
+      <div className="card">
+        <p className="text-sm" style={{ opacity: 0.6 }}>Todavía no hay formatos mapeados. Pídele al director que suba el primero desde aquí.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="card">
+        <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Mapeador de formatos oficiales</div>
+        <p className="text-sm" style={{ opacity: 0.6 }}>Sube cualquier PDF oficial con campos de texto rellenables, dile a Control Escolar qué dato va en cada campo (una sola vez) y de ahí en adelante lo rellenas y descargas cuando quieras, sin pedir ayuda. Por ahora solo reconoce campos de texto (no casillas ni desplegables).</p>
+      </div>
+
+      {error && (
+        <div className="card" style={{ borderColor: "var(--rojo)", background: "rgba(122,22,19,0.06)" }}>
+          <p className="text-sm flex items-center gap-2" style={{ color: "var(--rojo)" }}><AlertCircle size={14} /> {error}</p>
+        </div>
+      )}
+
+      {pantalla === "lista" && (
+        <div className="flex flex-col gap-4">
+          {esDirectora && (
+            <div className="card">
+              <label className="btn-primario" style={{ fontSize: "0.75rem", cursor: "pointer", display: "inline-flex" }}>
+                <FileText size={14} /> {procesando ? "Leyendo PDF…" : "Subir un formato nuevo (PDF)"}
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  style={{ display: "none" }}
+                  disabled={procesando}
+                  onChange={(e) => { const f = e.target.files && e.target.files[0]; manejarArchivo(f); e.target.value = ""; }}
+                />
+              </label>
+            </div>
+          )}
+
+          {cargando ? (
+            <p className="text-sm" style={{ opacity: 0.6 }}>Cargando formatos guardados…</p>
+          ) : documentos.length === 0 ? (
+            <p className="text-sm" style={{ opacity: 0.6 }}>Todavía no hay formatos mapeados.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {documentos.map((doc) => (
+                <div key={doc.id} className="card flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <div className="font-display" style={{ fontWeight: 700, fontSize: "0.82rem" }}>{doc.nombre}</div>
+                    <p className="text-sm" style={{ opacity: 0.55 }}>{(doc.campos || []).length} campo(s) · actualizado {doc.actualizado ? fechaBonita(doc.actualizado) : "—"}</p>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <button className="btn-primario" style={{ fontSize: "0.72rem" }} disabled={procesando} onClick={() => abrirRelleno(doc)}><Download size={13} /> Rellenar y descargar</button>
+                    {esDirectora && (
+                      <>
+                        <button className="btn-secundario" style={{ fontSize: "0.72rem" }} disabled={procesando} onClick={() => abrirRemapeo(doc)}><Pencil size={13} /> Volver a mapear</button>
+                        <button className="btn-icono" disabled={procesando} onClick={() => eliminarDocumento(doc)}><Trash2 size={14} /></button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {pantalla === "asignando" && edicion && (
+        <div className="flex flex-col gap-3">
+          {edicion.coincidencia && (
+            <div className="card" style={{ borderColor: "var(--verde)", background: "rgba(30,90,60,0.06)" }}>
+              <p className="text-sm">Este PDF parece ser el mismo formato que <strong>“{edicion.coincidencia.nombre}”</strong>, ya mapeado antes. Se rellenaron las asignaciones que ya tenías — revísalas y guarda para actualizar el archivo.</p>
+            </div>
+          )}
+          <div className="card flex flex-col gap-2">
+            <label className="text-sm" style={{ opacity: 0.7 }}>Nombre de este formato (para reconocerlo en la lista)</label>
+            <input className="campo" type="text" value={edicion.nombre} onChange={(e) => setEdicion((ed) => ({ ...ed, nombre: e.target.value }))} placeholder="Ej. Proyecto de Necesidades 2026-2027" />
+            <button className="btn-secundario" style={{ fontSize: "0.75rem", alignSelf: "flex-start" }} onClick={descargarPruebaNumerada}><Download size={13} /> Descargar PDF de prueba numerado</button>
+            <p className="text-sm" style={{ opacity: 0.55 }}>Ábrelo y lee qué número aparece en cada espacio en blanco del documento real — con eso identificas cada campo de la lista de abajo.</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {edicion.campos.map((c) => {
+              const asign = edicion.asignaciones[c.nombre] || { fuente: "", etiqueta: "" };
+              return (
+                <div key={c.nombre} className="card flex flex-col gap-2">
+                  <div className="text-sm" style={{ fontWeight: 700 }}>Campo #{c.orden + 1} <span style={{ opacity: 0.5, fontWeight: 400 }}>(página {c.pagina + 1} · nombre interno: {c.nombre})</span></div>
+                  <select className="campo" value={asign.fuente} onChange={(e) => cambiarAsignacion(c.nombre, { fuente: e.target.value })}>
+                    <option value="">— Elige qué va en este campo —</option>
+                    <option value="manual">Escribir manualmente cada vez</option>
+                    {FUENTES.map((f) => (<option key={f.clave} value={f.clave}>{f.etiqueta}</option>))}
+                  </select>
+                  {asign.fuente === "manual" && (
+                    <input className="campo" type="text" placeholder="Nombre para este campo al rellenarlo (ej. Número de oficio)" value={asign.etiqueta} onChange={(e) => cambiarAsignacion(c.nombre, { etiqueta: e.target.value })} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <button className="btn-primario" style={{ fontSize: "0.78rem" }} disabled={procesando} onClick={guardarMapeo}><Check size={14} /> {procesando ? "Guardando…" : "Guardar mapeo"}</button>
+            <button className="btn-secundario" style={{ fontSize: "0.78rem" }} disabled={procesando} onClick={cancelarEdicion}><X size={14} /> Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {pantalla === "rellenando" && relleno && (
+        <div className="flex flex-col gap-3">
+          <div className="card">
+            <div className="font-display" style={{ fontWeight: 700, fontSize: "0.85rem" }}>{relleno.doc.nombre}</div>
+            <p className="text-sm" style={{ opacity: 0.6 }}>Los datos ya conocidos por Control Escolar se llenan solos. Completa los que faltan.</p>
+          </div>
+          {(relleno.doc.campos || []).filter((c) => c.fuente === "manual").map((c) => (
+            <div key={c.nombre} className="card flex flex-col gap-1">
+              <label className="text-sm" style={{ opacity: 0.7 }}>{c.etiqueta || `Campo #${c.orden + 1}`}</label>
+              <input className="campo" type="text" value={relleno.valoresManual[c.nombre] || ""} onChange={(e) => cambiarValorManual(c.nombre, e.target.value)} />
+            </div>
+          ))}
+          {(relleno.doc.campos || []).every((c) => c.fuente !== "manual") && (
+            <p className="text-sm" style={{ opacity: 0.55 }}>Todos los campos de este formato ya se llenan solos con datos de Control Escolar.</p>
+          )}
+          <div className="flex gap-2 flex-wrap">
+            <button className="btn-primario" style={{ fontSize: "0.78rem" }} disabled={procesando} onClick={rellenarYDescargar}><Download size={14} /> {procesando ? "Generando…" : "Rellenar y descargar"}</button>
+            <button className="btn-secundario" style={{ fontSize: "0.78rem" }} disabled={procesando} onClick={cancelarRelleno}><X size={14} /> Cancelar</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DocumentosDireccion({ alumnos, onStamp, rolActual }) {
   const [subTab, setSubTab] = useState("apf");
   const grados = [1, 2, 3];
   const tutores = obtenerTutoresUnicos(alumnos);
@@ -5894,6 +6460,7 @@ function DocumentosDireccion({ alumnos, onStamp }) {
     { id: "convivencia", label: "Convivencia Escolar" },
     { id: "bimestral", label: "Corte de Caja" },
     { id: "otros", label: "Otros comités" },
+    { id: "mapeador", label: "Mapeador de formatos" },
   ];
 
   return (
@@ -6257,6 +6824,10 @@ function DocumentosDireccion({ alumnos, onStamp }) {
           <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Otros comités (SICEP Puebla)</div>
           <p className="text-sm" style={{ opacity: 0.6 }}>Espacio reservado para agregar, más adelante, el Comité de Contraloría Social, Comité de Participación Social, Comité de Seguridad Escolar u otros que se necesiten durante el ciclo — cada uno con su propia información, sin mezclarse con la APF.</p>
         </div>
+      )}
+
+      {subTab === "mapeador" && (
+        <MapeadorFormatos onStamp={onStamp} rolActual={rolActual} datosEscuela={vistaActa.datosEscuela} />
       )}
     </div>
   );
@@ -8089,6 +8660,7 @@ function App() {
   const [calificaciones, setCalificacionesState] = useState({});
   const [avisos, setAvisosState] = useState([]);
   const [eventos, setEventosState] = useState([]);
+  const [evidencias, setEvidenciasState] = useState([]);
   const [cteSesiones, setCteSesionesState] = useState([]);
   const [bitacora, setBitacoraState] = useState([]);
   const [reglamento, setReglamentoState] = useState("");
@@ -8109,12 +8681,13 @@ function App() {
     if (!liga) { setCargando(false); return; }
     setCargando(true);
     (async () => {
-      const [al, asi, cal, av, ev, cte, bit, reg, ligas, per] = await Promise.all([
+      const [al, asi, cal, av, ev, evid, cte, bit, reg, ligas, per] = await Promise.all([
         cargarListaMigrando("alumno:", "alumnos"),
         cargarObjetoMigrando("asistencia:", "asistencia-registro"),
         cargarObjetoMigrando("calificacion:", "calificaciones"),
         cargarListaMigrando("aviso:", "avisos"),
         cargarListaMigrando("evento:", "eventos"),
+        cargarListaMigrando("evidencia:", "evidencias-actividades"),
         cargarListaMigrando("cte:", "cte-sesiones"),
         cargarListaMigrando("bitacora:", "bitacora-casos"),
         getStorage("reglamento-texto", ""),
@@ -8122,7 +8695,7 @@ function App() {
         cargarListaMigrando("personal:", "personal-escolar"),
       ]);
       setAlumnosState(al); setAsistenciaState(asi); setCalificacionesState(cal);
-      setAvisosState(av); setEventosState(ev);
+      setAvisosState(av); setEventosState(ev); setEvidenciasState(evid);
       setCteSesionesState(cte); setBitacoraState(bit); setReglamentoState(reg);
       setLigasPropiasState(ligas); setPersonalState(per);
       setCargando(false);
@@ -8185,6 +8758,7 @@ function App() {
   const setCalificaciones = (v) => guardarObjetoPorClave("calificacion:", setCalificacionesState, calificaciones, v);
   const setAvisos = (v) => guardarListaPorId("aviso:", setAvisosState, avisos, v);
   const setEventos = (v) => guardarListaPorId("evento:", setEventosState, eventos, v);
+  const setEvidencias = (v) => guardarListaPorId("evidencia:", setEvidenciasState, evidencias, v);
   const setCteSesiones = (v) => guardarListaPorId("cte:", setCteSesionesState, cteSesiones, v);
   const setBitacora = (v) => guardarListaPorId("bitacora:", setBitacoraState, bitacora, v);
   const setReglamento = (v) => { setReglamentoState(v); setStorage("reglamento-texto", v); };
@@ -8484,7 +9058,7 @@ function App() {
         {tab === "calificaciones" && <Calificaciones alumnos={alumnos} calificaciones={calificaciones} setCalificaciones={setCalificaciones} gradosPermitidos={gradosPermitidos} onStamp={fireStamp} />}
         {tab === "incidencias" && <Bitacora alumnos={alumnos} casos={bitacora} setCasos={setBitacora} gradosPermitidos={gradosPermitidos} usuario={usuario.nombre} rolActual={rol} onStamp={fireStamp} />}
         {tab === "avisos" && <Avisos avisos={avisos} setAvisos={setAvisos} usuario={usuario.nombre} rolActual={rol} onStamp={fireStamp} />}
-        {tab === "calendario" && <Calendario eventos={eventos} setEventos={setEventos} rolActual={rol} onStamp={fireStamp} />}
+        {tab === "calendario" && <Calendario eventos={eventos} setEventos={setEventos} evidencias={evidencias} setEvidencias={setEvidencias} usuario={usuario.nombre} rolActual={rol} onStamp={fireStamp} />}
         {tab === "cte" && <CTE sesiones={cteSesiones} setSesiones={setCteSesiones} usuario={usuario.nombre} onStamp={fireStamp} />}
         {tab === "reglamento" && (
           <ReglamentoIncidencias
@@ -8496,7 +9070,7 @@ function App() {
         )}
         {tab === "pic" && <ProgramaAnaliticoPIC onStamp={fireStamp} />}
         {tab === "consejo" && <ConsejoEscolar onStamp={fireStamp} alumnos={alumnos} gradosPermitidos={gradosPermitidos} personal={personal} />}
-        {tab === "documentos" && <DocumentosDireccion alumnos={alumnos} onStamp={fireStamp} />}
+        {tab === "documentos" && <DocumentosDireccion alumnos={alumnos} onStamp={fireStamp} rolActual={rol} />}
         {tab === "personal" && <DatosPersonal personal={personal} setPersonal={setPersonal} onStamp={fireStamp} />}
         {tab === "recursos" && (
           <Recursos
