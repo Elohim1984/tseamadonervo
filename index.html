@@ -1723,6 +1723,29 @@ function nombreAlumno(a) {
   return partes.length ? partes.join(" ") : "(sin nombre capturado)";
 }
 
+// Orden estándar para listas/búsquedas que mezclan grados: primero por
+// grado (1°, 2°, 3°...) y dentro de cada grado por primer apellido (agregado
+// 24 sept 2026, a petición del director, para que cualquier búsqueda o
+// desplegable de alumnos quede organizado igual en toda la app).
+function compararAlumnos(a, b) {
+  const gradoA = Number(a.grado) || 0, gradoB = Number(b.grado) || 0;
+  if (gradoA !== gradoB) return gradoA - gradoB;
+  return nombreAlumno(a).localeCompare(nombreAlumno(b), "es");
+}
+
+// Opciones de un <select> de alumnos, agrupadas visualmente por grado
+// (<optgroup>) y ordenadas por primer apellido dentro de cada grado.
+function OpcionesAlumnosPorGrado({ alumnos }) {
+  const grados = Array.from(new Set((alumnos || []).map((a) => a.grado))).sort((a, b) => Number(a) - Number(b));
+  return grados.map((g) => (
+    <optgroup key={g} label={`${g}° grado`}>
+      {alumnos.filter((a) => a.grado === g).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b), "es")).map((a) => (
+        <option key={a.id} value={a.id}>{nombreAlumno(a)}{a.ESCUELA_GRUPO ? ` · ${a.grado}°${a.ESCUELA_GRUPO}` : ` · ${a.grado}°`}</option>
+      ))}
+    </optgroup>
+  ));
+}
+
 /* ---------- Detección y fusión de alumnos duplicados (agregado 24 sept 2026) ----------
    Causa raíz confirmada: el botón "Inscribir alumno" no se bloqueaba mientras
    guardaba, así que un doble clic (o clic accidental repetido) disparaba
@@ -2872,7 +2895,7 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
   const terminoBusqueda = busqueda.trim().toLowerCase();
   const coincide = (a) => (a.NIA || "").toLowerCase().includes(terminoBusqueda) || nombreAlumno(a).toLowerCase().includes(terminoBusqueda);
   const listaGrado = terminoBusqueda
-    ? alumnos.filter((a) => gradosPermitidos.includes(a.grado) && coincide(a)).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)))
+    ? alumnos.filter((a) => gradosPermitidos.includes(a.grado) && coincide(a)).sort(compararAlumnos)
     : alumnos.filter((a) => a.grado === grado).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
 
   return (
@@ -4089,7 +4112,7 @@ function CTE({ sesiones, setSesiones, usuario, onStamp }) {
 
 /* ---------- Bitácora de asuntos especiales ---------- */
 function Bitacora({ alumnos, casos, setCasos, gradosPermitidos, usuario, rolActual, onStamp }) {
-  const alumnosVisibles = alumnos.filter((a) => gradosPermitidos.includes(a.grado)).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
+  const alumnosVisibles = alumnos.filter((a) => gradosPermitidos.includes(a.grado)).sort(compararAlumnos);
   const formVacio = { alumnoId: "", instrumento: INSTRUMENTOS_CONVIVENCIA[0], tipo: TIPOS_ASUNTO[0], nivel: NIVEL_INCIDENCIA[0], fase: FASE_RUTA_ACTUACION[0], lugarHecho: "", otrasPersonas: "", testigos: "", descripcion: "", acuerdos: "", notificoFamilia: false, expediente: false, estatus: "Abierto" };
   const [form, setForm] = useState(formVacio);
   const [editandoId, setEditandoId] = useState(null);
@@ -4172,7 +4195,7 @@ function Bitacora({ alumnos, casos, setCasos, gradosPermitidos, usuario, rolActu
           <div className="flex flex-col gap-2">
             <select className="campo" value={form.alumnoId} onChange={(e) => setForm({ ...form, alumnoId: e.target.value })}>
               <option value="">Selecciona alumno…</option>
-              {alumnosVisibles.map((a) => <option key={a.id} value={a.id}>{nombreAlumno(a)} · {a.grado}°</option>)}
+              <OpcionesAlumnosPorGrado alumnos={alumnosVisibles} />
             </select>
 
             <div>
@@ -4249,7 +4272,7 @@ function Bitacora({ alumnos, casos, setCasos, gradosPermitidos, usuario, rolActu
           <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Ficha de convivencia por alumno</div>
           <select className="campo" value={verAlumnoId} onChange={(e) => setVerAlumnoId(e.target.value)}>
             <option value="">Ver historial de un alumno…</option>
-            {alumnosVisibles.map((a) => <option key={a.id} value={a.id}>{nombreAlumno(a)} · {a.grado}°</option>)}
+            <OpcionesAlumnosPorGrado alumnos={alumnosVisibles} />
           </select>
           {verAlumnoId && (
             <div className="flex flex-col gap-2 mt-2">
@@ -7233,6 +7256,8 @@ function TablaPorAlumno({ alumnosVisibles, gradosPermitidos, hayBusqueda }) {
   const [expandidoId, setExpandidoId] = useState(null);
 
   const ordenarPorApellido = (lista) => [...lista].sort((a, b) => {
+    const gradoA = Number(a.grado) || 0, gradoB = Number(b.grado) || 0;
+    if (gradoA !== gradoB) return gradoA - gradoB;
     const claveA = `${a.ALUMNO_APELLIDO_PATERNO || ""} ${a.ALUMNO_APELLIDO_MATERNO || ""} ${a.ALUMNO_NOMBRES || ""}`.trim();
     const claveB = `${b.ALUMNO_APELLIDO_PATERNO || ""} ${b.ALUMNO_APELLIDO_MATERNO || ""} ${b.ALUMNO_NOMBRES || ""}`.trim();
     return claveA.localeCompare(claveB, "es");
@@ -7835,13 +7860,13 @@ function Estadistica({ alumnos, gradosPermitidos }) {
     return true;
   });
 
-  // Orden general por primer apellido (nombreAlumno inicia con apellido
-  // paterno), sin agrupar por grado — así se puede imprimir un listado
-  // general ordenado alfabéticamente, o filtrado a un grado y grupo en
-  // particular con el mismo orden.
+  // Orden estándar: primero por grado y, dentro de cada grado, por primer
+  // apellido (nombreAlumno inicia con apellido paterno) — así un listado
+  // general (sin filtrar grado) queda organizado por grado, y uno filtrado a
+  // un grado y grupo en particular mantiene el mismo criterio de todas formas.
   const filasEdad = alumnosFiltradosEdad
     .slice()
-    .sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)))
+    .sort(compararAlumnos)
     .map((a) => ({ alumno: a, edad: calcularEdadExacta(a.ALUMNO_FECHA_NACIMIENTO, fechaRefEdad) }));
   const sinFechaNacimiento = filasEdad.filter((r) => !r.edad).length;
   const etiquetaFiltroEdad = filtroGradoEdad
@@ -8198,7 +8223,7 @@ function SelectorFamiliaConsejo({ alumnos, gradosPermitidos, personal, yaAgregad
 
   const alumnosDelGrado = alumnos
     .filter((a) => gradosPermitidos.includes(a.grado) && (!grado || String(a.grado) === String(grado)))
-    .sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
+    .sort(compararAlumnos);
 
   // Solo se ofrecen alumnos cuya persona elegida (alumno/madre/padre/tutor) tenga
   // nombre capturado Y aún no haya sido usada como integrante del Consejo.
