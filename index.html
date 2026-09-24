@@ -8988,7 +8988,11 @@ function ConvocatoriaImprimibleConsejo({ datos }) {
   );
 }
 
-function TarjetaComiteConsejo({ idComite, nombre, numero, prioritario, registro, onGuardar, onQuitar }) {
+function lineaIntegranteConsejo(i) {
+  return [i.nombre, i.apellidoPaterno, i.apellidoMaterno].filter(Boolean).join(" ").trim() + (i.correo ? ` — ${i.correo}` : "");
+}
+
+function TarjetaComiteConsejo({ idComite, nombre, numero, prioritario, registro, onGuardar, onQuitar, integrantesConsejo }) {
   const [abierto, setAbierto] = useState(false);
   const vacio = { presentaronPlanTrabajo: "", integrantesTexto: "", actividadesTexto: "" };
   const [borrador, setBorrador] = useState(registro || vacio);
@@ -9002,6 +9006,13 @@ function TarjetaComiteConsejo({ idComite, nombre, numero, prioritario, registro,
   const activar = () => { onGuardar({ id: idComite, nombre, numero, instalado: true, ...vacio }); setAbierto(true); };
   const quitar = () => onQuitar(idComite);
   const cambiar = (k, v) => setBorrador((prev) => ({ ...prev, [k]: v }));
+  const lineasIntegrantesTexto = (borrador.integrantesTexto || "").split("\n").map((l) => l.trim()).filter(Boolean);
+  const alternarIntegrante = (i) => {
+    const linea = lineaIntegranteConsejo(i);
+    const yaEsta = lineasIntegrantesTexto.includes(linea);
+    const nuevas = yaEsta ? lineasIntegrantesTexto.filter((l) => l !== linea) : [...lineasIntegrantesTexto, linea];
+    cambiar("integrantesTexto", nuevas.join("\n"));
+  };
   const guardar = async () => {
     setGuardando(true);
     const ok = await onGuardar({ id: idComite, nombre, numero, instalado: true, ...borrador });
@@ -9041,6 +9052,22 @@ function TarjetaComiteConsejo({ idComite, nombre, numero, prioritario, registro,
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Integrantes del comité (nombre y correo, uno por línea)</label>
+            {integrantesConsejo && integrantesConsejo.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {integrantesConsejo.map((i) => {
+                  const linea = lineaIntegranteConsejo(i);
+                  const activo = lineasIntegrantesTexto.includes(linea);
+                  return (
+                    <button key={i.id} type="button" onClick={() => alternarIntegrante(i)}
+                      className={`chip-grado ${activo ? "activo" : ""}`} style={{ fontSize: "0.7rem", padding: "0.25rem 0.55rem" }}>
+                      {activo ? "✓ " : "+ "}{i.nombre} {i.apellidoPaterno}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm mb-2" style={{ opacity: 0.5 }}>Aún no hay integrantes capturados en la pestaña "Integrantes" — agrégalos ahí y aquí podrás elegirlos con un clic.</p>
+            )}
             <textarea className="campo" rows={3} value={borrador.integrantesTexto || ""} onChange={(e) => cambiar("integrantesTexto", e.target.value)} placeholder={"Alberto Martínez Hidalgo — anad@gmail.com"} />
           </div>
           <div>
@@ -9059,12 +9086,15 @@ function TarjetaComiteConsejo({ idComite, nombre, numero, prioritario, registro,
 
 function ComitesConsejo({ onStamp }) {
   const [registros, setRegistros] = useState([]);
+  const [integrantesConsejo, setIntegrantesConsejo] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [nombreOtro, setNombreOtro] = useState("");
 
   useEffect(() => {
     let vivo = true;
-    listarStorage("consejo-comite:").then((v) => { if (vivo) { setRegistros(v); setCargando(false); } });
+    Promise.all([listarStorage("consejo-comite:"), listarStorage("consejo-integrante:")]).then(([coms, ints]) => {
+      if (vivo) { setRegistros(coms); setIntegrantesConsejo(ints); setCargando(false); }
+    });
     return () => { vivo = false; };
   }, []);
 
@@ -9098,11 +9128,11 @@ function ComitesConsejo({ onStamp }) {
       <p className="text-sm" style={{ opacity: 0.65 }}>Marca "Instalar" en los comités que sí operarán este ciclo en tu escuela. Los marcados como Prioritario fueron pedidos por tu supervisión de zona.</p>
       {COMITES_CATALOGO.map((c) => (
         <TarjetaComiteConsejo key={c.id} idComite={c.id} nombre={c.nombre} numero={c.numero} prioritario={c.prioritario}
-          registro={porId.get(c.id) || null} onGuardar={guardarRegistro} onQuitar={quitarRegistro} />
+          registro={porId.get(c.id) || null} onGuardar={guardarRegistro} onQuitar={quitarRegistro} integrantesConsejo={integrantesConsejo} />
       ))}
       {otros.map((r) => (
         <TarjetaComiteConsejo key={r.id} idComite={r.id} nombre={r.nombre} numero="Otro" prioritario={false}
-          registro={r} onGuardar={guardarRegistro} onQuitar={quitarRegistro} />
+          registro={r} onGuardar={guardarRegistro} onQuitar={quitarRegistro} integrantesConsejo={integrantesConsejo} />
       ))}
       <div className="card">
         <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Agregar otro comité (fuera del catálogo)</label>
