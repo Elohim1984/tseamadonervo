@@ -1723,6 +1723,185 @@ function nombreAlumno(a) {
   return partes.length ? partes.join(" ") : "(sin nombre capturado)";
 }
 
+/* ---------- Detección y fusión de alumnos duplicados (agregado 24 sept 2026) ----------
+   Causa raíz confirmada: el botón "Inscribir alumno" no se bloqueaba mientras
+   guardaba, así que un doble clic (o clic accidental repetido) disparaba
+   guardar() dos veces antes de que React alcanzara a re-renderizar, y cada
+   una creaba un id nuevo (uid()) con los mismos datos -> dos renglones para
+   el mismo alumno real. Ya se corrigió abajo (estado `guardando` + aviso si
+   el NIA ya existe). Este panel es para limpiar los duplicados que ya
+   quedaron guardados, fusionando también asistencia/calificaciones/
+   incidencias para que no se pierda nada de lo ya capturado. */
+function normalizarTexto(s) {
+  return (s || "").toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function contarCamposLlenos(a) {
+  return Object.keys(a || {}).filter((k) => k !== "id" && a[k] !== undefined && a[k] !== null && String(a[k]).trim() !== "").length;
+}
+
+// Agrupa alumnos que parecen ser el mismo: primero por NIA idéntico (confianza
+// alta), y entre los que no tienen NIA capturado, por nombre completo + fecha
+// de nacimiento idénticos (confianza media -- se revisa a mano, nunca se
+// fusiona en automático para no unir por error a dos hermanos con nombre
+// parecido).
+function detectarDuplicadosAlumnos(alumnos) {
+  const grupos = [];
+  const porNIA = new Map();
+  const sinNIA = [];
+  for (const a of alumnos || []) {
+    const nia = (a.NIA || "").trim();
+    if (nia) {
+      if (!porNIA.has(nia)) porNIA.set(nia, []);
+      porNIA.get(nia).push(a);
+    } else {
+      sinNIA.push(a);
+    }
+  }
+  for (const [nia, lista] of porNIA.entries()) {
+    if (lista.length > 1) grupos.push({ criterio: "Mismo NIA", detalle: nia, confianza: "alta", alumnos: lista });
+  }
+  const porNombre = new Map();
+  for (const a of sinNIA) {
+    const llave = normalizarTexto(nombreAlumno(a)) + "::" + (a.ALUMNO_FECHA_NACIMIENTO || "");
+    if (!llave.replace("::", "").trim()) continue;
+    if (!porNombre.has(llave)) porNombre.set(llave, []);
+    porNombre.get(llave).push(a);
+  }
+  for (const [, lista] of porNombre.entries()) {
+    if (lista.length > 1) grupos.push({ criterio: "Mismo nombre y fecha de nacimiento (sin NIA)", detalle: nombreAlumno(lista[0]), confianza: "media", alumnos: lista });
+  }
+  return grupos;
+}
+
+// Combina los campos de varios registros del mismo alumno en uno solo: los
+// campos ya llenos del registro elegido para conservar ganan; los que estén
+// vacíos ahí se completan con el primer valor no vacío que aparezca en los
+// demás (ordenados de más completo a menos completo).
+function fusionarCamposAlumno(idConservar, registrosDelGrupo) {
+  const base = registrosDelGrupo.find((a) => a.id === idConservar);
+  const otros = registrosDelGrupo.filter((a) => a.id !== idConservar).sort((a, b) => contarCamposLlenos(b) - contarCamposLlenos(a));
+  const fusionado = { ...base };
+  for (const otro of otros) {
+    for (const clave of Object.keys(otro)) {
+      if (clave === "id") continue;
+      const actual = fusionado[clave];
+      const vacio = actual === undefined || actual === null || String(actual).trim() === "";
+      const otroLleno = otro[clave] !== undefined && otro[clave] !== null && String(otro[clave]).trim() !== "";
+      if (vacio && otroLleno) fusionado[clave] = otro[clave];
+    }
+  }
+  return fusionado;
+}
+
+function PanelDuplicadosAlumnos({ alumnos, asistencia, calificaciones, bitacora, setAlumnos, setAsistencia, setCalificaciones, setBitacora, onStamp }) {
+  const [abierto, setAbierto] = useState(false);
+  const [seleccion, setSeleccion] = useState({});
+  const [fusionando, setFusionando] = useState(null);
+  const [hechos, setHechos] = useState([]);
+
+  const grupos = useMemo(() => detectarDuplicadosAlumnos(alumnos), [alumnos]);
+  if (grupos.length === 0) return null;
+
+  const elegir = (llaveGrupo, id) => setSeleccion((prev) => ({ ...prev, [llaveGrupo]: id }));
+
+  const fusionarGrupo = async (grupo, llaveGrupo) => {
+    const idConservar = seleccion[llaveGrupo] || grupo.alumnos.slice().sort((a, b) => contarCamposLlenos(b) - contarCamposLlenos(a))[0].id;
+    const idsQuitar = grupo.alumnos.map((a) => a.id).filter((id) => id !== idConservar);
+    if (idsQuitar.length === 0) return;
+    setFusionando(llaveGrupo);
+
+    // 1) Re-apuntar asistencia (objeto: { "grado_fecha": { alumnoId: estado } })
+    const nuevaAsistencia = JSON.parse(JSON.stringify(asistencia || {}));
+    for (const clave of Object.keys(nuevaAsistencia)) {
+      const registro = nuevaAsistencia[clave];
+      for (const idQuitar of idsQuitar) {
+        if (registro[idQuitar] !== undefined) {
+          if (registro[idConservar] === undefined || registro[idConservar] === null || registro[idConservar] === "") {
+            registro[idConservar] = registro[idQuitar];
+          }
+          delete registro[idQuitar];
+        }
+      }
+    }
+    await setAsistencia(nuevaAsistencia);
+
+    // 2) Re-apuntar calificaciones (mismo tipo de objeto)
+    const nuevasCalif = JSON.parse(JSON.stringify(calificaciones || {}));
+    for (const clave of Object.keys(nuevasCalif)) {
+      const registro = nuevasCalif[clave];
+      for (const idQuitar of idsQuitar) {
+        if (registro[idQuitar] !== undefined) {
+          if (registro[idConservar] === undefined || registro[idConservar] === null || registro[idConservar] === "") {
+            registro[idConservar] = registro[idQuitar];
+          }
+          delete registro[idQuitar];
+        }
+      }
+    }
+    await setCalificaciones(nuevasCalif);
+
+    // 3) Re-apuntar Bitácora de Incidencias (lista de casos con alumnoId)
+    const nuevaBitacora = (bitacora || []).map((c) => (idsQuitar.includes(c.alumnoId) ? { ...c, alumnoId: idConservar } : c));
+    await setBitacora(nuevaBitacora);
+
+    // 4) Fusionar los campos de la ficha y quitar los registros sobrantes
+    const fichaFusionada = fusionarCamposAlumno(idConservar, grupo.alumnos);
+    const nuevosAlumnos = alumnos.filter((a) => !idsQuitar.includes(a.id)).map((a) => (a.id === idConservar ? fichaFusionada : a));
+    await setAlumnos(nuevosAlumnos);
+
+    setFusionando(null);
+    setHechos((prev) => [...prev, llaveGrupo]);
+    onStamp && onStamp("Fusionado");
+  };
+
+  return (
+    <div className="card" style={{ borderColor: "var(--rojo, #b23b3b)", background: "rgba(178,59,59,0.06)" }}>
+      <button onClick={() => setAbierto((v) => !v)} className="flex items-center justify-between w-full" style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+        <span className="font-display flex items-center gap-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+          <AlertCircle size={16} color="#b23b3b" /> Se encontraron {grupos.length} posible(s) alumno(s) duplicado(s)
+        </span>
+        {abierto ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
+      {abierto && (
+        <div className="flex flex-col gap-3 mt-3">
+          <p className="text-sm" style={{ opacity: 0.7 }}>
+            Elige qué ficha quieres conservar de cada grupo (por default se sugiere la más completa). Al fusionar, se combinan los datos que falten, se pasan asistencia/calificaciones/incidencias del registro que se quita al que se conserva, y se borra el duplicado — nada de lo ya capturado se pierde.
+          </p>
+          {grupos.map((grupo, i) => {
+            const llaveGrupo = grupo.criterio + "::" + grupo.detalle + "::" + i;
+            if (hechos.includes(llaveGrupo)) {
+              return <div key={llaveGrupo} className="text-sm" style={{ color: "var(--verde)" }}>✓ Grupo "{grupo.detalle}" fusionado.</div>;
+            }
+            const elegido = seleccion[llaveGrupo] || grupo.alumnos.slice().sort((a, b) => contarCamposLlenos(b) - contarCamposLlenos(a))[0].id;
+            return (
+              <div key={llaveGrupo} className="card" style={{ background: "var(--fondo)" }}>
+                <div className="text-sm font-medium mb-2">{grupo.criterio}{grupo.confianza === "media" && <span className="pastilla ml-2" style={{ background: "rgba(245,179,67,0.18)", color: "var(--ambar)" }}>revisar con cuidado</span>}</div>
+                <div className="flex flex-col gap-2">
+                  {grupo.alumnos.map((a) => (
+                    <label key={a.id} className="flex items-start gap-2 text-sm" style={{ padding: "0.4rem", border: elegido === a.id ? "1.5px solid var(--azul)" : "1px solid var(--linea)", borderRadius: "0.5rem", cursor: "pointer" }}>
+                      <input type="radio" checked={elegido === a.id} onChange={() => elegir(llaveGrupo, a.id)} style={{ marginTop: "0.2rem" }} />
+                      <div>
+                        <div className="font-medium">{nombreAlumno(a)} {elegido === a.id && <span style={{ color: "var(--azul)", fontWeight: 700 }}>(se conserva)</span>}</div>
+                        <div className="font-mono" style={{ fontSize: "0.65rem", opacity: 0.6 }}>
+                          NIA {a.NIA || "—"} · Grado {a.grado}{a.ESCUELA_GRUPO || ""} · CURP {a.ALUMNO_CURP || "—"} · {contarCamposLlenos(a)} campos llenos · capturado {a.FECHA_CAPTURA || "—"}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <button onClick={() => fusionarGrupo(grupo, llaveGrupo)} disabled={fusionando === llaveGrupo} className="btn-primario mt-2" style={{ fontSize: "0.78rem" }}>
+                  {fusionando === llaveGrupo ? "Fusionando…" : <><Check size={14} /> Fusionar y quitar duplicado(s)</>}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Calcula la fecha de nacimiento a partir del CURP (posiciones 5-10: AAMMDD),
 // usando el carácter 17 para saber el siglo (letra = 1900s, dígito = 2000+).
 function fechaDeCURP(curp) {
@@ -2584,13 +2763,14 @@ function VistaPreviaCedula({ alumno, onCerrar, onEditar }) {
 }
 
 /* ---------- Inscripciones ---------- */
-function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp }) {
+function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, asistencia, calificaciones, bitacora, setAsistencia, setCalificaciones, setBitacora }) {
   const [grado, setGrado] = useState(gradosPermitidos[0]);
   const [form, setForm] = useState(() => alumnoVacio(gradosPermitidos[0]));
   const [seccionAbierta, setSeccionAbierta] = useState("alumno");
   const [expandidoId, setExpandidoId] = useState(null);
   const [editandoId, setEditandoId] = useState(null);
   const [imprimiendoCedula, setImprimiendoCedula] = useState(null);
+  const [guardando, setGuardando] = useState(false);
 
   const cambiarCampo = (clave, valor) => {
     setForm((f) => {
@@ -2646,16 +2826,23 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp }) 
     }
   };
 
-  const guardar = () => {
+  const nia = (form.NIA || "").trim();
+  const duplicadoNIA = nia && alumnos.find((a) => a.id !== editandoId && (a.NIA || "").trim() === nia);
+
+  const guardar = async () => {
+    if (guardando) return; // evita doble clic mientras se está guardando (causa real de los duplicados)
     if (!form.ALUMNO_NOMBRES?.trim() && !form.ALUMNO_APELLIDO_PATERNO?.trim()) return;
+    if (!editandoId && duplicadoNIA) return; // ya existe alguien con ese NIA — el aviso de abajo lo explica, no se deja crear otro
     const datos = { ...form, grado, ESCUELA_NOMBRE: form.ESCUELA_NOMBRE || "Tse. Amado Nervo", ESCUELA_CCT: form.ESCUELA_CCT || "21ETV0473W", ESCUELA_GRADO: form.ESCUELA_GRADO || String(grado), ESCUELA_ZONA_ESCOLAR: form.ESCUELA_ZONA_ESCOLAR || "52", FECHA_CAPTURA: form.FECHA_CAPTURA || hoyISO() };
+    setGuardando(true);
     if (editandoId) {
-      setAlumnos(alumnos.map((a) => (a.id === editandoId ? { ...datos, id: editandoId } : a)));
+      await setAlumnos(alumnos.map((a) => (a.id === editandoId ? { ...datos, id: editandoId } : a)));
       onStamp("Actualizado");
     } else {
-      setAlumnos([...alumnos, { ...datos, id: uid() }]);
+      await setAlumnos([...alumnos, { ...datos, id: uid() }]);
       onStamp("Inscrito");
     }
+    setGuardando(false);
     setForm(alumnoVacio(grado));
     setSeccionAbierta("alumno");
     setEditandoId(null);
@@ -2691,6 +2878,7 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp }) 
   return (
     <>
     <div className="flex flex-col gap-4">
+      <PanelDuplicadosAlumnos alumnos={alumnos} asistencia={asistencia} calificaciones={calificaciones} bitacora={bitacora} setAlumnos={setAlumnos} setAsistencia={setAsistencia} setCalificaciones={setCalificaciones} setBitacora={setBitacora} onStamp={onStamp} />
       <SelectorGrado grados={gradosPermitidos} valor={grado} onCambia={(g) => { setGrado(g); if (!editandoId) setForm(alumnoVacio(g)); }} />
 
       {editandoId ? (
@@ -2716,9 +2904,14 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp }) 
         />
       ))}
 
+      {!editandoId && duplicadoNIA && (
+        <div className="card" style={{ borderColor: "var(--ambar)", background: "rgba(245,179,67,0.1)" }}>
+          <p className="text-sm font-medium">Ya existe un alumno inscrito con el NIA {nia}: {nombreAlumno(duplicadoNIA)}. Para evitar duplicarlo, búscalo arriba y da clic en "Editar" en vez de inscribirlo de nuevo.</p>
+        </div>
+      )}
       <div className="flex gap-2">
-        <button onClick={guardar} className="btn-primario" style={{ flex: 1 }}>
-          {editandoId ? <Check size={16} /> : <Plus size={16} />} {editandoId ? "Guardar cambios" : "Inscribir alumno"}
+        <button onClick={guardar} disabled={guardando || (!editandoId && !!duplicadoNIA)} className="btn-primario" style={{ flex: 1 }}>
+          {guardando ? "Guardando…" : <>{editandoId ? <Check size={16} /> : <Plus size={16} />} {editandoId ? "Guardar cambios" : "Inscribir alumno"}</>}
         </button>
         {editandoId && (
           <button onClick={cancelarEdicion} className="btn-secundario">Cancelar</button>
@@ -2831,18 +3024,22 @@ function DatosPersonal({ personal, setPersonal, onStamp }) {
   const [editandoId, setEditandoId] = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [imprimiendoId, setImprimiendoId] = useState(null);
+  const [guardando, setGuardando] = useState(false);
 
   const cambiarCampo = (clave, valor) => setForm((f) => ({ ...f, [clave]: valor }));
 
-  const guardar = () => {
+  const guardar = async () => {
+    if (guardando) return; // evita doble clic -> registros duplicados (mismo problema ya corregido en Inscripciones)
     if (!form.PERSONAL_NOMBRES?.trim() && !form.PERSONAL_APELLIDO_PATERNO?.trim()) return;
+    setGuardando(true);
     if (editandoId) {
-      setPersonal(personal.map((p) => (p.id === editandoId ? { ...form, id: editandoId } : p)));
+      await setPersonal(personal.map((p) => (p.id === editandoId ? { ...form, id: editandoId } : p)));
       onStamp("Actualizado");
     } else {
-      setPersonal([...personal, { ...form, id: uid() }]);
+      await setPersonal([...personal, { ...form, id: uid() }]);
       onStamp("Guardado");
     }
+    setGuardando(false);
     setForm(personalVacio());
     setSeccionAbierta("datos");
     setEditandoId(null);
@@ -2897,8 +3094,8 @@ function DatosPersonal({ personal, setPersonal, onStamp }) {
       ))}
 
       <div className="flex gap-2">
-        <button onClick={guardar} className="btn-primario" style={{ flex: 1 }}>
-          {editandoId ? <Check size={16} /> : <Plus size={16} />} {editandoId ? "Guardar cambios" : "Agregar al personal"}
+        <button onClick={guardar} disabled={guardando} className="btn-primario" style={{ flex: 1 }}>
+          {guardando ? "Guardando…" : <>{editandoId ? <Check size={16} /> : <Plus size={16} />} {editandoId ? "Guardar cambios" : "Agregar al personal"}</>}
         </button>
         {editandoId && (
           <button onClick={cancelarEdicion} className="btn-secundario">Cancelar</button>
@@ -9154,7 +9351,7 @@ function App() {
         {tab === "diagnostico" && <DiagnosticoTab />}
         {tab === "eia" && <EIAEmbebido />}
         {tab === "asistencia" && <Asistencia alumnos={alumnos} asistencia={asistencia} setAsistencia={setAsistencia} gradosPermitidos={gradosPermitidos} onStamp={fireStamp} />}
-        {tab === "inscripciones" && <Inscripciones alumnos={alumnos} setAlumnos={setAlumnos} gradosPermitidos={gradosPermitidos} rol={rol} onStamp={fireStamp} />}
+        {tab === "inscripciones" && <Inscripciones alumnos={alumnos} setAlumnos={setAlumnos} gradosPermitidos={gradosPermitidos} rol={rol} onStamp={fireStamp} asistencia={asistencia} calificaciones={calificaciones} bitacora={bitacora} setAsistencia={setAsistencia} setCalificaciones={setCalificaciones} setBitacora={setBitacora} />}
         {tab === "directorio" && <Directorio alumnos={alumnos} gradosPermitidos={gradosPermitidos} />}
         {tab === "estadistica" && <Estadistica alumnos={alumnos} gradosPermitidos={gradosPermitidos} />}
         {tab === "calificaciones" && <Calificaciones alumnos={alumnos} calificaciones={calificaciones} setCalificaciones={setCalificaciones} gradosPermitidos={gradosPermitidos} onStamp={fireStamp} />}
