@@ -1763,6 +1763,103 @@ function contarCamposLlenos(a) {
   return Object.keys(a || {}).filter((k) => k !== "id" && a[k] !== undefined && a[k] !== null && String(a[k]).trim() !== "").length;
 }
 
+/* ---------- Resultados de Examen Diagnóstico / Diagnóstico Integral / Estilos de Aprendizaje ----------
+   Estos tres instrumentos ya viven como páginas aparte (examen.html, diagnostico.html,
+   estilosaprendizaje.html) con su propio panel docente. Aquí solo se PEGA una copia de
+   sus resultados (el director la copia de ahí o de donde los tenga) para poder verla
+   dentro de Control Escolar, junto con el resto de los documentos de la escuela, sin
+   tener que abrir cada página por separado. Se guarda con el mismo sistema genérico de
+   siempre (prefijos nuevos, sin hoja ni acción nueva en el Apps Script). */
+
+// Parser CSV completo (comillas, comas y saltos de línea dentro de un campo) --
+// necesario porque el Diagnóstico Integral trae respuestas largas de los alumnos
+// que pueden incluir comas y saltos de línea dentro de las comillas.
+function parsearCSV(texto) {
+  const filas = [];
+  let fila = [];
+  let campo = "";
+  let enComillas = false;
+  const s = (texto || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (enComillas) {
+      if (c === '"') {
+        if (s[i + 1] === '"') { campo += '"'; i++; }
+        else { enComillas = false; }
+      } else {
+        campo += c;
+      }
+    } else if (c === '"') {
+      enComillas = true;
+    } else if (c === ",") {
+      fila.push(campo); campo = "";
+    } else if (c === "\n") {
+      fila.push(campo); filas.push(fila); fila = []; campo = "";
+    } else {
+      campo += c;
+    }
+  }
+  if (campo !== "" || fila.length > 0) { fila.push(campo); filas.push(fila); }
+  return filas.filter((f) => !(f.length === 1 && f[0].trim() === ""));
+}
+
+function filasCSVAObjetos(texto) {
+  const filas = parsearCSV(texto);
+  if (filas.length < 2) return [];
+  const encabezados = filas[0].map((h) => h.trim());
+  return filas.slice(1)
+    .filter((f) => f.some((v) => (v || "").trim() !== ""))
+    .map((f) => {
+      const obj = {};
+      encabezados.forEach((h, idx) => { obj[h] = (f[idx] !== undefined ? f[idx] : "").trim(); });
+      return obj;
+    });
+}
+
+// El examen diagnóstico se pega como tabla (Campo, N°, Reactivo, % de aciertos del
+// grupo), separada por tabulador -- tal como se copia de una hoja de cálculo.
+function parsearFilasExamen(texto) {
+  const lineas = (texto || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const filas = [];
+  for (const linea of lineas) {
+    const partes = linea.split("\t").length >= 4 ? linea.split("\t") : linea.split(/\s{2,}/);
+    if (partes.length < 4) continue;
+    const [campo, n, ...resto] = partes;
+    const pct = resto[resto.length - 1];
+    const reactivo = resto.slice(0, -1).join(" ").trim();
+    if (/^campo$/i.test((campo || "").trim())) continue; // encabezado
+    const numero = parseInt(n, 10);
+    if (!Number.isFinite(numero)) continue;
+    const porcentaje = parseFloat(String(pct).replace("%", "").trim());
+    if (!Number.isFinite(porcentaje)) continue;
+    filas.push({ campo: campo.trim(), n: numero, reactivo, porcentaje });
+  }
+  return filas;
+}
+
+// Vincula (solo para mostrar, no modifica nada) un nombre suelto del Diagnóstico
+// Integral / Estilos de Aprendizaje con su ficha real de Inscripciones, comparando
+// el conjunto de palabras del nombre sin importar el orden en que vengan.
+function intentarVincularAlumno(nombreCrudo, alumnos) {
+  const tokensCrudo = normalizarTexto(nombreCrudo).split(/\s+/).filter(Boolean);
+  if (tokensCrudo.length === 0) return null;
+  const setCrudo = new Set(tokensCrudo);
+  for (const a of alumnos || []) {
+    const tokensAlumno = normalizarTexto(nombreAlumno(a)).split(/\s+/).filter(Boolean);
+    if (tokensAlumno.length !== setCrudo.size) continue;
+    if (tokensAlumno.every((t) => setCrudo.has(t))) return a;
+  }
+  return null;
+}
+
+function gradoDeGradoGrupo(texto) {
+  const m = (texto || "").match(/(\d+)/);
+  return m ? m[1] : "";
+}
+
+const UMBRAL_EXAMEN = (prom) =>
+  prom >= 8 ? { txt: "Adecuado", color: "var(--verde)" } : prom >= 6 ? { txt: "Regular", color: "#b58900" } : { txt: "Reforzar", color: "var(--rojo)" };
+
 // Agrupa alumnos que parecen ser el mismo: primero por NIA idéntico (confianza
 // alta), y entre los que no tienen NIA capturado, por nombre completo + fecha
 // de nacimiento idénticos (confianza media -- se revisa a mano, nunca se
@@ -4742,6 +4839,352 @@ function EIAEmbebido() {
           background: "#fff",
         }}
       />
+    </div>
+  );
+}
+
+/* ---------- Resultados 2026-2027: Examen Diagnóstico + Diagnóstico Integral + Estilos de Aprendizaje ----------
+   Un solo lugar dentro de Control Escolar para ver los resultados de los tres
+   instrumentos aplicados a inicio de ciclo, junto con el resto de los documentos
+   de la escuela (antes solo se veían abriendo cada página por separado). El
+   director pega aquí la tabla/CSV que ya tiene y la app la guarda con el mismo
+   sistema genérico de siempre. */
+
+function PanelExamenResultados({ examenResultados, setExamenResultados, onStamp }) {
+  const [gradoSel, setGradoSel] = useState("1");
+  const [texto, setTexto] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [mostrarImportar, setMostrarImportar] = useState(false);
+
+  const importar = async () => {
+    const filas = parsearFilasExamen(texto);
+    if (filas.length === 0) {
+      alert("No se reconoció ninguna fila. Pega la tabla completa (Campo, N°, Reactivo, % de aciertos del grupo), tal como la copiaste.");
+      return;
+    }
+    setGuardando(true);
+    await setExamenResultados({ ...examenResultados, [gradoSel]: { filas, fecha: hoyISO() } });
+    setGuardando(false);
+    setTexto("");
+    setMostrarImportar(false);
+    onStamp && onStamp("Resultados del examen guardados");
+  };
+
+  const borrarGrado = async (g) => {
+    if (!confirm(`¿Borrar los resultados del examen de ${g}° grado? Puedes volver a importarlos después.`)) return;
+    const nuevo = { ...examenResultados };
+    delete nuevo[g];
+    await setExamenResultados(nuevo);
+  };
+
+  const gradosConDatos = Object.keys(examenResultados || {}).sort();
+  const nombresCampos = CAMPOS_FORMATIVOS_NEM.map((c) => c.nombre);
+
+  const promediosPorGrado = {};
+  for (const g of gradosConDatos) {
+    const filas = (examenResultados[g] || {}).filas || [];
+    const porCampo = {};
+    filas.forEach((f) => { (porCampo[f.campo] = porCampo[f.campo] || []).push(f.porcentaje); });
+    promediosPorGrado[g] = {};
+    Object.keys(porCampo).forEach((campo) => {
+      const lista = porCampo[campo];
+      promediosPorGrado[g][campo] = Math.round((lista.reduce((a, b) => a + b, 0) / lista.length) / 10 * 10) / 10;
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="card flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-medium">Examen Diagnóstico Académico</div>
+          <button className="btn-secundario" onClick={() => setMostrarImportar((v) => !v)}>{mostrarImportar ? "Cerrar" : "Importar / actualizar"}</button>
+        </div>
+        <p className="text-sm" style={{ opacity: 0.6 }}>% de aciertos por reactivo, tal como se ve en `examen.html` → Promedio por campo formativo.</p>
+        {mostrarImportar && (
+          <div className="flex flex-col gap-2">
+            <select className="campo" value={gradoSel} onChange={(e) => setGradoSel(e.target.value)}>
+              <option value="1">1° grado</option>
+              <option value="2">2° grado</option>
+              <option value="3">3er grado</option>
+            </select>
+            <textarea className="campo" rows={6} placeholder={"Campo\tN°\tReactivo\t% de aciertos del grupo\n..."} value={texto} onChange={(e) => setTexto(e.target.value)} />
+            <button className="btn-primario" onClick={importar} disabled={guardando || !texto.trim()}>{guardando ? "Guardando…" : `Importar como ${gradoSel}° grado`}</button>
+          </div>
+        )}
+      </div>
+
+      {gradosConDatos.length === 0 && <p className="text-sm" style={{ opacity: 0.55 }}>Todavía no hay resultados del examen importados aquí.</p>}
+
+      {gradosConDatos.length > 0 && (
+        <div className="card">
+          <div className="text-sm font-medium mb-2">Comparación entre grados</div>
+          <div style={{ overflowX: "auto" }}>
+            <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+                  <th style={{ textAlign: "left", padding: "4px 6px" }}>Campo formativo</th>
+                  {gradosConDatos.map((g) => <th key={g} style={{ padding: "4px 6px" }}>{g}°</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {nombresCampos.map((campo) => (
+                  <tr key={campo} style={{ borderBottom: "1px solid var(--borde)" }}>
+                    <td style={{ padding: "4px 6px" }}>{campo}</td>
+                    {gradosConDatos.map((g) => {
+                      const prom = (promediosPorGrado[g] || {})[campo];
+                      const est = prom == null ? null : UMBRAL_EXAMEN(prom);
+                      return (
+                        <td key={g} style={{ padding: "4px 6px", textAlign: "center" }}>
+                          {prom == null ? "—" : <span style={{ color: est.color, fontWeight: 600 }}>{prom} · {est.txt}</span>}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {gradosConDatos.map((g) => {
+        const filas = [...((examenResultados[g] || {}).filas || [])].sort((a, b) => a.porcentaje - b.porcentaje).slice(0, 5);
+        return (
+          <div key={g} className="card flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">{g}° grado — reactivos más débiles</div>
+              <button className="btn-secundario" onClick={() => borrarGrado(g)} style={{ fontSize: "0.7rem", padding: "0.3rem 0.5rem" }}><Trash2 size={13} /></button>
+            </div>
+            <ul className="flex flex-col gap-1">
+              {filas.map((f, i) => (
+                <li key={i} className="text-sm" style={{ opacity: 0.85 }}><b>{f.porcentaje}%</b> · {f.campo} — {f.reactivo}</li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PanelDiagnosticoIntegral({ alumnos, registros, setRegistros, onStamp }) {
+  const [texto, setTexto] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [mostrarImportar, setMostrarImportar] = useState(false);
+  const [abierto, setAbierto] = useState(null);
+
+  const importar = async () => {
+    const filas = filasCSVAObjetos(texto);
+    if (filas.length === 0) {
+      alert("No se reconoció ninguna fila. Pega el CSV completo, con encabezados (id, grado_grupo, nombre, fecha, ...).");
+      return;
+    }
+    setGuardando(true);
+    const mapa = new Map((registros || []).map((r) => [r.id, r]));
+    filas.forEach((f) => {
+      const id = (f.id && f.id.trim()) || uid();
+      mapa.set(id, { ...f, id, grado: gradoDeGradoGrupo(f.grado_grupo) });
+    });
+    await setRegistros(Array.from(mapa.values()));
+    setGuardando(false);
+    setTexto("");
+    setMostrarImportar(false);
+    onStamp && onStamp("Diagnóstico Integral guardado");
+  };
+
+  const grados = Array.from(new Set((registros || []).map((r) => r.grado))).sort((a, b) => Number(a) - Number(b));
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="card flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-medium">Diagnóstico Integral (socioemocional, contexto, comunitario)</div>
+          <button className="btn-secundario" onClick={() => setMostrarImportar((v) => !v)}>{mostrarImportar ? "Cerrar" : "Importar / actualizar"}</button>
+        </div>
+        <p className="text-sm" style={{ opacity: 0.6 }}>{(registros || []).length} respuesta(s) guardadas aquí, tal como se ven en `diagnostico.html` → panel docente.</p>
+        {mostrarImportar && (
+          <div className="flex flex-col gap-2">
+            <textarea className="campo" rows={7} placeholder={"id,grado_grupo,nombre,fecha,se_1,...\n..."} value={texto} onChange={(e) => setTexto(e.target.value)} />
+            <button className="btn-primario" onClick={importar} disabled={guardando || !texto.trim()}>{guardando ? "Guardando…" : "Importar CSV"}</button>
+          </div>
+        )}
+      </div>
+
+      {grados.length === 0 && <p className="text-sm" style={{ opacity: 0.55 }}>Todavía no hay respuestas importadas aquí.</p>}
+
+      {grados.map((g) => {
+        const filasGrado = (registros || []).filter((r) => r.grado === g).sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", "es"));
+        return (
+          <div key={g} className="card">
+            <div className="text-sm font-medium mb-2">{g}° grado — {filasGrado.length} respuesta(s)</div>
+            <div className="flex flex-col gap-1">
+              {filasGrado.map((r) => {
+                const vinculo = intentarVincularAlumno(r.nombre, alumnos);
+                const abiertoAqui = abierto === r.id;
+                return (
+                  <div key={r.id} style={{ borderBottom: "1px solid var(--borde)", paddingBottom: "4px" }}>
+                    <button
+                      onClick={() => setAbierto(abiertoAqui ? null : r.id)}
+                      className="flex items-center justify-between w-full"
+                      style={{ background: "transparent", border: "none", padding: "4px 2px", cursor: "pointer", textAlign: "left" }}
+                    >
+                      <span className="text-sm">{r.nombre} {vinculo ? <span style={{ opacity: 0.45 }}>· vinculado con Inscripciones</span> : null}</span>
+                      {abiertoAqui ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    {abiertoAqui && (
+                      <div className="text-sm" style={{ opacity: 0.8, padding: "2px 2px 8px", display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <div><b>Fecha:</b> {r.fecha || "—"}</div>
+                        <div><b>Convivencia en casa:</b> {r.convivencia || "—"}</div>
+                        <div><b>Servicios en casa:</b> {r.servicios || "—"}</div>
+                        <div><b>Lugar de estudio propio:</b> {r.lugar_estudio || "—"}</div>
+                        <div><b>Internet para tareas:</b> {r.internet_tareas || "—"}</div>
+                        <div><b>Actividad de padres/tutores:</b> {r.actividad_padres || "—"}</div>
+                        <div><b>Problema de la comunidad:</b> {r.problemas_comunidad || "—"}</div>
+                        <div><b>Le preocupa:</b> {r.preocupacion || "—"}</div>
+                        <div><b>Lo hace feliz:</b> {r.felicidad || "—"}</div>
+                        <div><b>Propone para mejorar la convivencia:</b> {r.mejorar_convivencia || "—"}</div>
+                        <div><b>Proyecto que le gustaría hacer:</b> {r.proyecto_deseado || "—"}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PanelEstilosAprendizaje({ alumnos, registros, setRegistros, onStamp }) {
+  const [texto, setTexto] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [mostrarImportar, setMostrarImportar] = useState(false);
+
+  const importar = async () => {
+    const filas = filasCSVAObjetos(texto);
+    if (filas.length === 0) {
+      alert("No se reconoció ninguna fila. Pega el CSV completo, con encabezados (nombre, grado, grupo, visual, auditivo, kinestesico, estilo_dominante, fecha).");
+      return;
+    }
+    setGuardando(true);
+    // Un resultado por alumno: si ya había uno con el mismo nombre (normalizado), se reemplaza en vez de duplicarse.
+    const mapa = new Map((registros || []).map((r) => [normalizarTexto(r.nombre), r]));
+    filas.forEach((f) => {
+      const clave = normalizarTexto(f.nombre);
+      const existente = mapa.get(clave);
+      mapa.set(clave, { ...f, id: (existente && existente.id) || uid(), grado: (f.grado || "").replace(/[^0-9]/g, "") });
+    });
+    await setRegistros(Array.from(mapa.values()));
+    setGuardando(false);
+    setTexto("");
+    setMostrarImportar(false);
+    onStamp && onStamp("Estilos de Aprendizaje guardados");
+  };
+
+  const grados = Array.from(new Set((registros || []).map((r) => r.grado))).sort((a, b) => Number(a) - Number(b));
+  const total = (registros || []).length;
+  const conteo = { Visual: 0, Auditivo: 0, "Kinestésico": 0 };
+  (registros || []).forEach((r) => { if (conteo[r.estilo_dominante] !== undefined) conteo[r.estilo_dominante]++; });
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="card flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-medium">Estilos de Aprendizaje (VAK)</div>
+          <button className="btn-secundario" onClick={() => setMostrarImportar((v) => !v)}>{mostrarImportar ? "Cerrar" : "Importar / actualizar"}</button>
+        </div>
+        <p className="text-sm" style={{ opacity: 0.6 }}>{total} alumno(s) guardados aquí, tal como se ven en `estilosaprendizaje.html` → panel docente.</p>
+        {mostrarImportar && (
+          <div className="flex flex-col gap-2">
+            <textarea className="campo" rows={7} placeholder={"nombre,grado,grupo,visual,auditivo,kinestesico,estilo_dominante,fecha\n..."} value={texto} onChange={(e) => setTexto(e.target.value)} />
+            <button className="btn-primario" onClick={importar} disabled={guardando || !texto.trim()}>{guardando ? "Guardando…" : "Importar CSV"}</button>
+          </div>
+        )}
+      </div>
+
+      {total === 0 && <p className="text-sm" style={{ opacity: 0.55 }}>Todavía no hay resultados de Estilos de Aprendizaje importados aquí.</p>}
+
+      {total > 0 && (
+        <div className="card">
+          <div className="text-sm font-medium mb-2">Distribución en toda la escuela</div>
+          <div className="flex gap-4 flex-wrap">
+            {Object.keys(conteo).map((k) => (
+              <div key={k} className="text-sm">
+                <b>{k}:</b> {conteo[k]} ({total ? Math.round((conteo[k] / total) * 100) : 0}%)
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {grados.map((g) => {
+        const filasGrado = (registros || []).filter((r) => r.grado === g).sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", "es"));
+        return (
+          <div key={g} className="card">
+            <div className="text-sm font-medium mb-2">{g}° grado</div>
+            <div style={{ overflowX: "auto" }}>
+              <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+                    <th style={{ textAlign: "left", padding: "4px 6px" }}>Alumno</th>
+                    <th style={{ padding: "4px 6px" }}>Visual</th>
+                    <th style={{ padding: "4px 6px" }}>Auditivo</th>
+                    <th style={{ padding: "4px 6px" }}>Kinestésico</th>
+                    <th style={{ padding: "4px 6px" }}>Dominante</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filasGrado.map((r) => {
+                    const vinculo = intentarVincularAlumno(r.nombre, alumnos);
+                    return (
+                      <tr key={r.id} style={{ borderBottom: "1px solid var(--borde)" }}>
+                        <td style={{ padding: "4px 6px" }}>{r.nombre}{vinculo ? "" : " ⚠︎"}</td>
+                        <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.visual}</td>
+                        <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.auditivo}</td>
+                        <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.kinestesico}</td>
+                        <td style={{ padding: "4px 6px", textAlign: "center", fontWeight: 600 }}>{r.estilo_dominante}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ResultadosDiagnostico2026({ alumnos, examenResultados, setExamenResultados, diagnosticoIntegral, setDiagnosticoIntegral, estilosAprendizaje, setEstilosAprendizaje, onStamp }) {
+  const [subTab, setSubTab] = useState("examen");
+  const SUBTABS = [
+    { id: "examen", label: "Examen Diagnóstico" },
+    { id: "integral", label: "Diagnóstico Integral" },
+    { id: "estilos", label: "Estilos de Aprendizaje" },
+  ];
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm" style={{ opacity: 0.6 }}>
+        Resultados de los tres diagnósticos aplicados a inicio de ciclo, en un solo lugar junto con el resto de los documentos de la escuela. Pega aquí una copia de lo que ya tienes capturado en cada herramienta para poder verlo, sin tener que abrir cada página por separado.
+      </p>
+      <div className="flex gap-2 flex-wrap">
+        {SUBTABS.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setSubTab(s.id)}
+            className={subTab === s.id ? "btn-primario" : "btn-secundario"}
+            style={{ fontSize: "0.78rem", padding: "0.4rem 0.75rem" }}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+      {subTab === "examen" && <PanelExamenResultados examenResultados={examenResultados} setExamenResultados={setExamenResultados} onStamp={onStamp} />}
+      {subTab === "integral" && <PanelDiagnosticoIntegral alumnos={alumnos} registros={diagnosticoIntegral} setRegistros={setDiagnosticoIntegral} onStamp={onStamp} />}
+      {subTab === "estilos" && <PanelEstilosAprendizaje alumnos={alumnos} registros={estilosAprendizaje} setRegistros={setEstilosAprendizaje} onStamp={onStamp} />}
     </div>
   );
 }
@@ -8990,6 +9433,9 @@ function App() {
   const [reglamento, setReglamentoState] = useState("");
   const [ligasPropias, setLigasPropiasState] = useState([]);
   const [personal, setPersonalState] = useState([]);
+  const [examenResultados, setExamenResultadosState] = useState({});
+  const [diagnosticoIntegral, setDiagnosticoIntegralState] = useState([]);
+  const [estilosAprendizaje, setEstilosAprendizajeState] = useState([]);
   const [stamp, setStamp] = useState(null);
   const [avisoGuardado, setAvisoGuardado] = useState(null);
 
@@ -9005,7 +9451,7 @@ function App() {
     if (!liga) { setCargando(false); return; }
     setCargando(true);
     (async () => {
-      const [al, asi, cal, av, ev, evid, cte, bit, reg, ligas, per] = await Promise.all([
+      const [al, asi, cal, av, ev, evid, cte, bit, reg, ligas, per, exRes, diagInt, estAp] = await Promise.all([
         cargarListaMigrando("alumno:", "alumnos"),
         cargarObjetoMigrando("asistencia:", "asistencia-registro"),
         cargarObjetoMigrando("calificacion:", "calificaciones"),
@@ -9017,11 +9463,15 @@ function App() {
         getStorage("reglamento-texto", ""),
         cargarListaMigrando("liga:", "ligas-propias"),
         cargarListaMigrando("personal:", "personal-escolar"),
+        listarStorageObjeto("examenresultado:"),
+        listarStorage("diagintegral:"),
+        listarStorage("estilosvak:"),
       ]);
       setAlumnosState(al); setAsistenciaState(asi); setCalificacionesState(cal);
       setAvisosState(av); setEventosState(ev); setEvidenciasState(evid);
       setCteSesionesState(cte); setBitacoraState(bit); setReglamentoState(reg);
       setLigasPropiasState(ligas); setPersonalState(per);
+      setExamenResultadosState(exRes); setDiagnosticoIntegralState(diagInt); setEstilosAprendizajeState(estAp);
       setCargando(false);
     })();
   }, [liga]);
@@ -9088,6 +9538,9 @@ function App() {
   const setReglamento = (v) => { setReglamentoState(v); setStorage("reglamento-texto", v); };
   const setLigasPropias = (v) => guardarListaPorId("liga:", setLigasPropiasState, ligasPropias, v);
   const setPersonal = (v) => guardarListaPorId("personal:", setPersonalState, personal, v);
+  const setExamenResultados = (v) => guardarObjetoPorClave("examenresultado:", setExamenResultadosState, examenResultados, v);
+  const setDiagnosticoIntegral = (v) => guardarListaPorId("diagintegral:", setDiagnosticoIntegralState, diagnosticoIntegral, v);
+  const setEstilosAprendizaje = (v) => guardarListaPorId("estilosvak:", setEstilosAprendizajeState, estilosAprendizaje, v);
 
   const estilos = `
     @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
@@ -9240,6 +9693,7 @@ function App() {
   const TABS = [
     { id: "inicio", label: "Inicio", icon: School },
     { id: "diagnostico", label: "Diagnóstico", icon: Globe2 },
+    { id: "resultadosdx", label: "Resultados 2026-2027", icon: BarChart3 },
     { id: "eia", label: "EIA · Fase 6", icon: ClipboardCheck },
     { id: "asistencia", label: "Asistencia", icon: CalendarCheck2 },
     { id: "inscripciones", label: "Inscripciones", icon: Users },
@@ -9261,7 +9715,7 @@ function App() {
   const NAV_GROUPS = [
     { id: "inicio", tabs: ["inicio"] },
     { id: "alumnos", label: "Alumnos", tabs: ["inscripciones", "directorio", "estadistica", "asistencia", "calificaciones", "incidencias"] },
-    { id: "diagnosticos", label: "Diagnósticos", tabs: ["diagnostico", "eia"] },
+    { id: "diagnosticos", label: "Diagnósticos", tabs: ["diagnostico", "resultadosdx", "eia"] },
     { id: "comunicacion", label: "Comunicación", tabs: ["avisos", "calendario"] },
     { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "pic", "consejo", "documentos", "personal"] },
     { id: "recursos", tabs: ["recursos"] },
@@ -9374,6 +9828,18 @@ function App() {
       <main className="px-4 py-5 max-w-lg sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full">
         {tab === "inicio" && <Inicio rol={rol} alumnos={alumnos} asistencia={asistencia} avisos={avisos} eventos={eventos} gradosPermitidos={gradosPermitidos} />}
         {tab === "diagnostico" && <DiagnosticoTab />}
+        {tab === "resultadosdx" && (
+          <ResultadosDiagnostico2026
+            alumnos={alumnos}
+            examenResultados={examenResultados}
+            setExamenResultados={setExamenResultados}
+            diagnosticoIntegral={diagnosticoIntegral}
+            setDiagnosticoIntegral={setDiagnosticoIntegral}
+            estilosAprendizaje={estilosAprendizaje}
+            setEstilosAprendizaje={setEstilosAprendizaje}
+            onStamp={fireStamp}
+          />
+        )}
         {tab === "eia" && <EIAEmbebido />}
         {tab === "asistencia" && <Asistencia alumnos={alumnos} asistencia={asistencia} setAsistencia={setAsistencia} gradosPermitidos={gradosPermitidos} onStamp={fireStamp} />}
         {tab === "inscripciones" && <Inscripciones alumnos={alumnos} setAlumnos={setAlumnos} gradosPermitidos={gradosPermitidos} rol={rol} onStamp={fireStamp} asistencia={asistencia} calificaciones={calificaciones} bitacora={bitacora} setAsistencia={setAsistencia} setCalificaciones={setCalificaciones} setBitacora={setBitacora} />}
