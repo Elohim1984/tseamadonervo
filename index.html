@@ -5438,19 +5438,50 @@ const DOCUMENTOS_PLANEACION_COMPLETOS = [
   { emoji: "📙", titulo: "PEMC 2026-2027", descripcion: "Programa Escolar de Mejora Continua", url: "pemc-2026-2027.html" },
 ];
 
+async function cargarResumenImpresionPIC() {
+  const obs = await listarStorage("progObs:");
+  const porGrado = {};
+  await Promise.all(["1", "2", "3"].map(async (g) => {
+    const [contextualizacion, codiseno, seleccion, planeacion] = await Promise.all([
+      Promise.all(CAMPOS_FORMATIVOS_NEM.map((c) => getStorage(`progAnalitico:${g}:contextualizacion:${c.slug}`, {}).then((v) => ({ ...c, ...v })))),
+      Promise.all(TRIMESTRES.map((t) => getStorage(`progAnalitico:${g}:codiseno:${t.slug}`, {}).then((v) => ({ ...t, ...v })))),
+      getStorage(`pic:${g}:seleccion`, {}),
+      getStorage(`pic:${g}:planeacion`, {}),
+    ]);
+    porGrado[g] = { contextualizacion, codiseno, seleccion, planeacion };
+  }));
+  const cronograma = await Promise.all(FASES_CRONOGRAMA_PIC.map((f) => getStorage(`pic:cronograma:${f.slug}`, {}).then((v) => ({ ...f, ...v }))));
+  const evaluacionDifusion = await getStorage("pic:evaluacionDifusion", {});
+  return { obs, porGrado, cronograma, evaluacionDifusion };
+}
+
 function ProgramaAnaliticoPIC({ onStamp }) {
   const [subTab, setSubTab] = useState("analitico");
   const [grado, setGrado] = useState("1");
+  const [imprimiendo, setImprimiendo] = useState(false);
+  const [datosImpresion, setDatosImpresion] = useState(null);
 
   const SUBTABS = [
     { id: "analitico", label: "Programa Analítico" },
     { id: "pic", label: "PIC" },
   ];
 
+  const imprimirResumen = async () => {
+    onStamp && onStamp("Preparando");
+    const datos = await cargarResumenImpresionPIC();
+    setDatosImpresion(datos);
+    setImprimiendo(true);
+    setTimeout(() => window.print(), 200);
+  };
+
   return (
     <div className="flex flex-col gap-4">
+      {imprimiendo && datosImpresion && <ProgramaAnaliticoPICImprimible datos={datosImpresion} />}
       <div className="card">
-        <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Documentos completos para consulta (borrador en revisión)</div>
+        <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Documentos completos para consulta (borrador en revisión)</div>
+          <button onClick={imprimirResumen} className="btn-secundario" style={{ fontSize: "0.72rem" }}><Printer size={13} /> Imprimir lo capturado aquí</button>
+        </div>
         <p className="text-sm mb-3" style={{ opacity: 0.6 }}>Versión completa de cada documento, para revisar en CTE. Se abren en una pestaña nueva.</p>
         <div className="flex flex-wrap gap-2.5">
           {DOCUMENTOS_PLANEACION_COMPLETOS.map((d) => (
@@ -5598,6 +5629,109 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           />
         </div>
       )}
+    </div>
+  );
+}
+
+/* Vista de una sola hoja con todo lo ya capturado en Programa Analítico y PIC
+   (observaciones, contextualización y codiseño por grado, fases del PIC por
+   grado, cronograma y evaluación compartidos). Usa el mismo patrón
+   "solo-impresion" que el resto de la app: al imprimir, se oculta todo lo
+   demás y solo se ve esta hoja. */
+function ProgramaAnaliticoPICImprimible({ datos }) {
+  const { obs, porGrado, cronograma, evaluacionDifusion } = datos;
+  const val = (v) => (v && String(v).trim() ? v : "— sin capturar —");
+
+  return (
+    <div className="solo-impresion" style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#111", fontSize: "11px" }}>
+      <div style={{ textAlign: "center", marginBottom: "0.8rem" }}>
+        <div style={{ fontWeight: 800, fontSize: "15px" }}>Telesecundaria "Amado Nervo" — CCT 21ETV0473W</div>
+        <div style={{ fontWeight: 700, fontSize: "13px", marginTop: "0.15rem" }}>Programa Analítico y PIC — Resumen de lo capturado en Control Escolar</div>
+        <div style={{ fontSize: "10px", color: "#555", marginTop: "0.1rem" }}>Ciclo 2026-2027 · Impreso el {fechaBonita(hoyISO())} · Documento de trabajo interno, sujeto a revisión del CTE</div>
+      </div>
+
+      <div style={{ border: "1.4px solid #111", marginBottom: "0.7rem" }}>
+        <div style={{ background: "var(--azul)", color: "#fff", fontWeight: 700, fontSize: "11px", padding: "0.25rem 0.5rem" }}>3.4 — Otras observaciones del colectivo</div>
+        <div style={{ padding: "0.4rem 0.6rem" }}>
+          {obs.length === 0 ? (
+            <div style={{ opacity: 0.6 }}>Sin observaciones capturadas.</div>
+          ) : (
+            obs.map((o) => (
+              <div key={o.id} style={{ marginBottom: "0.3rem", paddingBottom: "0.25rem", borderBottom: "1px solid #ccc" }}>
+                <div>{o.observacion}</div>
+                <div style={{ fontSize: "9px", color: "#555" }}>{[o.grados, o.campo, o.fecha].filter(Boolean).join(" · ")}</div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {["1", "2", "3"].map((g) => {
+        const d = porGrado[g];
+        return (
+          <div key={g} style={{ marginBottom: "0.9rem", pageBreakInside: "avoid" }}>
+            <div style={{ fontWeight: 800, fontSize: "12.5px", background: "#eee", padding: "0.2rem 0.4rem", marginBottom: "0.3rem" }}>{g}° grado</div>
+
+            <div style={{ fontWeight: 700, fontSize: "10.5px", marginBottom: "0.2rem" }}>Plano 2 — Contextualización</div>
+            {d.contextualizacion.map((c) => (
+              <div key={c.slug} style={{ border: "1px solid #999", padding: "0.3rem 0.45rem", marginBottom: "0.25rem" }}>
+                <div style={{ fontWeight: 700 }}>{c.nombre}</div>
+                <div><b>Contenido(s) contextualizado(s):</b> {val(c.contenido)}</div>
+                <div><b>Eje(s) articulador(es):</b> {val(c.eje)}</div>
+                <div><b>Vínculo con el diagnóstico:</b> {val(c.vinculo)}</div>
+              </div>
+            ))}
+
+            <div style={{ fontWeight: 700, fontSize: "10.5px", margin: "0.3rem 0 0.2rem" }}>Plano 3 — Codiseño (secuenciación)</div>
+            {d.codiseno.map((t) => (
+              <div key={t.slug} style={{ border: "1px solid #999", padding: "0.3rem 0.45rem", marginBottom: "0.25rem" }}>
+                <div style={{ fontWeight: 700 }}>{t.nombre}</div>
+                <div><b>Contenidos y PDA a trabajar:</b> {val(t.contenidosPDA)}</div>
+                <div><b>Metodología / vinculación con PIC:</b> {val(t.metodologia)}</div>
+                <div><b>Fecha de cierre:</b> {val(t.fechaCierre)}</div>
+              </div>
+            ))}
+
+            <div style={{ fontWeight: 700, fontSize: "10.5px", margin: "0.3rem 0 0.2rem" }}>PIC · Fase 2 — Selección y planteamiento del problema</div>
+            <div style={{ border: "1px solid #999", padding: "0.3rem 0.45rem", marginBottom: "0.25rem" }}>
+              <div><b>Problema priorizado:</b> {val(d.seleccion.problema)}</div>
+              <div><b>¿Por qué este y no otro?</b> {val(d.seleccion.porQue)}</div>
+              <div><b>¿A quién afecta en la comunidad?</b> {val(d.seleccion.aQuienAfecta)}</div>
+              <div><b>Pregunta guía del proyecto:</b> {val(d.seleccion.preguntaGuia)}</div>
+            </div>
+
+            <div style={{ fontWeight: 700, fontSize: "10.5px", margin: "0.3rem 0 0.2rem" }}>PIC · Fase 3 — Planeación de la propuesta</div>
+            <div style={{ border: "1px solid #999", padding: "0.3rem 0.45rem" }}>
+              <div><b>Nombre del proyecto:</b> {val(d.planeacion.nombreProyecto)}</div>
+              <div><b>Objetivo general:</b> {val(d.planeacion.objetivo)}</div>
+              <div><b>Campo(s) formativo(s) vinculado(s):</b> {val(d.planeacion.camposFormativos)}</div>
+              <div><b>Eje(s) articulador(es):</b> {val(d.planeacion.ejesArticuladores)}</div>
+              <div><b>Metodología / actividades principales:</b> {val(d.planeacion.metodologia)}</div>
+              <div><b>Recursos necesarios:</b> {val(d.planeacion.recursos)}</div>
+              <div><b>Producto final esperado:</b> {val(d.planeacion.productoFinal)}</div>
+              <div><b>Aliados de la comunidad:</b> {val(d.planeacion.aliados)}</div>
+            </div>
+          </div>
+        );
+      })}
+
+      <div style={{ marginBottom: "0.9rem", pageBreakInside: "avoid" }}>
+        <div style={{ fontWeight: 800, fontSize: "12.5px", background: "#eee", padding: "0.2rem 0.4rem", marginBottom: "0.3rem" }}>PIC — Cronograma (compartido, no varía por grado)</div>
+        {cronograma.map((f) => (
+          <div key={f.slug} style={{ border: "1px solid #999", padding: "0.3rem 0.45rem", marginBottom: "0.25rem" }}>
+            <div style={{ fontWeight: 700 }}>{f.nombre}</div>
+            <div><b>Actividad principal:</b> {val(f.actividad)}</div>
+            <div><b>Periodo (trimestre):</b> {val(f.periodo)}</div>
+            <div><b>Responsable:</b> {val(f.responsable)}</div>
+          </div>
+        ))}
+
+        <div style={{ fontWeight: 700, fontSize: "10.5px", margin: "0.3rem 0 0.2rem" }}>Fase 5 — Evaluación y difusión (compartido)</div>
+        <div style={{ border: "1px solid #999", padding: "0.3rem 0.45rem" }}>
+          <div><b>¿Cómo se presentará el resultado a la comunidad?</b> {val(evaluacionDifusion.comoPresentar)}</div>
+          <div><b>Criterios de evaluación:</b> {val(evaluacionDifusion.criterios)}</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -9788,8 +9922,9 @@ function App() {
     { id: "inicio", tabs: ["inicio"] },
     { id: "alumnos", label: "Alumnos", tabs: ["inscripciones", "directorio", "estadistica", "asistencia", "calificaciones", "incidencias"] },
     { id: "diagnosticos", label: "Diagnósticos", tabs: ["diagnostico", "resultadosdx", "eia"] },
+    { id: "pic", tabs: ["pic"] },
     { id: "comunicacion", label: "Comunicación", tabs: ["avisos", "calendario"] },
-    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "pic", "consejo", "documentos", "personal"] },
+    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "consejo", "documentos", "personal"] },
     { id: "recursos", tabs: ["recursos"] },
   ];
 
