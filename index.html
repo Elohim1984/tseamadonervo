@@ -5442,7 +5442,8 @@ function TablaDiagnosticoRef() {
    — el mismo contenido exacto, embebido aquí para verlo dentro de Control
    Escolar sin abrir otra página (a petición del director: que se vea "como
    el link" pero sin salir de la app). */
-const DOCUMENTO_COMPLETO_PROGRAMA_ANALITICO_HTML = `<p align="center" style="line-height: 100%; margin-bottom: 0.01in">
+const DOCUMENTO_COMPLETO_PROGRAMA_ANALITICO_HTML = `
+<p align="center" style="line-height: 100%; margin-bottom: 0.01in">
 <font size="2" style="font-size: 10pt">Subsecretaria Básica y Media
 Superior Dirección Telesecundaria</font></p>
 <p align="center" style="line-height: 100%; margin-bottom: 0.01in"><font size="2" style="font-size: 10pt">Jefatura
@@ -5662,12 +5663,28 @@ aplicados por la escuela:</p>
 <text x="224.7" y="183.5" font-size="10.3" font-weight="700" fill="#1c1c1c">1</text>
 </svg></div>
 <p style="line-height: 100%; margin-bottom: 0.08in"><b>Interpretación para la planeación docente:</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in"><b>Saberes y Pensamiento Científico (matemáticas) es el campo formativo más débil en los tres grados</b>, confirmado por dos instrumentos aplicados en momentos distintos: el examen diagnóstico (3.5 / 4.0 / 3.5 sobre 10 en 1°/2°/3°) y, en el agregado de toda la escuela, el EIA de Fase 6 (56.25% de los 32 alumnos en nivel "Requiere apoyo" en este campo). El patrón de reactivos más débiles se repite: fracciones/decimales y moda estadística en 1° y 2°, y potencias/probabilidad/área-perímetro en 3°.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Por grado, el EIA no siempre señala a SPC como el campo con más "Requiere apoyo": en 1er grado, Lenguajes (75%) y De lo Humano y lo Comunitario (62.5%) tienen más alumnos en RA que SPC (25%) — dato útil para no generalizar de más y planear también el refuerzo de esos dos campos en 1er grado. En 2° grado sí coinciden ambos instrumentos en señalar a SPC como el más débil.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Los <b>Estilos de Aprendizaje</b> muestran una escuela mayoritariamente <b>Visual (59%)</b>, con muy pocos alumnos Kinestésicos (9%, y ninguno en 3er grado) — sugiere que el refuerzo de Saberes y Pensamiento Científico rendiría más apoyado en material gráfico y diagramas que en actividades manipulativas, sobre todo en 3er grado.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">El <b>Diagnóstico Integral</b> confirma que agua y manejo de basura son, por un margen amplio, las problemáticas comunitarias que más mencionan los propios alumnos (10 de 28 cada una) — el mismo insumo que ya orientó la Fase 2 del PIC 2026-2027.</p></li>
-</ul>
+<table style="width:100%;border-collapse:separate;border-spacing:10px 0;margin:0.18in 0;table-layout:fixed;">
+<tr>
+<td style="width:33%;vertical-align:top;text-align:center;border:2px solid #b3382f;border-radius:10px;padding:12px 8px;background:#fdf4f3;">
+<div style="font-size:22px;font-weight:800;color:#7a1f1f;line-height:1.1;">SPC</div>
+<div style="font-size:10.5px;font-weight:700;color:#1c1c1c;margin-top:4px;">Campo más débil en los 3 grados</div>
+<div style="font-size:9px;color:#6b6b6b;margin-top:4px;line-height:1.35;">Confirmado por 2 instrumentos: Examen (3.5/4.0/3.5 de 10) y EIA (56% "Requiere apoyo"). Más débil: fracciones/decimales/moda en 1°-2°; potencias/probabilidad/área-perímetro en 3°.</div>
+</td>
+<td style="width:33%;vertical-align:top;text-align:center;border:2px solid #b8860b;border-radius:10px;padding:12px 8px;background:#fdf8ee;">
+<div style="font-size:22px;font-weight:800;color:#8a6d1a;line-height:1.1;">59%</div>
+<div style="font-size:10.5px;font-weight:700;color:#1c1c1c;margin-top:4px;">Estilo Visual predomina</div>
+<div style="font-size:9px;color:#6b6b6b;margin-top:4px;line-height:1.35;">Solo 9% Kinestésico (0% en 3°) — reforzar SPC rinde más con material gráfico/diagramas que con actividades manipulativas.</div>
+</td>
+<td style="width:33%;vertical-align:top;text-align:center;border:2px solid #3f8f52;border-radius:10px;padding:12px 8px;background:#f2f8f3;">
+<div style="font-size:22px;font-weight:800;color:#2f6b3f;line-height:1.1;">10/28</div>
+<div style="font-size:10.5px;font-weight:700;color:#1c1c1c;margin-top:4px;">Agua y basura, empatadas</div>
+<div style="font-size:9px;color:#6b6b6b;margin-top:4px;line-height:1.35;">Problemáticas comunitarias más mencionadas — el mismo insumo que orientó la Fase 2 del PIC 2026-2027.</div>
+</td>
+</tr>
+</table>
+<div style="max-width:640px;margin:0.1in auto 0.16in auto;padding:9px 14px;border-left:4px solid #c98a1b;background:#fdf8ee;border-radius:0 6px 6px 0;">
+<p style="line-height:130%;margin:0;font-size:9.5px;color:#1c1c1c;"><b>⚠ Ojo — no generalizar de más:</b> en <b>1er grado</b> el EIA no señala a SPC como el campo con más "Requiere apoyo": Lenguajes (75%) y De lo Humano y lo Comunitario (62.5%) tienen más alumnos en RA que SPC (25%) — planear también el refuerzo de esos dos campos ahí. En <b>2° grado</b> sí coinciden ambos instrumentos en señalar a SPC como el más débil.</p>
+</div>
 <p style="line-height: 100%; margin-bottom: 0.14in; font-size: 0.8rem; color: #555555"><i>Esta lectura es un borrador de apoyo para el CTE; la decisión pedagógica de qué y cómo reforzar sigue siendo del colectivo docente. Detalle completo por reactivo en los documentos de análisis del proyecto (Examen Diagnóstico y EIA Fase 6).</i></p>
 <p style="line-height: 100%; margin-bottom: 0.08in"><b>Condiciones
 personales de los alumnos</b></p>
@@ -8048,7 +8065,8 @@ CTE: ______________________________</p>
 </div>
 
 `;
-const DOCUMENTO_COMPLETO_PEMC_HTML = `<p align="center" style="line-height: 100%; margin-bottom: 0.01in">
+const DOCUMENTO_COMPLETO_PEMC_HTML = `
+<p align="center" style="line-height: 100%; margin-bottom: 0.01in">
 <font size="2" style="font-size: 10pt">Subsecretaria Básica y Media
 Superior Dirección Telesecundaria</font></p>
 <p align="center" style="line-height: 100%; margin-bottom: 0.01in"><font size="2" style="font-size: 10pt">Jefatura
@@ -8432,12 +8450,28 @@ de las evaluaciones internas y externas</b></font></h2>
 <text x="224.7" y="183.5" font-size="10.3" font-weight="700" fill="#1c1c1c">1</text>
 </svg></div>
 <p style="line-height: 100%; margin-bottom: 0.08in"><b>Interpretación para la planeación docente:</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in"><b>Saberes y Pensamiento Científico (matemáticas) es el campo formativo más débil en los tres grados</b>, confirmado por dos instrumentos aplicados en momentos distintos: el examen diagnóstico (3.5 / 4.0 / 3.5 sobre 10 en 1°/2°/3°) y, en el agregado de toda la escuela, el EIA de Fase 6 (56.25% de los 32 alumnos en nivel "Requiere apoyo" en este campo). El patrón de reactivos más débiles se repite: fracciones/decimales y moda estadística en 1° y 2°, y potencias/probabilidad/área-perímetro en 3°.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Por grado, el EIA no siempre señala a SPC como el campo con más "Requiere apoyo": en 1er grado, Lenguajes (75%) y De lo Humano y lo Comunitario (62.5%) tienen más alumnos en RA que SPC (25%) — dato útil para no generalizar de más y planear también el refuerzo de esos dos campos en 1er grado. En 2° grado sí coinciden ambos instrumentos en señalar a SPC como el más débil.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Los <b>Estilos de Aprendizaje</b> muestran una escuela mayoritariamente <b>Visual (59%)</b>, con muy pocos alumnos Kinestésicos (9%, y ninguno en 3er grado) — sugiere que el refuerzo de Saberes y Pensamiento Científico rendiría más apoyado en material gráfico y diagramas que en actividades manipulativas, sobre todo en 3er grado.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">El <b>Diagnóstico Integral</b> confirma que agua y manejo de basura son, por un margen amplio, las problemáticas comunitarias que más mencionan los propios alumnos (10 de 28 cada una) — el mismo insumo que ya orientó la Fase 2 del PIC 2026-2027.</p></li>
-</ul>
+<table style="width:100%;border-collapse:separate;border-spacing:10px 0;margin:0.18in 0;table-layout:fixed;">
+<tr>
+<td style="width:33%;vertical-align:top;text-align:center;border:2px solid #b3382f;border-radius:10px;padding:12px 8px;background:#fdf4f3;">
+<div style="font-size:22px;font-weight:800;color:#7a1f1f;line-height:1.1;">SPC</div>
+<div style="font-size:10.5px;font-weight:700;color:#1c1c1c;margin-top:4px;">Campo más débil en los 3 grados</div>
+<div style="font-size:9px;color:#6b6b6b;margin-top:4px;line-height:1.35;">Confirmado por 2 instrumentos: Examen (3.5/4.0/3.5 de 10) y EIA (56% "Requiere apoyo"). Más débil: fracciones/decimales/moda en 1°-2°; potencias/probabilidad/área-perímetro en 3°.</div>
+</td>
+<td style="width:33%;vertical-align:top;text-align:center;border:2px solid #b8860b;border-radius:10px;padding:12px 8px;background:#fdf8ee;">
+<div style="font-size:22px;font-weight:800;color:#8a6d1a;line-height:1.1;">59%</div>
+<div style="font-size:10.5px;font-weight:700;color:#1c1c1c;margin-top:4px;">Estilo Visual predomina</div>
+<div style="font-size:9px;color:#6b6b6b;margin-top:4px;line-height:1.35;">Solo 9% Kinestésico (0% en 3°) — reforzar SPC rinde más con material gráfico/diagramas que con actividades manipulativas.</div>
+</td>
+<td style="width:33%;vertical-align:top;text-align:center;border:2px solid #3f8f52;border-radius:10px;padding:12px 8px;background:#f2f8f3;">
+<div style="font-size:22px;font-weight:800;color:#2f6b3f;line-height:1.1;">10/28</div>
+<div style="font-size:10.5px;font-weight:700;color:#1c1c1c;margin-top:4px;">Agua y basura, empatadas</div>
+<div style="font-size:9px;color:#6b6b6b;margin-top:4px;line-height:1.35;">Problemáticas comunitarias más mencionadas — el mismo insumo que orientó la Fase 2 del PIC 2026-2027.</div>
+</td>
+</tr>
+</table>
+<div style="max-width:640px;margin:0.1in auto 0.16in auto;padding:9px 14px;border-left:4px solid #c98a1b;background:#fdf8ee;border-radius:0 6px 6px 0;">
+<p style="line-height:130%;margin:0;font-size:9.5px;color:#1c1c1c;"><b>⚠ Ojo — no generalizar de más:</b> en <b>1er grado</b> el EIA no señala a SPC como el campo con más "Requiere apoyo": Lenguajes (75%) y De lo Humano y lo Comunitario (62.5%) tienen más alumnos en RA que SPC (25%) — planear también el refuerzo de esos dos campos ahí. En <b>2° grado</b> sí coinciden ambos instrumentos en señalar a SPC como el más débil.</p>
+</div>
 <p style="line-height: 100%; margin-bottom: 0.14in; font-size: 0.8rem; color: #555555"><i>Esta lectura es un borrador de apoyo para el CTE; la decisión pedagógica de qué y cómo reforzar sigue siendo del colectivo docente. Detalle completo por reactivo en los documentos de análisis del proyecto (Examen Diagnóstico y EIA Fase 6).</i></p>
 <h2 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#b8860b"><b>Calendario
 de sesiones del Consejo Técnico Escolar 2026-2027</b></font></h2>
@@ -9897,7 +9931,8 @@ metas/tiempos y completar lo que dependa de datos aún no compartidos
 </div>
 
 `;
-const DOCUMENTO_COMPLETO_PIC_HTML = `<p align="center" style="line-height: 100%; margin-bottom: 0.01in">
+const DOCUMENTO_COMPLETO_PIC_HTML = `
+<p align="center" style="line-height: 100%; margin-bottom: 0.01in">
 <font size="2" style="font-size: 10pt">Subsecretaria Básica y Media
 Superior Dirección Telesecundaria</font></p>
 <p align="center" style="line-height: 100%; margin-bottom: 0.01in"><font size="2" style="font-size: 10pt">Jefatura
@@ -10614,16 +10649,40 @@ async function cargarResumenImpresionPIC() {
    que aquí se ve como una pestaña más de Control Escolar. */
 function AnalisisResultadosEmbebido() {
   const [cual, setCual] = useState("pa");
+  const [imprimiendoDoc, setImprimiendoDoc] = useState(false);
   const DOCS = {
     pa: { label: "Programa Analítico", html: DOCUMENTO_COMPLETO_PROGRAMA_ANALITICO_HTML },
     pemc: { label: "PEMC 2026-2027", html: DOCUMENTO_COMPLETO_PEMC_HTML },
     pic: { label: "PIC 2026-2027", html: DOCUMENTO_COMPLETO_PIC_HTML },
   };
+
+  useEffect(() => {
+    window.onafterprint = () => setImprimiendoDoc(false);
+    return () => { window.onafterprint = null; };
+  }, []);
+
+  const imprimirDocumento = () => {
+    setImprimiendoDoc(true);
+    setTimeout(() => window.print(), 200);
+  };
+
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm" style={{ opacity: 0.6 }}>
-        El documento completo (diagnóstico, gráficas de resultados, análisis e interpretación, y el resto del contenido) — exactamente igual que al abrir el archivo por su liga, pero sin salir de Control Escolar.
-      </p>
+      {imprimiendoDoc && (
+        <div
+          className="solo-impresion"
+          style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
+          dangerouslySetInnerHTML={{ __html: DOCS[cual].html }}
+        />
+      )}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-sm" style={{ opacity: 0.6, margin: 0 }}>
+          El documento completo (diagnóstico, gráficas de resultados, análisis e interpretación, y el resto del contenido) — exactamente igual que al abrir el archivo por su liga, pero sin salir de Control Escolar.
+        </p>
+        <button onClick={imprimirDocumento} className="btn-secundario" style={{ fontSize: "0.72rem", flexShrink: 0 }}>
+          <Printer size={13} /> Imprimir / Guardar como PDF
+        </button>
+      </div>
       <div className="flex gap-2 flex-wrap">
         {Object.entries(DOCS).map(([id, d]) => (
           <button key={id} onClick={() => setCual(id)} className={`chip-grado ${cual === id ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>{d.label}</button>
