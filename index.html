@@ -358,15 +358,15 @@
   }
 
   #root{ display: none; }
-  #volver-portal{ position: fixed; bottom: 18px; right: 18px; z-index: 9998; display: none; }
-  #volver-portal a{
+  #volver-portal, #ir-control{ position: fixed; bottom: 18px; right: 18px; z-index: 9998; display: none; }
+  #volver-portal a, #ir-control a{
     display: inline-block; background: #4A0D0B; color: #fff;
     font-family: 'Public Sans', system-ui, -apple-system, sans-serif;
     font-size: 13px; font-weight: 600; text-decoration: none;
     padding: 9px 16px; border-radius: 999px;
     box-shadow: 0 4px 14px rgba(74,13,11,0.28);
   }
-  #volver-portal a:hover{ background: #7A1613; }
+  #volver-portal a:hover, #ir-control a:hover{ background: #7A1613; }
 </style>
 </head>
 <body>
@@ -493,6 +493,7 @@
 
 <div id="root"></div>
 <div id="volver-portal"><a href="#" id="volver-portal-link">&larr; Volver al portal</a></div>
+<div id="ir-control"><a href="#" id="ir-control-link">Entrar a Control Escolar &rarr;</a></div>
 
 <script type="text/plain" id="codigo-fuente-app">
 const { useState, useEffect, useCallback, useMemo } = React;
@@ -18024,6 +18025,8 @@ window.montarControlEscolar = function () {
     var root = document.getElementById('root');
     var volverPortal = document.getElementById('volver-portal');
     var volverLink = document.getElementById('volver-portal-link');
+    var irControl = document.getElementById('ir-control');
+    var irControlLink = document.getElementById('ir-control-link');
 
     var appMontada = false;
     var portalOk = false;
@@ -18034,6 +18037,7 @@ window.montarControlEscolar = function () {
       root.style.display = 'none';
       if(volverPortal) volverPortal.style.display = 'none';
       portal.style.display = 'block';
+      if(irControl) irControl.style.display = 'block';
     }
 
     function mostrarControlEscolar(){
@@ -18041,6 +18045,7 @@ window.montarControlEscolar = function () {
       portal.style.display = 'none';
       root.style.display = 'block';
       if(volverPortal) volverPortal.style.display = 'block';
+      if(irControl) irControl.style.display = 'none';
       if(!appMontada && typeof window.montarControlEscolar === 'function'){
         window.montarControlEscolar();
         appMontada = true;
@@ -18104,6 +18109,14 @@ window.montarControlEscolar = function () {
           if(volverPortal) volverPortal.style.display = 'none';
           gate.style.display = 'flex';
         }
+      });
+    }
+
+    if(irControlLink){
+      irControlLink.addEventListener('click', function(ev){
+        ev.preventDefault();
+        try{ sessionStorage.setItem('controlEscolarOk', '1'); }catch(e){}
+        mostrarControlEscolar();
       });
     }
   })();
