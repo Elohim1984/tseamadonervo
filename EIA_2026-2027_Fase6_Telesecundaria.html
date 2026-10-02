@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EIA 2026-2027 · Fase 6 Telesecundaria · Telesecundaria Estatal Amado Nervo</title>
+<title>EIA 2026-2027 · Fase 6 Telesecundaria · Amado Nervo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -42,7 +42,7 @@
 <script type="text/babel">
 /* ============================================================================
    MODULO EIA 2026-2027 · Fase 6 Telesecundaria (1°, 2° y 3°)
-   Telesecundaria Estatal Amado Nervo — CCT 21ETV0473W
+   Amado Nervo — CCT 21ETV0473W
 
    CONEXIÓN CON LA HOJA COMPARTIDA (corregido 12 sept 2026):
    Este módulo usa la MISMA Hoja de Google y el MISMO Apps Script que ya usan
@@ -58,7 +58,7 @@
 // CONFIGURACION
 // ---------------------------------------------------------------------------
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyP65kGWIq6Ury8VO7eLpAa4q9v91kDUL1gcw0fX4-aMuiEYqaurAIbz3J6R9oKj1sHA/exec';
-const CODIGO_ACCESO = "CONTROL2026"; // mismo candado que Control Escolar (quítalo si ya vas a entrar detrás de ese candado)
+const CODIGO_ACCESO = "AMADO2026"; // mismo candado único que el resto del sitio (quítalo si ya vas a entrar detrás de ese candado)
 
 const EIA_DATA = JSON.parse(document.getElementById("eia-data").textContent);
 const EIA_IMAGES = JSON.parse(document.getElementById("eia-images").textContent);
@@ -190,7 +190,7 @@ function Candado({ onOk }) {
         <h1 className="text-lg font-bold mb-1" style={{ color: "var(--guinda)" }}>
           Módulo EIA 2026-2027
         </h1>
-        <p className="text-sm text-gray-500 mb-4">Telesecundaria Estatal Amado Nervo · Fase 6 Telesecundaria</p>
+        <p className="text-sm text-gray-500 mb-4">Amado Nervo · Fase 6 Telesecundaria</p>
         <input
           type="password"
           value={code}
@@ -1135,7 +1135,7 @@ function App() {
         <div className="max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between">
           <div>
             <div className="font-bold">EIA 2026-2027 · Fase 6 Telesecundaria</div>
-            <div className="text-xs opacity-80">Telesecundaria Estatal Amado Nervo — CCT 21ETV0473W</div>
+            <div className="text-xs opacity-80">Amado Nervo — CCT 21ETV0473W</div>
           </div>
           {vista !== "inicio" && (
             <button onClick={() => setVista("inicio")} className="text-xs underline">
