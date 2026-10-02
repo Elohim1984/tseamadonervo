@@ -1447,6 +1447,73 @@ function corteCajaDibujarTexto(pagina, fuente, texto, x, top, opciones) {
   pagina.drawText(ajustado.texto, { x: xDibujo, y: corteCajaY(top), size: ajustado.tam, font: fuente });
 }
 
+// Nombres reales de la Mesa Directiva (y sobre todo "Nombre(s) + 2 apellidos" del
+// director) casi nunca caben en una sola línea dentro del ancho real de cada línea
+// de firma (~85-90 pt) sin quedar ilegiblemente chicos. En vez de encoger la letra
+// hasta un mínimo feo o recortar con "…" (lo que pasaba antes: "NEFTALID BLADIMIR
+// ORTA…"), se intenta primero una sola línea con una letra decente: si no cabe, se
+// parte en 2 líneas por palabra completa (nunca a la mitad de una palabra) y se
+// busca el tamaño más grande con el que ambas líneas quepan. Solo como último
+// recurso (nombre extremadamente largo) se recorta la segunda línea con "…".
+function corteCajaMedirFirma(fuente, texto, ancho, tamInicial, tamUmbralUnaLinea, tamMinimoDosLineas) {
+  const t = (texto || "").trim();
+  if (!t) return { lineas: [], tam: tamInicial };
+
+  // 1) ¿Cabe en una sola línea con una letra todavía legible (no por debajo del umbral)?
+  for (let tam = tamInicial; tam >= tamUmbralUnaLinea; tam -= 0.5) {
+    if (fuente.widthOfTextAtSize(t, tam) <= ancho) return { lineas: [t], tam };
+  }
+
+  // 2) Partir en 2 líneas por palabra completa, probando del tamaño más grande al más chico.
+  const palabras = t.split(/\s+/).filter(Boolean);
+  const partir = (tam) => {
+    let linea1 = "";
+    let linea2 = "";
+    let enLinea2 = false;
+    palabras.forEach((palabra) => {
+      if (!enLinea2) {
+        const candidata = linea1 ? `${linea1} ${palabra}` : palabra;
+        if (fuente.widthOfTextAtSize(candidata, tam) <= ancho) { linea1 = candidata; return; }
+        enLinea2 = true;
+      }
+      linea2 = linea2 ? `${linea2} ${palabra}` : palabra;
+    });
+    if (!linea1) { linea1 = palabras[0] || t; linea2 = palabras.slice(1).join(" "); }
+    return { linea1, linea2 };
+  };
+  for (let tam = tamInicial; tam >= tamMinimoDosLineas; tam -= 0.5) {
+    const { linea1, linea2 } = partir(tam);
+    if (!linea2 || (fuente.widthOfTextAtSize(linea1, tam) <= ancho && fuente.widthOfTextAtSize(linea2, tam) <= ancho)) {
+      return { lineas: linea2 ? [linea1, linea2] : [linea1], tam };
+    }
+  }
+
+  // 3) Último recurso: 2 líneas al tamaño mínimo, recortando la segunda con "…".
+  let { linea1, linea2 } = partir(tamMinimoDosLineas);
+  while (linea2.length > 1 && fuente.widthOfTextAtSize(`${linea2}…`, tamMinimoDosLineas) > ancho) linea2 = linea2.slice(0, -1);
+  if (linea2) linea2 += "…";
+  return { lineas: linea2 ? [linea1, linea2] : [linea1], tam: tamMinimoDosLineas };
+}
+
+// Dibuja un nombre centrado sobre una línea de firma, partiéndolo en hasta 2
+// renglones cuando hace falta (ver corteCajaMedirFirma). "topBase" es el renglón
+// de ABAJO (el más cercano a la línea de firma impresa); si hay un segundo
+// renglón, se dibuja encima, en el espacio en blanco que ya trae el formato.
+function corteCajaDibujarFirma(pagina, fuente, texto, x0, x1, topBase) {
+  if (!texto) return;
+  const ancho = (x1 - x0) - 4;
+  const { lineas, tam } = corteCajaMedirFirma(fuente, String(texto), ancho, 8.5, 7, 6);
+  if (!lineas.length) return;
+  const alturaLinea = tam + 2;
+  const centro = (x0 + x1) / 2;
+  lineas.forEach((linea, i) => {
+    const desdeAbajo = lineas.length - 1 - i;
+    const top = topBase - desdeAbajo * alturaLinea;
+    const x = centro - fuente.widthOfTextAtSize(linea, tam) / 2;
+    pagina.drawText(linea, { x, y: corteCajaY(top), size: tam, font: fuente });
+  });
+}
+
 // Formato de pesos con separador de miles para que se vea igual que un Corte de
 // Caja real a mano ("1,234.56" en vez de "1234.56"); vacío si no hay monto.
 function corteCajaFormatoPesos(valor) {
@@ -1549,7 +1616,7 @@ async function llenarYDescargarCorteCajaPDF(filasBase, arrastre, encabezado, fir
       corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(saldoFinal) || "0.00", CORTE_CAJA_CAMPO_EXISTENCIA.x, CORTE_CAJA_CAMPO_EXISTENCIA.top, { xMax: CORTE_CAJA_CAMPO_EXISTENCIA.xMax, align: "left", tam: 9.5, tamMinimo: 7, ajustar: false });
       CORTE_CAJA_LINEAS_FIRMA.forEach(([x0, x1], i) => {
         const nombre = (firmas && firmas[i] && firmas[i].nombre) || "";
-        corteCajaDibujarTexto(pagina, fuenteTexto, nombre, x0, CORTE_CAJA_FIRMA_TOP, { xMax: x1, align: "center", tam: 8.5, tamMinimo: 6 });
+        corteCajaDibujarFirma(pagina, fuenteTexto, nombre, x0, x1, CORTE_CAJA_FIRMA_TOP);
       });
     }
   }
