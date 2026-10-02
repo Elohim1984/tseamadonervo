@@ -34,6 +34,7 @@
 </script>
 <style>
   html, body { margin: 0; padding: 0; }
+  html{ font-size: 17px; } /* 2 oct 2026: letra base un poco más grande en toda la app (pedido del director) — casi todo el tamaño de letra interno usa rem, así que esto lo escala parejo sin tocar cada estilo uno por uno */
 </style>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
@@ -15097,6 +15098,7 @@ function MapeadorFormatos({ onStamp, rolActual, datosEscuela }) {
 
 function DocumentosDireccion({ alumnos, onStamp, rolActual }) {
   const [subTab, setSubTab] = useState("apf");
+  const [apfDocTab, setApfDocTab] = useState("convocatoria");
   const grados = [1, 2, 3];
   const tutores = obtenerTutoresUnicos(alumnos);
   const [vistaActa, setVistaActa] = useState({ mesaDirectiva: {}, contraloria: {}, saliente: {}, checklist: {}, convocatoria: {}, constancia: {}, datosEscuela: {}, mesaDebates: {}, asamblea: {}, entregaFecha: {}, convivencia: {}, cargando: true });
@@ -15176,11 +15178,18 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual }) {
   };
 
   const SUBTABS = [
-    { id: "apf", label: "APF · Padrón" },
+    { id: "apf", label: "APF — Documentos oficiales" },
     { id: "convivencia", label: "Convivencia Escolar" },
     { id: "bimestral", label: "Corte de Caja" },
     { id: "otros", label: "Otros comités" },
     { id: "mapeador", label: "Mapeador de formatos" },
+  ];
+
+  const APF_DOC_TABS = [
+    { id: "convocatoria", label: "1. Convocatoria y Asamblea" },
+    { id: "constitutiva", label: "2. Acta Constitutiva" },
+    { id: "entrega", label: "3. Entrega-Recepción" },
+    { id: "constancia", label: "4. Constancia de Registro" },
   ];
 
   return (
@@ -15232,6 +15241,14 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual }) {
             ]}
           />
 
+          <div className="flex gap-2 flex-wrap" style={{ marginTop: "0.25rem" }}>
+            {APF_DOC_TABS.map((t) => (
+              <button key={t.id} onClick={() => setApfDocTab(t.id)} className={`chip-grado ${apfDocTab === t.id ? "activo" : ""}`} style={{ fontSize: "0.72rem" }}>{t.label}</button>
+            ))}
+          </div>
+
+          {apfDocTab === "convocatoria" && (
+          <>
           <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.5rem" }}>
             Primera Convocatoria
           </div>
@@ -15305,7 +15322,11 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual }) {
             )}
           </div>
           {imprimiendo === "lista" && <ListaAsistenciaImprimible tutores={tutores} />}
+          </>
+          )}
 
+          {apfDocTab === "constitutiva" && (
+          <>
           <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.5rem" }}>
             Asignación de puestos
           </div>
@@ -15394,7 +15415,11 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual }) {
             <ActaConstitutivaVista mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} tutores={tutores} imprimible={false} />
           )}
           {imprimiendo === "acta" && <ActaConstitutivaVista mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} tutores={tutores} imprimible={true} />}
+          </>
+          )}
 
+          {apfDocTab === "entrega" && (
+          <>
           <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.8rem" }}>
             Acta de Entrega-Recepción
           </div>
@@ -15447,7 +15472,11 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual }) {
             <ActaEntregaRecepcionVista checklist={vistaActa.checklist} saliente={vistaActa.saliente} entrante={vistaActa.mesaDirectiva} imprimible={false} />
           )}
           {imprimiendo === "entrega" && <ActaEntregaRecepcionVista checklist={vistaActa.checklist} saliente={vistaActa.saliente} entrante={vistaActa.mesaDirectiva} imprimible={true} />}
+          </>
+          )}
 
+          {apfDocTab === "constancia" && (
+          <>
           <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.8rem" }}>
             Constancia de Registro del Acta
           </div>
@@ -15477,6 +15506,8 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual }) {
             <ConstanciaRegistroVista datos={vistaActa.constancia} imprimible={false} />
           )}
           {imprimiendo === "constancia" && <ConstanciaRegistroVista datos={vistaActa.constancia} imprimible={true} />}
+          </>
+          )}
         </div>
       )}
 
