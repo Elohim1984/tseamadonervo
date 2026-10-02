@@ -293,7 +293,7 @@ var PREFIX_CONCENTRADO = "diagConcentrado:";
 var PREFIX_ALUMNO = "alumno:"; // datos de Control Escolar — solo lectura, nunca se escribe aquí
 
 var DEFAULT_CONFIG_BLOB = {
-  meta:{escuela:"Telesecundaria Amado Nervo", programa:"Programa Analítico, PIC y Proyectos Comunitarios", cicloEscolar:"2026-2027", semana:"Semana 1 de inscripción"},
+  meta:{escuela:"Telesecundaria Estatal Amado Nervo", programa:"Programa Analítico, PIC y Proyectos Comunitarios", cicloEscolar:"2026-2027", semana:"Semana 1 de inscripción"},
   config:{pin:"2026", likertScale:["Nunca","Casi nunca","Ocasionalmente","Casi siempre","Siempre"], grupos:[]}
 };
 
@@ -947,7 +947,10 @@ function renderConfig(){
     '</tbody></table></div>';
   }
   if(roster.sinIdentificar && roster.sinIdentificar.length){
-    out += '<div class="field-hint" style="margin-top:10px; color:var(--warning)">⚠️ '+roster.sinIdentificar.length+' registro(s) de alumno en Control Escolar no se pudieron agrupar por grado/grupo (formato no reconocido) y no se cuentan arriba — si el número no coincide con Control Escolar, avísale a Claude para ajustar la lectura.</div>';
+    var listaSinIdentificar = roster.sinIdentificar.map(function(r){
+      return esc(r.nombre || ('registro ' + r.clave));
+    }).join(', ');
+    out += '<div class="field-hint" style="margin-top:10px; color:var(--warning)">⚠️ '+roster.sinIdentificar.length+' registro(s) de alumno en Control Escolar no se pudieron agrupar por grado/grupo (formato no reconocido) y no se cuentan arriba: <strong>' + listaSinIdentificar + '</strong>. Es muy probable que a estos alumnos les falte el campo Grado o Grupo en su ficha de Control Escolar (Inscripciones/Directorio) — complétalo ahí y toca "Actualizar desde Control Escolar".</div>';
   }
   out += '</div>';
 
