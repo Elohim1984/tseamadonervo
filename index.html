@@ -581,6 +581,8 @@ const DATOS_PLANTEL = {
   cct: "21ETV0473W",
   municipio: "Tepeojuma",
   localidad: "Xoyatla",
+  estado: "Puebla",
+  cp: "74394",
   sector: "Izúcar de Matamoros",
   zona: "Zona Escolar 052",
   turno: "Matutino",
@@ -1079,17 +1081,20 @@ async function generarPDFNumeradoDePrueba(bytes, campos) {
 function construirFuentesMapeador(datosEscuela) {
   const de = datosEscuela || {};
   return [
-    { clave: "escuela.nombre", etiqueta: "Nombre de la escuela", obtener: () => DATOS_PLANTEL.nombre },
-    { clave: "escuela.cct", etiqueta: "Clave de Centro de Trabajo (CCT)", obtener: () => DATOS_PLANTEL.cct },
+    { clave: "escuela.nombre", etiqueta: "Nombre de la escuela", obtener: () => de.nombre || DATOS_PLANTEL.nombre },
+    { clave: "escuela.cct", etiqueta: "Clave de Centro de Trabajo (CCT)", obtener: () => de.cct || DATOS_PLANTEL.cct },
     { clave: "escuela.nivel", etiqueta: "Nivel educativo", obtener: () => de.modalidad || DATOS_PLANTEL.modalidad },
-    { clave: "escuela.turno", etiqueta: "Turno", obtener: () => DATOS_PLANTEL.turno },
-    { clave: "escuela.zona", etiqueta: "Zona escolar", obtener: () => "052" },
-    { clave: "escuela.sector", etiqueta: "Sector", obtener: () => DATOS_PLANTEL.sector },
-    { clave: "escuela.localidad", etiqueta: "Localidad", obtener: () => DATOS_PLANTEL.localidad },
-    { clave: "escuela.municipio", etiqueta: "Municipio", obtener: () => DATOS_PLANTEL.municipio },
+    { clave: "escuela.turno", etiqueta: "Turno", obtener: () => de.turno || DATOS_PLANTEL.turno },
+    { clave: "escuela.zona", etiqueta: "Zona escolar", obtener: () => de.zona || "052" },
+    { clave: "escuela.sector", etiqueta: "Sector", obtener: () => de.sector || DATOS_PLANTEL.sector },
+    { clave: "escuela.localidad", etiqueta: "Localidad", obtener: () => de.localidad || DATOS_PLANTEL.localidad },
+    { clave: "escuela.municipio", etiqueta: "Municipio", obtener: () => de.municipio || DATOS_PLANTEL.municipio },
+    { clave: "escuela.estado", etiqueta: "Estado", obtener: () => de.estado || DATOS_PLANTEL.estado },
+    { clave: "escuela.cp", etiqueta: "Código Postal", obtener: () => de.cp || DATOS_PLANTEL.cp },
     { clave: "escuela.domicilio", etiqueta: "Domicilio de la escuela", obtener: () => de.domicilio || "" },
     { clave: "escuela.telefono", etiqueta: "Teléfono de la escuela", obtener: () => de.telefono || "" },
     { clave: "escuela.corde", etiqueta: "CORDE", obtener: () => de.corde || "" },
+    { clave: "escuela.supervisorZona", etiqueta: "Nombre de quien supervisa la zona", obtener: () => de.supervisorZona || "" },
     { clave: "director.nombre", etiqueta: "Nombre del director/a", obtener: () => NOMBRE_COMPLETO.directora },
     { clave: "director.cargo", etiqueta: "Cargo del director/a", obtener: () => CARGO_USUARIO.directora },
     { clave: "docente.nombre", etiqueta: "Nombre de quien atiende 2°/3er grado", obtener: () => NOMBRE_COMPLETO.maestro },
@@ -1099,29 +1104,37 @@ function construirFuentesMapeador(datosEscuela) {
   ];
 }
 
-// Datos generales de la escuela que usan los 5 documentos (nombre, CCT,
-// localidad, municipio y turno ya existían en DATOS_PLANTEL; domicilio/teléfono/
-// CORDE/supervisor de zona/modalidad son datos que el director captura una sola
-// vez en Documentos de Dirección → APF · Padrón y quedan guardados como
-// "apf:datosEscuela" — modalidad (Telesecundaria/Secundaria) tiene su propio
-// selector ahí porque algunos formatos oficiales piden "Secundaria" en vez de
-// "Telesecundaria"; si no se ha elegido nada, se usa "Telesecundaria" por defecto).
+// Datos generales de la escuela que usan los documentos oficiales. Todos
+// (nombre, CCT, modalidad, domicilio, localidad, municipio, estado, C.P.,
+// sector, zona, turno, teléfono, CORDE, supervisor de zona) se capturan y se
+// revisan en un solo lugar — la pestaña "Datos Esc." junto a Inicio (también
+// disponible, con la misma clave, en Gestión escolar → Documentos de
+// Dirección → APF) — y quedan guardados como "apf:datosEscuela". Si un campo
+// nunca se ha tocado ahí, se usa el valor por defecto ya conocido en
+// DATOS_PLANTEL (de.X || DATOS_PLANTEL.X), así que nada se rompe mientras el
+// director no haya revisado la ficha todavía. Modalidad (Telesecundaria/
+// Secundaria) existe porque algunos formatos oficiales piden "Secundaria" en
+// vez de "Telesecundaria"; si no se ha elegido nada, se usa "Telesecundaria".
 function mapaEncabezadoEscuelaPDF(datosEscuela) {
   const de = datosEscuela || {};
+  const nombre = de.nombre || DATOS_PLANTEL.nombre;
+  const cct = de.cct || DATOS_PLANTEL.cct;
   return {
-    "Escuela": DATOS_PLANTEL.nombre,
-    "Nombre de la escuela": DATOS_PLANTEL.nombre,
-    "Nombre de la Escuela": DATOS_PLANTEL.nombre,
-    "Clave": DATOS_PLANTEL.cct,
-    "Clave de Centro de Trabajo": DATOS_PLANTEL.cct,
+    "Escuela": nombre,
+    "Nombre de la escuela": nombre,
+    "Nombre de la Escuela": nombre,
+    "Clave": cct,
+    "Clave de Centro de Trabajo": cct,
     "Domicilio": de.domicilio || "",
     "Teléfono": de.telefono || "",
     "Nivel": de.modalidad || DATOS_PLANTEL.modalidad,
-    "Turno": DATOS_PLANTEL.turno,
-    "Zona": "052",
+    "Turno": de.turno || DATOS_PLANTEL.turno,
+    "Zona": de.zona || "052",
     "CORDE": de.corde || "",
-    "Localidad": DATOS_PLANTEL.localidad,
-    "Municipio": DATOS_PLANTEL.municipio,
+    "Localidad": de.localidad || DATOS_PLANTEL.localidad,
+    "Municipio": de.municipio || DATOS_PLANTEL.municipio,
+    "Estado": de.estado || DATOS_PLANTEL.estado,
+    "C.P.": de.cp || DATOS_PLANTEL.cp,
   };
 }
 
@@ -5438,7 +5451,7 @@ const DIAGNOSTICO_COMUNITARIO_REF = [
 /* Formulario genérico de varios campos que se guarda como UN objeto JSON
    bajo una sola clave — se usa para cada tabla/fase del Programa Analítico
    y del PIC, siempre autoguardado con botón propio y confirmación visual. */
-function FormularioAutoguardado({ claveStorage, titulo, ayuda, campos, onStamp, compacto }) {
+function FormularioAutoguardado({ claveStorage, titulo, ayuda, campos, onStamp, compacto, valoresPorDefecto }) {
   const [valores, setValores] = useState({});
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -5448,7 +5461,17 @@ function FormularioAutoguardado({ claveStorage, titulo, ayuda, campos, onStamp, 
     let vivo = true;
     setCargando(true);
     setGuardadoOk(false);
-    getStorage(claveStorage, {}).then((v) => { if (vivo) { setValores(v || {}); setCargando(false); } });
+    // valoresPorDefecto (opcional): campos que todavía no se han guardado nunca
+    // se ven prellenados con el dato real ya conocido por el sitio (ej. los de
+    // DATOS_PLANTEL), para que "llenar al inicio del ciclo" sea solo revisar y
+    // corregir, no escribir todo desde cero. Si un campo ya se guardó antes
+    // (aunque se haya guardado en blanco a propósito), ese valor manda.
+    getStorage(claveStorage, {}).then((v) => {
+      if (vivo) {
+        setValores(valoresPorDefecto ? { ...valoresPorDefecto, ...(v || {}) } : (v || {}));
+        setCargando(false);
+      }
+    });
     return () => { vivo = false; };
   }, [claveStorage]);
 
@@ -5496,6 +5519,81 @@ function FormularioAutoguardado({ claveStorage, titulo, ayuda, campos, onStamp, 
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Ficha única de datos oficiales de la escuela — pestaña "Datos Esc." junto a
+// Inicio. Usa la MISMA clave de guardado ("apf:datosEscuela") que el
+// formulario que ya existía dentro de Gestión escolar → Documentos de
+// Dirección → APF, así que es un solo dato compartido, no una copia: lo que
+// se guarda aquí también aparece allá y viceversa. La idea es que al inicio
+// de cada ciclo escolar el director la revise y corrija una sola vez aquí, y
+// de ahí se tomen los datos que pidan el Programa Analítico, el PIC, los
+// documentos de la APF y el mapeador de formatos nuevos (ver
+// construirFuentesMapeador y mapaEncabezadoEscuelaPDF, que ya leen estos
+// campos con de.X || DATOS_PLANTEL.X como respaldo).
+function DatosEscuelaTab({ onStamp }) {
+  const [respaldando, setRespaldando] = useState(false);
+
+  const descargarRespaldo = async () => {
+    setRespaldando(true);
+    const datos = await getStorage("apf:datosEscuela", {});
+    const paquete = { ...DATOS_PLANTEL, ...(datos || {}), _respaldoGenerado: hoyISO() };
+    const blob = new Blob([JSON.stringify(paquete, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `datos_escuela_respaldo_${hoyISO()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setRespaldando(false);
+    onStamp && onStamp("Respaldo descargado");
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="card" style={{ borderColor: "var(--amarillo)", background: "rgba(245,179,67,0.08)" }}>
+        <p className="text-sm">
+          Ficha única de datos oficiales de la escuela. Revísala y corrígela una sola vez al inicio de cada ciclo escolar — de aquí se toman los datos que necesitan el Programa Analítico, el PIC, los documentos de la APF y los demás formatos oficiales del sitio, sin tener que volver a escribirlos documento por documento. Es la misma ficha que está en Gestión escolar → Documentos de Dirección → APF — Documentos oficiales; está aquí también, junto a Inicio, para que sea lo primero que se revise.
+        </p>
+      </div>
+
+      <FormularioAutoguardado
+        claveStorage="apf:datosEscuela"
+        titulo="Ficha de datos oficiales de la escuela"
+        ayuda="Los campos ya traen el dato actual capturado en el sitio — revísalos y corrige solo lo que haya cambiado."
+        onStamp={onStamp}
+        valoresPorDefecto={DATOS_PLANTEL}
+        campos={[
+          { key: "nombre", etiqueta: "Nombre de la escuela", tipo: "texto", placeholder: 'Ej. Amado Nervo' },
+          { key: "cct", etiqueta: "CCT (Clave de Centro de Trabajo)", tipo: "texto", placeholder: "Ej. 21ETV0473W" },
+          { key: "modalidad", etiqueta: "Modalidad (según lo pida el documento oficial)", tipo: "select", opciones: ["Telesecundaria", "Secundaria"] },
+          { key: "domicilio", etiqueta: "Dirección de la escuela", tipo: "texto", placeholder: "Ej. Calle Cerro del Vigilante S/N" },
+          { key: "localidad", etiqueta: "Población o colonia", tipo: "texto", placeholder: "Ej. Xoyatla" },
+          { key: "municipio", etiqueta: "Municipio", tipo: "texto", placeholder: "Ej. Tepeojuma" },
+          { key: "estado", etiqueta: "Estado", tipo: "texto", placeholder: "Ej. Puebla" },
+          { key: "cp", etiqueta: "Código Postal", tipo: "texto", placeholder: "Ej. 74394" },
+          { key: "sector", etiqueta: "Sector", tipo: "texto", placeholder: "Ej. Izúcar de Matamoros" },
+          { key: "zona", etiqueta: "Zona Escolar", tipo: "texto", placeholder: "Ej. Zona Escolar 052" },
+          { key: "turno", etiqueta: "Turno", tipo: "texto", placeholder: "Ej. Matutino" },
+          { key: "telefono", etiqueta: "Teléfono de la escuela", tipo: "texto", placeholder: "Ej. 2444419381" },
+          { key: "corde", etiqueta: "CORDE (Coordinación de Desarrollo Educativo)", tipo: "texto", placeholder: "Ej. Izúcar de Matamoros" },
+          { key: "supervisorZona", etiqueta: "Nombre de quien supervisa la zona", tipo: "texto", placeholder: "Ej. Mtra. Fulana de Tal" },
+        ]}
+      />
+
+      <div className="card flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Respaldo de esta ficha</div>
+          <p className="text-sm" style={{ opacity: 0.6 }}>Descarga un archivo con todos estos datos, por si quieres guardarlos aparte o recuperarlos más adelante.</p>
+        </div>
+        <button onClick={descargarRespaldo} disabled={respaldando} className="btn-primario" style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}>
+          <Download size={14} /> {respaldando ? "Preparando…" : "Descargar respaldo"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -17794,6 +17892,7 @@ function App() {
 
   const TABS = [
     { id: "inicio", label: "Inicio", icon: School },
+    { id: "datosescuela", label: "Datos Esc.", icon: IdCard },
     { id: "diagnostico", label: "Diagnóstico", icon: Globe2 },
     { id: "resultadosdx", label: "Resultados 2026-2027", icon: BarChart3 },
     { id: "eia", label: "EIA · Fase 6", icon: ClipboardCheck },
@@ -17810,12 +17909,13 @@ function App() {
     { id: "pic", label: "Programa Analítico y PIC", icon: Sprout },
     { id: "consejo", label: "Consejo Escolar", icon: Vote },
     { id: "documentos", label: "Documentos de Dirección", icon: FolderKanban },
-    { id: "personal", label: "Datos Esc.", icon: IdCard },
+    { id: "personal", label: "Personal del Plantel", icon: UserRound },
     { id: "recursos", label: "Recursos", icon: FileText },
   ];
 
   const NAV_GROUPS = [
     { id: "inicio", tabs: ["inicio"] },
+    { id: "datosescuela", tabs: ["datosescuela"] },
     { id: "alumnos", label: "Alumnos", tabs: ["inscripciones", "directorio", "estadistica", "asistencia", "calificaciones", "incidencias"] },
     { id: "diagnosticos", label: "Diagnósticos", tabs: ["diagnostico", "resultadosdx", "eia"] },
     { id: "pic", tabs: ["pic"] },
@@ -17930,6 +18030,7 @@ function App() {
 
       <main className="px-4 py-5 max-w-lg sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full">
         {tab === "inicio" && <Inicio rol={rol} alumnos={alumnos} asistencia={asistencia} avisos={avisos} eventos={eventos} gradosPermitidos={gradosPermitidos} />}
+        {tab === "datosescuela" && <DatosEscuelaTab onStamp={fireStamp} />}
         {tab === "diagnostico" && <DiagnosticoTab />}
         {tab === "resultadosdx" && (
           <ResultadosDiagnostico2026
