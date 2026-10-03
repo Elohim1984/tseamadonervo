@@ -3174,6 +3174,28 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
   const [guardando, setGuardando] = useState(false);
   const [generandoPortadas, setGenerandoPortadas] = useState(false);
   const [errorPortadas, setErrorPortadas] = useState("");
+  // Descarga individual desde el mismo bloque de impresión general (agregado
+  // 2 oct 2026, a petición del director: "en la impresión en general también
+  // por si alguien necesita su propia [portada] después se puede"), sin tener
+  // que buscar al alumno más abajo en la lista.
+  const [idPortadaIndividual, setIdPortadaIndividual] = useState("");
+  const [descargandoIndividual, setDescargandoIndividual] = useState(false);
+
+  const descargarPortadaSeleccionada = async () => {
+    const a = alumnos.find((x) => x.id === idPortadaIndividual);
+    if (!a) return;
+    setDescargandoIndividual(true);
+    setErrorPortadas("");
+    try {
+      await descargarPortadaAlumno(a, alumnos);
+      onStamp && onStamp("Descargado");
+    } catch (e) {
+      console.error("Portada individual falló:", e);
+      setErrorPortadas("No se pudo generar la portada de ese alumno. Intenta de nuevo.");
+    } finally {
+      setDescargandoIndividual(false);
+    }
+  };
 
   const descargarTodasLasPortadas = async () => {
     setGenerandoPortadas(true);
@@ -3337,14 +3359,36 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
 
       <DivisorTalavera />
 
-      <div className="card flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Portadas de carpeta — todos los alumnos</div>
-          <p className="text-sm" style={{ opacity: 0.6 }}>Un PDF con una portada por cada alumno inscrito (todos los grados), con su nombre y, en grande, su grado, grupo y número de lista — lista para imprimir de un jalón al recibir al grupo y pegar en su carpeta física. Cuando llegue un alumno nuevo a mitad de ciclo, descarga solo la suya con el ícono de carnet (🪪) de su ficha, abajo.</p>
+      <div className="card flex flex-col gap-2">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <div className="font-display" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Portadas de carpeta — todos los alumnos</div>
+            <p className="text-sm" style={{ opacity: 0.6 }}>Un PDF con una portada por cada alumno inscrito (todos los grados), con su nombre y, en grande, su grado, grupo y número de lista — lista para imprimir de un jalón al recibir al grupo y pegar en su carpeta física.</p>
+          </div>
+          <button onClick={descargarTodasLasPortadas} disabled={generandoPortadas || alumnos.length === 0} className="btn-primario" style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}>
+            <Download size={14} /> {generandoPortadas ? "Generando…" : "Portadas de todos los alumnos"}
+          </button>
         </div>
-        <button onClick={descargarTodasLasPortadas} disabled={generandoPortadas || alumnos.length === 0} className="btn-primario" style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}>
-          <Download size={14} /> {generandoPortadas ? "Generando…" : "Portadas de todos los alumnos"}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap" style={{ borderTop: "1px dashed var(--linea)", paddingTop: "0.5rem" }}>
+          <IdCard size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
+          <select
+            className="campo"
+            style={{ flex: 1, minWidth: "200px", fontSize: "0.78rem" }}
+            value={idPortadaIndividual}
+            onChange={(e) => setIdPortadaIndividual(e.target.value)}
+          >
+            <option value="">¿Solo necesitas la de un alumno? Elígelo aquí…</option>
+            <OpcionesAlumnosPorGrado alumnos={alumnos} />
+          </select>
+          <button
+            onClick={descargarPortadaSeleccionada}
+            disabled={!idPortadaIndividual || descargandoIndividual}
+            className="btn-secundario"
+            style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}
+          >
+            {descargandoIndividual ? "Generando…" : "Descargar solo esta"}
+          </button>
+        </div>
       </div>
       {errorPortadas && (
         <div className="card" style={{ borderColor: "var(--rojo)", background: "rgba(122,22,19,0.06)" }}>
@@ -3376,7 +3420,12 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
               </button>
               <div className="flex items-center gap-1 shrink-0">
                 <button onClick={() => setImprimiendoCedula(a)} className="btn-icono" style={{ color: "var(--azul)" }} title="Cédula de Registro y Actualización de Datos (ver y descargar PDF)"><Printer size={15} /></button>
-                <button onClick={() => descargarPortadaAlumno(a, alumnos)} className="btn-icono" style={{ color: "var(--verde)" }} title="Descargar portada de carpeta de este alumno (PDF)"><IdCard size={15} /></button>
+                <button
+                  onClick={() => descargarPortadaAlumno(a, alumnos)}
+                  className="font-mono"
+                  style={{ fontSize: "0.68rem", color: "var(--verde)", background: "transparent", border: "1px solid var(--linea)", borderRadius: "8px", padding: "0.35rem 0.55rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem", whiteSpace: "nowrap" }}
+                  title="Descargar portada de carpeta de este alumno (PDF)"
+                ><IdCard size={13} /> Portada</button>
                 <button onClick={() => iniciarEdicion(a)} className="font-mono" style={{ fontSize: "0.68rem", color: "var(--azul)", background: "transparent", border: "1px solid var(--linea)", borderRadius: "8px", padding: "0.35rem 0.6rem", cursor: "pointer" }}>Editar</button>
                 <button onClick={() => eliminar(a.id)} className="btn-icono"><Trash2 size={15} /></button>
               </div>
