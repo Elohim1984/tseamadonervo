@@ -547,6 +547,7 @@ const IdCard = crearIcono('<rect x="3" y="4" width="18" height="16" rx="2"/><cir
 const BarChart3 = crearIcono('<path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12.5" y="8" width="3" height="10"/><rect x="18" y="5" width="3" height="13"/>');
 const Vote = crearIcono('<path d="m9 12 2 2 4-4"/><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z"/><path d="M22 19H2"/>');
 const Camera = crearIcono('<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>');
+const Upload = crearIcono('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>');
 
 
 /* ---------- estados de México (para campos de entidad) ---------- */
@@ -1204,6 +1205,133 @@ async function generarCredencialesTodosAlumnos(alumnos) {
   const bytes = await combinado.save();
   descargarBytesPDF(bytes, `Credenciales_todos_los_alumnos_${hoyISO()}.pdf`);
   return lista.length;
+}
+
+/* ---------- Credenciales oficiales del Estado (Puebla), con foto (6 oct 2026) ---------- */
+/* El director decidió (después de ver la Credencial propia de arriba) usar
+   SOLO las credenciales OFICIALES que genera el portal de Control Escolar del
+   Estado de Puebla — un PDF por grado, 4 credenciales por hoja, cada una ya
+   impresa con Nombre/Apellidos/NIA/CURP/Grado/Grupo del alumno y un recuadro
+   vacío para la foto. El director sube aquí ese PDF (el que exporta del
+   portal del Estado, tal cual, cada vez que cambie algo) y Control Escolar le
+   pega la foto de cada alumno ya guardada (con el botón "Foto" de arriba) en
+   el recuadro correcto.
+
+   Es un PDF de TEXTO FIJO, no tiene campos de formulario (confirmado: "Form:
+   none"), así que no hay forma de leer automáticamente qué NIA trae cada
+   recuadro (eso necesitaría una librería aparte para leer texto con posición,
+   que no está cargada en la app a propósito, para no sumar otra dependencia
+   externa). Por eso el director asigna a mano, una vez por hoja, qué alumno
+   va en cada uno de los 4 recuadros (viendo su propio PDF al lado) — con 4
+   selects por hoja alcanza.
+
+   La posición del recuadro de foto se midió por escaneo de píxeles sobre el
+   PDF real que subió el director (4 alumnos de prueba, en los 3 grados) y se
+   comprobó visualmente que es EXACTAMENTE la misma en los 3 archivos y en
+   todas las hojas. OJO con la rotación: la página trae /Rotate 90 (el
+   MediaBox es 612x792 vertical, pero se ve apaisada) — pdf-lib siempre dibuja
+   en el espacio SIN ROTAR del MediaBox, así que las constantes de abajo ya
+   están convertidas a ese espacio (ver cajaCredencialOficial). */
+
+// Medidas tomadas sobre un render a 100dpi de la hoja ORIGINAL (tal como se
+// ve, ya rotada): recuadro superior-izquierdo en x:191-281px, y:156-265px;
+// distancia a la columna derecha 502px, a la fila de abajo 385px. 0.72 = pt
+// por "px" de referencia (72/100dpi).
+const CRED_OFICIAL_REND_COL0_X = 191;
+const CRED_OFICIAL_REND_FILA0_Y = 156;
+const CRED_OFICIAL_REND_CAJA_DX = 90; // ancho del recuadro en el render (horizontal)
+const CRED_OFICIAL_REND_CAJA_DY = 109; // alto del recuadro en el render (vertical)
+const CRED_OFICIAL_REND_PASO_COL = 502;
+const CRED_OFICIAL_REND_PASO_FILA = 385;
+const CRED_OFICIAL_REND_ESCALA = 0.72;
+const CRED_OFICIAL_REND_INSET = 2; // para no tapar el borde del recuadro
+
+// fila: 0 (arriba) o 1 (abajo). columna: 0 (izquierda) o 1 (derecha).
+// Devuelve {x,y,width,height} en el espacio SIN ROTAR del MediaBox (el que
+// usa pdf-lib para drawImage/drawRectangle), ya con el intercambio de ejes
+// que exige la rotación de 90°: lo que en el render es "vertical" (eje Y de
+// la imagen) pasa a ser el eje X del PDF, y lo "horizontal" pasa a ser el eje Y.
+function cajaCredencialOficial(fila, columna) {
+  const inset = CRED_OFICIAL_REND_INSET;
+  const topRend = CRED_OFICIAL_REND_FILA0_Y + fila * CRED_OFICIAL_REND_PASO_FILA + inset;
+  const bottomRend = CRED_OFICIAL_REND_FILA0_Y + fila * CRED_OFICIAL_REND_PASO_FILA + CRED_OFICIAL_REND_CAJA_DY - inset;
+  const leftRend = CRED_OFICIAL_REND_COL0_X + columna * CRED_OFICIAL_REND_PASO_COL + inset;
+  const rightRend = CRED_OFICIAL_REND_COL0_X + columna * CRED_OFICIAL_REND_PASO_COL + CRED_OFICIAL_REND_CAJA_DX - inset;
+  return {
+    x: topRend * CRED_OFICIAL_REND_ESCALA,
+    y: leftRend * CRED_OFICIAL_REND_ESCALA,
+    width: (bottomRend - topRend) * CRED_OFICIAL_REND_ESCALA,
+    height: (rightRend - leftRend) * CRED_OFICIAL_REND_ESCALA,
+  };
+}
+
+// Dibuja la foto del alumno "cubriendo" todo el recuadro rectangular (sin
+// deformarla: se recorta lo que sobre, igual que un "object-fit: cover"),
+// usando un recorte rectangular de bajo nivel (mismo patrón que el recorte
+// circular de la Credencial propia, pero con un rectángulo en vez de una
+// elipse). Como aquí NUNCA se combinan páginas de otros documentos con
+// copyPages (se dibuja directo sobre las páginas del PDF que subió el
+// director), no aplica el bug de pdf-lib documentado arriba en
+// dibujarFotoEnPagina — no hace falta dibujar "después de copiar".
+async function dibujarFotoEnCajaRectangular(doc, page, fotoBase64, caja) {
+  try {
+    const { pushGraphicsState, popGraphicsState, moveTo, lineTo, closePath, clip, endPath } = window.PDFLib;
+    const img = await doc.embedJpg(base64ABytes(fotoBase64));
+    const { x, y, width, height } = caja;
+    page.pushOperators(
+      pushGraphicsState(),
+      moveTo(x, y),
+      lineTo(x + width, y),
+      lineTo(x + width, y + height),
+      lineTo(x, y + height),
+      closePath(),
+      clip(),
+      endPath()
+    );
+    const escala = Math.max(width / img.width, height / img.height);
+    const anchoDibujo = img.width * escala;
+    const altoDibujo = img.height * escala;
+    page.drawImage(img, {
+      x: x + (width - anchoDibujo) / 2,
+      y: y + (height - altoDibujo) / 2,
+      width: anchoDibujo,
+      height: altoDibujo,
+    });
+    page.pushOperators(popGraphicsState());
+  } catch (e) {
+    console.error("No se pudo dibujar la foto en la credencial oficial:", e);
+  }
+}
+
+// asignaciones: arreglo por página, cada una con 4 ids de alumno (o "" si no
+// se asignó), en orden arriba-izq, arriba-der, abajo-izq, abajo-der.
+// fotosPorId: { [idAlumno]: base64 } ya cargado de antemano. Regresa los
+// bytes del PDF final y la lista de ids asignados que no tenían foto guardada
+// (para avisarle al director cuáles faltaron).
+async function llenarCredencialesOficialesPDF(bytesPDF, asignaciones, fotosPorId) {
+  const { PDFDocument } = window.PDFLib;
+  const pdfDoc = await PDFDocument.load(bytesPDF);
+  const numPaginas = pdfDoc.getPageCount();
+  const faltantes = [];
+  for (let p = 0; p < numPaginas; p++) {
+    const page = pdfDoc.getPage(p);
+    const asignacionesPagina = asignaciones[p] || [];
+    for (let slot = 0; slot < 4; slot++) {
+      const idAlumno = asignacionesPagina[slot];
+      if (!idAlumno) continue;
+      const fotoBase64 = fotosPorId[idAlumno];
+      if (!fotoBase64) {
+        faltantes.push(idAlumno);
+        continue;
+      }
+      const fila = slot < 2 ? 0 : 1;
+      const columna = slot % 2;
+      const caja = cajaCredencialOficial(fila, columna);
+      await dibujarFotoEnCajaRectangular(pdfDoc, page, fotoBase64, caja);
+    }
+  }
+  const bytes = await pdfDoc.save();
+  return { bytes, faltantes };
 }
 
 /* ---------- Mapeador de formatos oficiales ---------- */
@@ -2146,6 +2274,42 @@ function OpcionesAlumnosPorGrado({ alumnos }) {
       ))}
     </optgroup>
   ));
+}
+
+// Fila de 4 selects para asignar, a mano, qué alumno va en cada uno de los 4
+// recuadros de una hoja de credenciales oficiales del Estado (ver nota junto
+// a llenarCredencialesOficialesPDF: el PDF no trae campos de formulario, así
+// que no hay forma automática de saber qué NIA trae cada recuadro). El
+// director ve su propio PDF (ya impreso con cada nombre/NIA) y elige aquí, en
+// el mismo orden visual de la hoja: arriba-izquierda, arriba-derecha,
+// abajo-izquierda, abajo-derecha.
+function AsignacionPaginaCredOficial({ numeroPagina, asignacion, alumnosGrado, onChange }) {
+  const etiquetas = ["Arriba izquierda", "Arriba derecha", "Abajo izquierda", "Abajo derecha"];
+  return (
+    <div className="card" style={{ padding: "0.6rem 0.75rem" }}>
+      <div className="font-mono" style={{ fontSize: "0.68rem", opacity: 0.55, marginBottom: "0.35rem" }}>
+        Hoja {numeroPagina + 1}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {[0, 1, 2, 3].map((slot) => (
+          <div key={slot} className="flex flex-col gap-1">
+            <label className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.5 }}>{etiquetas[slot]}</label>
+            <select
+              className="campo"
+              style={{ fontSize: "0.75rem" }}
+              value={(asignacion && asignacion[slot]) || ""}
+              onChange={(e) => onChange(numeroPagina, slot, e.target.value)}
+            >
+              <option value="">— sin asignar —</option>
+              {alumnosGrado.map((a) => (
+                <option key={a.id} value={a.id}>{nombreAlumno(a)}{a.NIA ? ` · NIA ${a.NIA}` : ""}</option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 /* ---------- Detección y fusión de alumnos duplicados (agregado 24 sept 2026) ----------
@@ -3391,10 +3555,19 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
   const [cargandoFotos, setCargandoFotos] = useState(true);
   const [subiendoFotoId, setSubiendoFotoId] = useState(null);
   const [errorFoto, setErrorFoto] = useState("");
-  const [generandoCredenciales, setGenerandoCredenciales] = useState(false);
-  const [errorCredenciales, setErrorCredenciales] = useState("");
-  const [idCredencialIndividual, setIdCredencialIndividual] = useState("");
-  const [descargandoCredencialIndividual, setDescargandoCredencialIndividual] = useState(false);
+
+  // Credenciales OFICIALES del Estado (Puebla), con foto (6 oct 2026) — el
+  // director decidió usar solo estas (ver nota junto a llenarCredencialesOficialesPDF).
+  // El director sube el PDF que exporta del portal del Estado (uno por grado,
+  // 4 credenciales por hoja) y asigna a mano, por hoja, qué alumno va en cada
+  // uno de los 4 recuadros; luego se le pega la foto ya guardada de cada quien.
+  const [credOficialGrado, setCredOficialGrado] = useState(gradosPermitidos[0]);
+  const [credOficialArchivo, setCredOficialArchivo] = useState(null); // { nombre, bytes, numPaginas }
+  const [credOficialAsignaciones, setCredOficialAsignaciones] = useState([]); // [pagina][slot] = idAlumno | ""
+  const [credOficialCargando, setCredOficialCargando] = useState(false);
+  const [credOficialGenerando, setCredOficialGenerando] = useState(false);
+  const [credOficialError, setCredOficialError] = useState("");
+  const [credOficialAviso, setCredOficialAviso] = useState("");
 
   useEffect(() => {
     let cancelado = false;
@@ -3426,33 +3599,74 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
     }
   };
 
-  const descargarCredencialSeleccionada = async () => {
-    const a = alumnos.find((x) => x.id === idCredencialIndividual);
-    if (!a) return;
-    setDescargandoCredencialIndividual(true);
-    setErrorCredenciales("");
+  const subirPDFCredencialOficial = async (archivo) => {
+    if (!archivo) return;
+    setCredOficialCargando(true);
+    setCredOficialError("");
+    setCredOficialAviso("");
     try {
-      await descargarCredencialAlumno(a, alumnos);
-      onStamp && onStamp("Descargado");
+      const buffer = await archivo.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const { PDFDocument } = window.PDFLib;
+      const pdfDoc = await PDFDocument.load(bytes);
+      const numPaginas = pdfDoc.getPageCount();
+      setCredOficialArchivo({ nombre: archivo.name, bytes, numPaginas });
+      setCredOficialAsignaciones(Array.from({ length: numPaginas }, () => ["", "", "", ""]));
     } catch (e) {
-      console.error("Credencial individual falló:", e);
-      setErrorCredenciales("No se pudo generar la credencial de ese alumno. Intenta de nuevo.");
+      console.error("No se pudo leer el PDF de credenciales oficiales:", e);
+      setCredOficialError("No se pudo leer ese PDF. Confirma que es el que exportaste del portal del Estado, sin modificar.");
+      setCredOficialArchivo(null);
+      setCredOficialAsignaciones([]);
     } finally {
-      setDescargandoCredencialIndividual(false);
+      setCredOficialCargando(false);
     }
   };
 
-  const descargarTodasLasCredenciales = async () => {
-    setGenerandoCredenciales(true);
-    setErrorCredenciales("");
+  const cambiarAsignacionCredOficial = (pagina, slot, idAlumno) => {
+    setCredOficialAsignaciones((prev) => {
+      const copia = prev.map((pag) => pag.slice());
+      if (!copia[pagina]) copia[pagina] = ["", "", "", ""];
+      copia[pagina][slot] = idAlumno;
+      return copia;
+    });
+  };
+
+  const generarCredencialesOficialesConFoto = async () => {
+    if (!credOficialArchivo) return;
+    setCredOficialGenerando(true);
+    setCredOficialError("");
+    setCredOficialAviso("");
     try {
-      await generarCredencialesTodosAlumnos(alumnos);
+      // ids únicos asignados en alguna casilla, para cargar su foto una sola vez
+      const idsAsignados = Array.from(
+        new Set(credOficialAsignaciones.flat().filter(Boolean))
+      );
+      const fotosPorId = {};
+      for (const id of idsAsignados) {
+        fotosPorId[id] = await cargarFotoAlumno(id);
+      }
+      const { bytes, faltantes } = await llenarCredencialesOficialesPDF(
+        credOficialArchivo.bytes,
+        credOficialAsignaciones,
+        fotosPorId
+      );
+      const nombreArchivo = `Credenciales_oficiales_${credOficialGrado}er_grado_con_foto_${hoyISO()}.pdf`;
+      descargarBytesPDF(bytes, nombreArchivo);
       onStamp && onStamp("Descargado");
+      if (faltantes.length > 0) {
+        const nombres = faltantes
+          .map((id) => alumnos.find((a) => a.id === id))
+          .filter(Boolean)
+          .map((a) => nombreAlumno(a));
+        setCredOficialAviso(
+          `Se generó el PDF, pero ${faltantes.length} alumno(s) asignado(s) todavía no tienen foto guardada (quedaron con el recuadro en blanco): ${nombres.join(", ")}. Sube su foto con el botón "Foto" más abajo y vuelve a generar.`
+        );
+      }
     } catch (e) {
-      console.error("Credenciales de alumnos falló:", e);
-      setErrorCredenciales("No se pudieron generar las credenciales. Intenta de nuevo.");
+      console.error("No se pudieron generar las credenciales oficiales:", e);
+      setCredOficialError("No se pudo generar el PDF con fotos. Intenta de nuevo.");
     } finally {
-      setGenerandoCredenciales(false);
+      setCredOficialGenerando(false);
     }
   };
 
@@ -3671,50 +3885,92 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
         </div>
       )}
 
-      <div className="card flex flex-col gap-2">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <div className="font-display" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Credenciales de alumno — con foto</div>
-            <p className="text-sm" style={{ opacity: 0.6 }}>
-              Un PDF con una credencial por cada alumno (nombre, escuela, ciclo escolar, grado y número de lista), con su foto recortada en círculo si ya la subiste. Sube la foto de cada quien con el botón <Camera size={11} style={{ display: "inline", verticalAlign: "-1px" }} /> junto a su nombre, más abajo — a los que todavía no tengan foto les sale el círculo en blanco, y se puede volver a generar cuando la subas.
-            </p>
-          </div>
-          <button onClick={descargarTodasLasCredenciales} disabled={generandoCredenciales || alumnos.length === 0} className="btn-primario" style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}>
-            <IdCard size={14} /> {generandoCredenciales ? "Generando…" : "Credenciales de todos los alumnos"}
-          </button>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap" style={{ borderTop: "1px dashed var(--linea)", paddingTop: "0.5rem" }}>
-          <IdCard size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
-          <select
-            className="campo"
-            style={{ flex: 1, minWidth: "200px", fontSize: "0.78rem" }}
-            value={idCredencialIndividual}
-            onChange={(e) => setIdCredencialIndividual(e.target.value)}
-          >
-            <option value="">¿Solo necesitas la de un alumno? Elígelo aquí…</option>
-            <OpcionesAlumnosPorGrado alumnos={alumnos} />
-          </select>
-          <button
-            onClick={descargarCredencialSeleccionada}
-            disabled={!idCredencialIndividual || descargandoCredencialIndividual}
-            className="btn-secundario"
-            style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}
-          >
-            {descargandoCredencialIndividual ? "Generando…" : "Descargar solo esta"}
-          </button>
-        </div>
-        {!cargandoFotos && (
-          <p className="text-sm" style={{ opacity: 0.55 }}>{fotosConAlumno.size} de {alumnos.length} alumno(s) ya tienen foto guardada.</p>
-        )}
-      </div>
-      {errorCredenciales && (
-        <div className="card" style={{ borderColor: "var(--rojo)", background: "rgba(122,22,19,0.06)" }}>
-          <p className="text-sm" style={{ color: "var(--rojo)" }}>{errorCredenciales}</p>
-        </div>
-      )}
       {errorFoto && (
         <div className="card" style={{ borderColor: "var(--rojo)", background: "rgba(122,22,19,0.06)" }}>
           <p className="text-sm" style={{ color: "var(--rojo)" }}>{errorFoto}</p>
+        </div>
+      )}
+
+      <div className="card flex flex-col gap-2">
+        <div>
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Credenciales oficiales (Estado de Puebla) — pegar fotos</div>
+          <p className="text-sm" style={{ opacity: 0.6 }}>
+            Sube aquí el PDF que exportaste del portal de Control Escolar del Estado (uno por grado, 4 credenciales por hoja, ya con nombre/NIA/CURP impresos). Viendo tu propio PDF, asigna qué alumno va en cada uno de los 4 recuadros de cada hoja, y Control Escolar le pega la foto que ya tengas guardada de cada quien.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap" style={{ borderTop: "1px dashed var(--linea)", paddingTop: "0.5rem" }}>
+          <Landmark size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
+          <select
+            className="campo"
+            style={{ maxWidth: "140px", fontSize: "0.78rem" }}
+            value={credOficialGrado}
+            onChange={(e) => setCredOficialGrado(e.target.value)}
+          >
+            {gradosPermitidos.map((g) => (
+              <option key={g} value={g}>{g}° grado</option>
+            ))}
+          </select>
+          <label
+            className="font-mono btn-secundario"
+            style={{ fontSize: "0.75rem", whiteSpace: "nowrap", cursor: credOficialCargando ? "wait" : "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+          >
+            <Upload size={13} />
+            {credOficialCargando ? "Leyendo…" : credOficialArchivo ? "Cambiar PDF" : "Subir PDF del Estado"}
+            <input
+              type="file"
+              accept="application/pdf"
+              style={{ display: "none" }}
+              disabled={credOficialCargando}
+              onChange={(e) => {
+                const archivo = e.target.files && e.target.files[0];
+                e.target.value = "";
+                if (archivo) subirPDFCredencialOficial(archivo);
+              }}
+            />
+          </label>
+          {credOficialArchivo && (
+            <span className="text-sm" style={{ opacity: 0.55 }}>
+              {credOficialArchivo.nombre} · {credOficialArchivo.numPaginas} hoja(s) · {credOficialArchivo.numPaginas * 4} credenciales
+            </span>
+          )}
+        </div>
+
+        {credOficialArchivo && (
+          <>
+            <div className="flex flex-col gap-2">
+              {credOficialAsignaciones.map((asignacion, i) => (
+                <AsignacionPaginaCredOficial
+                  key={i}
+                  numeroPagina={i}
+                  asignacion={asignacion}
+                  alumnosGrado={alumnos.filter((a) => a.grado === credOficialGrado).slice().sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b), "es"))}
+                  onChange={cambiarAsignacionCredOficial}
+                />
+              ))}
+            </div>
+            <button
+              onClick={generarCredencialesOficialesConFoto}
+              disabled={credOficialGenerando}
+              className="btn-primario"
+              style={{ fontSize: "0.75rem", whiteSpace: "nowrap", alignSelf: "flex-start" }}
+            >
+              <IdCard size={14} /> {credOficialGenerando ? "Generando…" : "Generar PDF con fotos"}
+            </button>
+          </>
+        )}
+
+        {!cargandoFotos && (
+          <p className="text-sm" style={{ opacity: 0.55 }}>{fotosConAlumno.size} de {alumnos.length} alumno(s) ya tienen foto guardada (con el botón <Camera size={11} style={{ display: "inline", verticalAlign: "-1px" }} /> "Foto", más abajo).</p>
+        )}
+      </div>
+      {credOficialError && (
+        <div className="card" style={{ borderColor: "var(--rojo)", background: "rgba(122,22,19,0.06)" }}>
+          <p className="text-sm" style={{ color: "var(--rojo)" }}>{credOficialError}</p>
+        </div>
+      )}
+      {credOficialAviso && (
+        <div className="card" style={{ borderColor: "var(--ambar)", background: "rgba(180,130,20,0.08)" }}>
+          <p className="text-sm" style={{ color: "var(--ambar)" }}>{credOficialAviso}</p>
         </div>
       )}
 
@@ -3751,7 +4007,7 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
                 <label
                   className="font-mono"
                   style={{ fontSize: "0.68rem", color: fotosConAlumno.has(a.id) ? "var(--verde)" : "var(--ambar)", background: "transparent", border: "1px solid var(--linea)", borderRadius: "8px", padding: "0.35rem 0.55rem", cursor: subiendoFotoId === a.id ? "wait" : "pointer", display: "flex", alignItems: "center", gap: "0.25rem", whiteSpace: "nowrap" }}
-                  title={fotosConAlumno.has(a.id) ? "Ya tiene foto guardada para la Credencial — elige otra imagen para reemplazarla" : "Subir foto de este alumno (para la Credencial)"}
+                  title={fotosConAlumno.has(a.id) ? "Ya tiene foto guardada para pegar en su credencial oficial — elige otra imagen para reemplazarla" : "Subir foto de este alumno (para pegarla en su credencial oficial, más abajo)"}
                 >
                   <Camera size={13} /> {subiendoFotoId === a.id ? "Subiendo…" : fotosConAlumno.has(a.id) ? "Foto ✓" : "Foto"}
                   <input
@@ -3766,12 +4022,6 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
                     }}
                   />
                 </label>
-                <button
-                  onClick={() => descargarCredencialAlumno(a, alumnos)}
-                  className="font-mono"
-                  style={{ fontSize: "0.68rem", color: "var(--rojo)", background: "transparent", border: "1px solid var(--linea)", borderRadius: "8px", padding: "0.35rem 0.55rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem", whiteSpace: "nowrap" }}
-                  title="Descargar credencial de este alumno (PDF, con foto si ya la subiste)"
-                ><IdCard size={13} /> Credencial</button>
                 <button onClick={() => iniciarEdicion(a)} className="font-mono" style={{ fontSize: "0.68rem", color: "var(--azul)", background: "transparent", border: "1px solid var(--linea)", borderRadius: "8px", padding: "0.35rem 0.6rem", cursor: "pointer" }}>Editar</button>
                 <button onClick={() => eliminar(a.id)} className="btn-icono"><Trash2 size={15} /></button>
               </div>
