@@ -1491,7 +1491,7 @@ async function cred2026PaginaParaIncrustar(alumno) {
   return docRecargado.getPage(0);
 }
 
-async function generarHojasCredencial20264x(alumnos) {
+async function generarHojasCredencial20264x(alumnos, etiquetaArchivo) {
   const { PDFDocument, rgb } = window.PDFLib;
   const lista = (alumnos || []).slice().sort(compararAlumnos);
   const combinado = await PDFDocument.create();
@@ -1520,7 +1520,8 @@ async function generarHojasCredencial20264x(alumnos) {
     }
   }
   const bytes = await combinado.save();
-  descargarBytesPDF(bytes, `Credenciales2026_4porhoja_${hoyISO()}.pdf`);
+  const sufijo = etiquetaArchivo ? `_${etiquetaArchivo.replace(/[^a-zA-Z0-9]+/g, "_")}` : "";
+  descargarBytesPDF(bytes, `Credenciales2026_4porhoja${sufijo}_${hoyISO()}.pdf`);
   return lista.length;
 }
 
@@ -4043,6 +4044,22 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
   const [errorCredencial2026, setErrorCredencial2026] = useState("");
   const [idCredencial2026Individual, setIdCredencial2026Individual] = useState("");
   const [descargandoCredencial2026Individual, setDescargandoCredencial2026Individual] = useState(false);
+  // 4 por hoja, pero de un solo grupo a la vez (6 oct 2026, a petición del
+  // director: "que genere por grupo completo... que pueda seleccionar grupos").
+  const [grupoHojasCredencial2026, setGrupoHojasCredencial2026] = useState("");
+  const [generandoHojasCredencial2026Grupo, setGenerandoHojasCredencial2026Grupo] = useState(false);
+  // Lista de grado+grupo que de verdad existen entre los alumnos inscritos
+  // (p. ej. "1°A", "1°B", "2°A"…), para el selector de "4 por hoja, por grupo".
+  const gruposCredencial2026 = useMemo(() => {
+    const mapa = new Map();
+    for (const a of alumnos) {
+      if (!a.grado) continue;
+      const g = (a.ESCUELA_GRUPO || "").trim();
+      const clave = `${a.grado}|${g}`;
+      if (!mapa.has(clave)) mapa.set(clave, { grado: a.grado, grupo: g });
+    }
+    return Array.from(mapa.values()).sort((x, y) => (x.grado - y.grado) || x.grupo.localeCompare(y.grupo, "es"));
+  }, [alumnos]);
 
   // Credencial de alumno con foto (6 oct 2026) — mismo patrón que la Portada
   // de arriba, pero con una foto por alumno (subida aquí mismo) recortada en
@@ -4257,6 +4274,27 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
     }
   };
 
+  const descargarHojasCredencial20264xGrupo = async () => {
+    if (!grupoHojasCredencial2026) return;
+    const [gradoTexto, grupoTexto] = grupoHojasCredencial2026.split("|");
+    const gradoSel = Number(gradoTexto);
+    const alumnosDelGrupo = alumnos.filter(
+      (a) => a.grado === gradoSel && (a.ESCUELA_GRUPO || "").trim() === grupoTexto
+    );
+    if (alumnosDelGrupo.length === 0) return;
+    setGenerandoHojasCredencial2026Grupo(true);
+    setErrorCredencial2026("");
+    try {
+      await generarHojasCredencial20264x(alumnosDelGrupo, `${gradoSel}${grupoTexto || ""}`);
+      onStamp && onStamp("Descargado");
+    } catch (e) {
+      console.error("Hojas de 4 Credenciales 2026 por grupo falló:", e);
+      setErrorCredencial2026("No se pudieron generar las hojas de ese grupo. Intenta de nuevo.");
+    } finally {
+      setGenerandoHojasCredencial2026Grupo(false);
+    }
+  };
+
   const cambiarCampo = (clave, valor) => {
     setForm((f) => {
       const actualizado = { ...f, [clave]: valor };
@@ -4456,6 +4494,30 @@ function Inscripciones({ alumnos, setAlumnos, gradosPermitidos, rol, onStamp, as
               <Download size={14} /> {generandoCredenciales2026 ? "Generando…" : "Una por página, todos"}
             </button>
           </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap" style={{ borderTop: "1px dashed var(--linea)", paddingTop: "0.5rem" }}>
+          <Users size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
+          <select
+            className="campo"
+            style={{ flex: 1, minWidth: "200px", fontSize: "0.78rem" }}
+            value={grupoHojasCredencial2026}
+            onChange={(e) => setGrupoHojasCredencial2026(e.target.value)}
+          >
+            <option value="">¿Solo un grupo? Elígelo aquí para su propia hoja de 4…</option>
+            {gruposCredencial2026.map((g) => (
+              <option key={`${g.grado}|${g.grupo}`} value={`${g.grado}|${g.grupo}`}>
+                {g.grado}°{g.grupo || ""}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={descargarHojasCredencial20264xGrupo}
+            disabled={!grupoHojasCredencial2026 || generandoHojasCredencial2026Grupo}
+            className="btn-secundario"
+            style={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}
+          >
+            {generandoHojasCredencial2026Grupo ? "Generando…" : "4 por hoja, solo este grupo"}
+          </button>
         </div>
         <div className="flex items-center gap-2 flex-wrap" style={{ borderTop: "1px dashed var(--linea)", paddingTop: "0.5rem" }}>
           <IdCard size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
