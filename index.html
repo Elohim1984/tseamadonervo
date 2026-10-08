@@ -613,6 +613,76 @@ const ESTADOS_MEXICO = [
   "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas",
 ];
 
+/* ---------- Estadística 911.5 (SEP) — catálogos oficiales del formato de
+   Educación Secundaria, ciclo 2026-2027 (tomados del formato oficial
+   FORMATO_SECUNDARIA_911.5, no del manual genérico de captura). Se usan para
+   que la ficha del alumno y la de personal capturen, con las mismas
+   categorías oficiales, los datos que hoy solo existen como texto libre. ---------- */
+const E911_CATEGORIAS_CONDICION = [
+  "Ninguna",
+  "Ceguera", "Baja visión", "Sordera", "Hipoacusia", "Sordoceguera",
+  "Discapacidad motriz", "Discapacidad intelectual", "Discapacidad psicosocial", "Discapacidad múltiple",
+  "Trastorno del espectro autista", "TDAH",
+  "Aptitudes sobresalientes",
+  "Otras condiciones",
+];
+// A qué columna del cuadro oficial (Con discapacidad / Con trastorno /
+// Aptitudes sobresalientes / Otras condiciones) corresponde cada categoría
+// granular de E911_CATEGORIAS_CONDICION — mismo agrupamiento que usa la SEP
+// en las secciones I, IV, VIII… del formato 911.5 2026-2027.
+const E911_GRUPO_CONDICION = {
+  "Ceguera": "discapacidad", "Baja visión": "discapacidad", "Sordera": "discapacidad",
+  "Hipoacusia": "discapacidad", "Sordoceguera": "discapacidad", "Discapacidad motriz": "discapacidad",
+  "Discapacidad intelectual": "discapacidad", "Discapacidad psicosocial": "discapacidad",
+  "Discapacidad múltiple": "discapacidad",
+  "Trastorno del espectro autista": "trastorno", "TDAH": "trastorno",
+  "Aptitudes sobresalientes": "aptitudes",
+  "Otras condiciones": "otras",
+};
+const E911_PROCEDENCIAS = ["Misma entidad federativa", "Otra entidad federativa", "Otro país"];
+const E911_REGIONES_PAIS = ["Estados Unidos", "Canadá", "Centroamérica y el Caribe", "Sudamérica", "África", "Asia", "Europa", "Oceanía"];
+const E911_TIPOS_PRIMARIA = ["Primaria general", "Primaria indígena", "Primaria comunitaria"];
+const E911_ORIGENES_BECA = [
+  "Beca Rita Cetina", "Otra beca federal", "Beca estatal",
+  "Beca de fundaciones y asociaciones civiles", "Beca de la propia escuela",
+  "Beca particular", "Beca municipal", "Otra",
+];
+const E911_BECAS_FEDERALES = ["Beca Rita Cetina", "Otra beca federal"];
+const E911_NIVELES_ESTUDIO = [
+  "Primaria incompleta", "Primaria terminada", "Secundaria incompleta", "Secundaria terminada",
+  "Profesional técnico", "Bachillerato incompleto", "Bachillerato terminado",
+  "Normal preescolar incompleta", "Normal preescolar terminada",
+  "Normal primaria incompleta", "Normal primaria terminada",
+  "Normal superior incompleta", "Normal superior pasante", "Normal superior titulado",
+  "Licenciatura incompleta", "Licenciatura pasante", "Licenciatura titulado",
+  "Maestría incompleta", "Maestría graduado", "Doctorado incompleto", "Doctorado graduado", "Otros",
+];
+const E911_FUNCIONES_PERSONAL = [
+  "Personal directivo con grupo", "Personal directivo sin grupo", "Subdirector de gestión escolar",
+  "Personal docente", "Tutor",
+  "Profesor de educación física", "Profesor de actividades artísticas",
+  "Profesor de actividades tecnológicas", "Profesor de idiomas",
+  "Personal administrativo, auxiliar y de servicios",
+];
+// V.5 del formato oficial: solo se suma el personal directivo con grupo, el
+// personal docente y el personal docente especial (no el subdirector de
+// gestión, el directivo sin grupo, los tutores ni el personal administrativo).
+const E911_FUNCIONES_TIEMPO_ACADEMICO = [
+  "Personal directivo con grupo", "Personal docente",
+  "Profesor de educación física", "Profesor de actividades artísticas",
+  "Profesor de actividades tecnológicas", "Profesor de idiomas",
+];
+const E911_TIEMPOS_DEDICACION = ["Tiempo completo", "Tres cuartos de tiempo", "Medio tiempo", "Por horas"];
+const E911_IDIOMAS = [
+  { clave: "ingles", etiqueta: "Inglés" },
+  { clave: "frances", etiqueta: "Francés" },
+  { clave: "aleman", etiqueta: "Alemán" },
+  { clave: "japones", etiqueta: "Japonés" },
+  { clave: "italiano", etiqueta: "Italiano" },
+  { clave: "otro", etiqueta: "Otro" },
+];
+const E911_SEMANAS_LIBROS = ["Primera semana", "Segunda semana", "Tercera semana", "Cuarta semana o más"];
+
 /* ---------- constantes de datos ---------- */
 const GRADOS = [1, 2, 3];
 const GRADOS_PERMITIDOS = { directora: [1, 2, 3], maestro: [2, 3] };
@@ -2733,6 +2803,20 @@ const FICHA_SCHEMA = [
     { clave: "ESCUELA_GRUPO", etiqueta: "Grupo", tipo: "texto" },
     { clave: "ESCUELA_ZONA_ESCOLAR", etiqueta: "Zona escolar", tipo: "texto" },
   ] },
+  { id: "estadistica911", titulo: "Estadística 911.5 (SEP)", campos: [
+    { clave: "E911_REPITE_GRADO", etiqueta: "¿Repite este grado? (si no, cuenta como nuevo ingreso)", tipo: "select", opciones: ["No", "Sí"] },
+    { clave: "E911_PROVIENE_OTRA_ESCUELA", etiqueta: "¿Proviene de otra escuela este ciclo?", tipo: "select", opciones: ["No", "Sí"] },
+    { clave: "E911_PROCEDENCIA_LUGAR", etiqueta: "Si proviene de otra escuela, ¿de dónde?", tipo: "select", opciones: E911_PROCEDENCIAS },
+    { clave: "E911_PROCEDENCIA_REGION_PAIS", etiqueta: "Si es de otro país, región", tipo: "select", opciones: E911_REGIONES_PAIS },
+    { clave: "E911_PRIMARIA_TIPO", etiqueta: "Tipo de primaria de la que egresó (si aplica)", tipo: "select", opciones: E911_TIPOS_PRIMARIA },
+    { clave: "E911_TIENE_BECA", etiqueta: "¿Tiene beca?", tipo: "select", opciones: ["No", "Sí"] },
+    { clave: "E911_BECA_ORIGEN", etiqueta: "Origen de la beca", tipo: "select", opciones: E911_ORIGENES_BECA },
+    { clave: "E911_BECA_ESPECIFIQUE", etiqueta: "Especifique (si el origen es \"Otra beca federal\" u \"Otra\")", tipo: "texto" },
+    { clave: "E911_CONDICION", etiqueta: "Condición oficial 911 (discapacidad / trastorno / aptitudes)", tipo: "select", opciones: E911_CATEGORIAS_CONDICION },
+    { clave: "E911_AFROMEXICANO", etiqueta: "¿Afromexicano o afrodescendiente? (autoadscripción de los padres)", tipo: "select", opciones: ["No", "Sí"] },
+    { clave: "E911_USAER", etiqueta: "¿Atendido por la USAER?", tipo: "select", opciones: ["No", "Sí"] },
+    { clave: "E911_ENTIDAD_RESIDENCIA", etiqueta: "Entidad federativa de residencia", tipo: "select", opciones: ESTADOS_MEXICO },
+  ] },
 ];
 
 function nombreAlumno(a) {
@@ -3109,6 +3193,13 @@ function alumnoVacio(grado) {
   obj.ESCUELA_NOMBRE = "Amado Nervo";
   obj.ESCUELA_CCT = "21ETV0473W";
   obj.ESCUELA_ZONA_ESCOLAR = "52";
+  obj.E911_REPITE_GRADO = "No";
+  obj.E911_PROVIENE_OTRA_ESCUELA = "No";
+  obj.E911_TIENE_BECA = "No";
+  obj.E911_CONDICION = "Ninguna";
+  obj.E911_AFROMEXICANO = "No";
+  obj.E911_USAER = "No";
+  obj.E911_ENTIDAD_RESIDENCIA = "Puebla";
   return obj;
 }
 
@@ -3118,6 +3209,7 @@ const FICHA_PERSONAL_SCHEMA = [
     { clave: "PERSONAL_APELLIDO_PATERNO", etiqueta: "Apellido paterno", tipo: "texto" },
     { clave: "PERSONAL_APELLIDO_MATERNO", etiqueta: "Apellido materno", tipo: "texto" },
     { clave: "PERSONAL_NOMBRES", etiqueta: "Nombre(s)", tipo: "texto" },
+    { clave: "PERSONAL_GENERO", etiqueta: "Género", tipo: "select", opciones: ["H", "M"] },
     { clave: "PERSONAL_PUESTO", etiqueta: "Puesto", tipo: "texto" },
     { clave: "PERSONAL_GRADO_ATIENDE", etiqueta: "Grado(s) que atiende", tipo: "select", opciones: ["1er grado", "2° grado", "3er grado", "2° y 3er grado (bidocente)"] },
     { clave: "PERSONAL_CURP", etiqueta: "CURP", tipo: "texto" },
@@ -3134,6 +3226,12 @@ const FICHA_PERSONAL_SCHEMA = [
     { clave: "PERSONAL_CORREO_INSTITUCIONAL", etiqueta: "Correo institucional", tipo: "texto" },
     { clave: "PERSONAL_CELULAR", etiqueta: "Celular", tipo: "texto" },
     { clave: "PERSONAL_TELEFONO_EMERGENCIA", etiqueta: "Teléfono de emergencia", tipo: "texto" },
+  ] },
+  { id: "estadistica911", titulo: "Estadística 911.5 (SEP)", campos: [
+    { clave: "PERSONAL_E911_FUNCION", etiqueta: "Función (según el 911.5)", tipo: "select", opciones: E911_FUNCIONES_PERSONAL },
+    { clave: "PERSONAL_E911_NIVEL_ESTUDIOS", etiqueta: "Nivel máximo de estudios (según el 911.5)", tipo: "select", opciones: E911_NIVELES_ESTUDIO },
+    { clave: "PERSONAL_E911_TIEMPO_DEDICACION", etiqueta: "Tiempo que dedica a la función académica", tipo: "select", opciones: E911_TIEMPOS_DEDICACION },
+    { clave: "PERSONAL_E911_DISCAPACIDAD", etiqueta: "¿Tiene alguna discapacidad?", tipo: "select", opciones: ["No", "Sí"] },
   ] },
 ];
 
@@ -3167,6 +3265,7 @@ function contactoFichaPersonal(p) {
 function personalVacio() {
   const obj = { id: uid() };
   FICHA_PERSONAL_SCHEMA.forEach((g) => g.campos.forEach((c) => { obj[c.clave] = ""; }));
+  obj.PERSONAL_E911_DISCAPACIDAD = "No";
   return obj;
 }
 
@@ -17759,24 +17858,46 @@ function bucketEdad911(anios) {
 function anioCicloInicio911() {
   return new Date(CICLO_INICIO + "T00:00:00").getFullYear();
 }
-function calcularEstadistica911(alumnosVisibles, gradosPermitidos) {
+function calcularEstadistica911(alumnosVisibles, gradosPermitidos, personalVisible) {
   const anio = anioCicloInicio911();
   const fechaEdadRef = `${anio}-09-01`;
   const fechaCorteMatricula = `${anio}-09-30`;
 
+  const esLenguaIndigena = (l) => {
+    const t = (l || "").trim().toLowerCase();
+    return Boolean(t) && !["español", "espanol", "castellano", "ninguna", "ninguno", "n/a", "no aplica"].includes(t);
+  };
+  const esNacidoFuera = (p) => {
+    const t = (p || "").trim().toLowerCase();
+    return Boolean(t) && t !== "méxico" && t !== "mexico";
+  };
+  const grupoCondicion = (a) => E911_GRUPO_CONDICION[a.E911_CONDICION] || null;
+
+  /* ---- IV. Alumnado y Grupos — por grado, sexo, nuevo ingreso/repetidor y edad ---- */
+  const contarPorBucket = (lista) => {
+    const porBucket = {};
+    BUCKETS_EDAD_911.forEach((b) => { porBucket[b] = 0; });
+    let sinEdad = 0;
+    lista.forEach((a) => {
+      const edad = calcularEdadExacta(a.ALUMNO_FECHA_NACIMIENTO, fechaEdadRef);
+      const bucket = edad ? bucketEdad911(edad.anios) : null;
+      if (bucket) porBucket[bucket] += 1; else sinEdad += 1;
+    });
+    return { porBucket, sinEdad, total: lista.length };
+  };
   const porGrado = GRADOS.filter((g) => gradosPermitidos.includes(g)).map((g) => {
     const delGrado = alumnosVisibles.filter((a) => a.grado === g);
     const filas = ["H", "M"].map((sexo) => {
       const delSexo = delGrado.filter((a) => a.ALUMNO_GENERO === sexo);
-      const porBucket = {};
-      BUCKETS_EDAD_911.forEach((b) => { porBucket[b] = 0; });
-      let sinEdad = 0;
-      delSexo.forEach((a) => {
-        const edad = calcularEdadExacta(a.ALUMNO_FECHA_NACIMIENTO, fechaEdadRef);
-        const bucket = edad ? bucketEdad911(edad.anios) : null;
-        if (bucket) porBucket[bucket] += 1; else sinEdad += 1;
-      });
-      return { sexo, total: delSexo.length, porBucket, sinEdad };
+      const nuevoIngreso = delSexo.filter((a) => a.E911_REPITE_GRADO !== "Sí");
+      const repetidor = delSexo.filter((a) => a.E911_REPITE_GRADO === "Sí");
+      return {
+        sexo,
+        total: delSexo.length,
+        ...contarPorBucket(delSexo),
+        nuevoIngreso: { total: nuevoIngreso.length, ...contarPorBucket(nuevoIngreso) },
+        repetidor: { total: repetidor.length, ...contarPorBucket(repetidor) },
+      };
     });
     const gruposDelGrado = Array.from(new Set(delGrado.map((a) => (a.ESCUELA_GRUPO || "").trim()).filter(Boolean)));
     return { grado: g, filas, total: delGrado.length, grupos: gruposDelGrado.length || (delGrado.length > 0 ? 1 : 0) };
@@ -17784,10 +17905,6 @@ function calcularEstadistica911(alumnosVisibles, gradosPermitidos) {
 
   const sinFechaNacimiento = alumnosVisibles.filter((a) => !calcularEdadExacta(a.ALUMNO_FECHA_NACIMIENTO, fechaEdadRef)).length;
 
-  const esLenguaIndigena = (l) => {
-    const t = (l || "").trim().toLowerCase();
-    return Boolean(t) && !["español", "espanol", "castellano", "ninguna", "ninguno", "n/a", "no aplica"].includes(t);
-  };
   const hablantes = alumnosVisibles.filter((a) => esLenguaIndigena(a.ALUMNO_LENGUA_MATERNA));
   const lenguaIndigena = {
     hombres: hablantes.filter((a) => a.ALUMNO_GENERO === "H").length,
@@ -17796,10 +17913,6 @@ function calcularEstadistica911(alumnosVisibles, gradosPermitidos) {
     lista: hablantes.map((a) => ({ nombre: nombreAlumno(a), lengua: a.ALUMNO_LENGUA_MATERNA, sexo: a.ALUMNO_GENERO })),
   };
 
-  const esNacidoFuera = (p) => {
-    const t = (p || "").trim().toLowerCase();
-    return Boolean(t) && t !== "méxico" && t !== "mexico";
-  };
   const nacidosFueraAlumnos = alumnosVisibles.filter((a) => esNacidoFuera(a.ALUMNO_PAIS_NACIMIENTO));
   const paisesMap = {};
   nacidosFueraAlumnos.forEach((a) => {
@@ -17810,7 +17923,436 @@ function calcularEstadistica911(alumnosVisibles, gradosPermitidos) {
   });
   const nacidosFuera = Object.values(paisesMap);
 
-  return { anio, fechaEdadRef, fechaCorteMatricula, porGrado, sinFechaNacimiento, lenguaIndigena, nacidosFuera };
+  // IV.3 — procede de primaria general / indígena / comunitaria
+  const procedePrimaria = E911_TIPOS_PRIMARIA.map((tipo) => {
+    const deEseTipo = alumnosVisibles.filter((a) => a.E911_PRIMARIA_TIPO === tipo);
+    return {
+      tipo,
+      hombres: deEseTipo.filter((a) => a.ALUMNO_GENERO === "H").length,
+      mujeres: deEseTipo.filter((a) => a.ALUMNO_GENERO === "M").length,
+      total: deEseTipo.length,
+    };
+  });
+
+  // IV.5 — atendidos por la USAER
+  const usaerAlumnos = alumnosVisibles.filter((a) => a.E911_USAER === "Sí");
+  const atendidosUSAER = {
+    hombres: usaerAlumnos.filter((a) => a.ALUMNO_GENERO === "H").length,
+    mujeres: usaerAlumnos.filter((a) => a.ALUMNO_GENERO === "M").length,
+    total: usaerAlumnos.length,
+  };
+
+  // IV.6 — condición del alumnado: 13 categorías oficiales y sus 4 columnas agrupadas
+  const condicionDetalle = E911_CATEGORIAS_CONDICION.filter((c) => c !== "Ninguna").map((cat) => {
+    const deEsaCategoria = alumnosVisibles.filter((a) => a.E911_CONDICION === cat);
+    return {
+      categoria: cat,
+      hombres: deEsaCategoria.filter((a) => a.ALUMNO_GENERO === "H").length,
+      mujeres: deEsaCategoria.filter((a) => a.ALUMNO_GENERO === "M").length,
+      total: deEsaCategoria.length,
+    };
+  });
+  const condicionPorGrupo = { discapacidad: 0, trastorno: 0, aptitudes: 0, otras: 0 };
+  alumnosVisibles.forEach((a) => {
+    const grp = grupoCondicion(a);
+    if (grp) condicionPorGrupo[grp] += 1;
+  });
+
+  // IV.13 — afromexicanos o afrodescendientes por autoadscripción de los padres
+  const afromexicanosAlumnos = alumnosVisibles.filter((a) => a.E911_AFROMEXICANO === "Sí");
+  const afromexicanos = {
+    hombres: afromexicanosAlumnos.filter((a) => a.ALUMNO_GENERO === "H").length,
+    mujeres: afromexicanosAlumnos.filter((a) => a.ALUMNO_GENERO === "M").length,
+    total: afromexicanosAlumnos.length,
+  };
+
+  // IV.14 — alumnado según su entidad federativa de residencia
+  const residenciaMap = {};
+  alumnosVisibles.forEach((a) => {
+    const ent = (a.E911_ENTIDAD_RESIDENCIA || "").trim() || "Puebla";
+    if (!residenciaMap[ent]) residenciaMap[ent] = { entidad: ent, hombres: 0, mujeres: 0 };
+    if (a.ALUMNO_GENERO === "H") residenciaMap[ent].hombres += 1;
+    else if (a.ALUMNO_GENERO === "M") residenciaMap[ent].mujeres += 1;
+  });
+  const residencia = Object.values(residenciaMap).sort((x, y) => (y.hombres + y.mujeres) - (x.hombres + x.mujeres));
+
+  /* ---- II. Alumnado que proviene de otra escuela ---- */
+  const provienenOtraEscuela = alumnosVisibles.filter((a) => a.E911_PROVIENE_OTRA_ESCUELA === "Sí");
+  const procedenciaPorGrado = GRADOS.filter((g) => gradosPermitidos.includes(g)).map((g) => {
+    const delGrado = provienenOtraEscuela.filter((a) => a.grado === g);
+    const filaDeLista = (lista) => {
+      const contarLugar = (lugar) => ({
+        hombres: lista.filter((a) => a.E911_PROCEDENCIA_LUGAR === lugar && a.ALUMNO_GENERO === "H").length,
+        mujeres: lista.filter((a) => a.E911_PROCEDENCIA_LUGAR === lugar && a.ALUMNO_GENERO === "M").length,
+      });
+      return {
+        mismaEntidad: contarLugar("Misma entidad federativa"),
+        otraEntidad: contarLugar("Otra entidad federativa"),
+        otroPais: contarLugar("Otro país"),
+        totalHombres: lista.filter((a) => a.ALUMNO_GENERO === "H").length,
+        totalMujeres: lista.filter((a) => a.ALUMNO_GENERO === "M").length,
+      };
+    };
+    if (g === 1) {
+      return {
+        grado: g,
+        nuevoIngreso: filaDeLista(delGrado.filter((a) => a.E911_REPITE_GRADO !== "Sí")),
+        repetidor: filaDeLista(delGrado.filter((a) => a.E911_REPITE_GRADO === "Sí")),
+      };
+    }
+    return { grado: g, total: filaDeLista(delGrado) };
+  });
+  const procedenciaPorRegion = E911_REGIONES_PAIS.map((region) => {
+    const deEsaRegion = provienenOtraEscuela.filter((a) => a.E911_PROCEDENCIA_LUGAR === "Otro país" && a.E911_PROCEDENCIA_REGION_PAIS === region);
+    return {
+      region,
+      hombres: deEsaRegion.filter((a) => a.ALUMNO_GENERO === "H").length,
+      mujeres: deEsaRegion.filter((a) => a.ALUMNO_GENERO === "M").length,
+    };
+  });
+
+  /* ---- III. Becas ---- */
+  const conBeca = alumnosVisibles.filter((a) => a.E911_TIENE_BECA === "Sí");
+  const sinBeca = alumnosVisibles.filter((a) => a.E911_TIENE_BECA !== "Sí");
+  const filaBeca = (lista) => ({
+    hombres: lista.filter((a) => a.ALUMNO_GENERO === "H").length,
+    mujeres: lista.filter((a) => a.ALUMNO_GENERO === "M").length,
+    total: lista.length,
+    conDiscapacidad: lista.filter((a) => grupoCondicion(a) === "discapacidad").length,
+    hablantesLengua: lista.filter((a) => esLenguaIndigena(a.ALUMNO_LENGUA_MATERNA)).length,
+    nacidosFuera: lista.filter((a) => esNacidoFuera(a.ALUMNO_PAIS_NACIMIENTO)).length,
+  });
+  const becas = {
+    conBeca: filaBeca(conBeca),
+    sinBeca: filaBeca(sinBeca),
+    porOrigen: E911_ORIGENES_BECA.map((origen) => {
+      const deEseOrigen = conBeca.filter((a) => a.E911_BECA_ORIGEN === origen);
+      return {
+        origen,
+        hombres: deEseOrigen.filter((a) => a.ALUMNO_GENERO === "H").length,
+        mujeres: deEseOrigen.filter((a) => a.ALUMNO_GENERO === "M").length,
+      };
+    }),
+    totalFederales: conBeca.filter((a) => E911_BECAS_FEDERALES.includes(a.E911_BECA_ORIGEN)).length,
+    totalOtras: conBeca.filter((a) => a.E911_BECA_ORIGEN && !E911_BECAS_FEDERALES.includes(a.E911_BECA_ORIGEN)).length,
+    sinOrigenEspecificado: conBeca.filter((a) => !a.E911_BECA_ORIGEN).length,
+  };
+
+  /* ---- V. Personal por función (apoyo de captura, no sustituye la plataforma) ---- */
+  const personalArr = Array.isArray(personalVisible) ? personalVisible : [];
+  const funcionesPrincipales = ["Personal directivo con grupo", "Personal directivo sin grupo", "Subdirector de gestión escolar", "Personal docente", "Tutor"];
+  const funcionesEspeciales = ["Profesor de educación física", "Profesor de actividades artísticas", "Profesor de actividades tecnológicas", "Profesor de idiomas", "Personal administrativo, auxiliar y de servicios"];
+  const gridPersonal = (funciones) => E911_NIVELES_ESTUDIO.map((nivel) => {
+    const fila = { nivel, porFuncion: {} };
+    funciones.forEach((fn) => {
+      const grupo = personalArr.filter((p) => p.PERSONAL_E911_FUNCION === fn && p.PERSONAL_E911_NIVEL_ESTUDIOS === nivel);
+      fila.porFuncion[fn] = {
+        hombres: grupo.filter((p) => p.PERSONAL_GENERO === "H").length,
+        mujeres: grupo.filter((p) => p.PERSONAL_GENERO === "M").length,
+      };
+    });
+    return fila;
+  });
+  // V.3 es "docentes con discapacidad" — no cuenta al personal administrativo,
+  // auxiliar y de servicios aunque también tenga el campo marcado.
+  const docentesConDiscapacidad = personalArr.filter((p) =>
+    p.PERSONAL_E911_DISCAPACIDAD === "Sí" && p.PERSONAL_E911_FUNCION !== "Personal administrativo, auxiliar y de servicios" && p.PERSONAL_E911_FUNCION
+  );
+  const tiempoDedicacion = E911_TIEMPOS_DEDICACION.map((t) => ({
+    tiempo: t,
+    total: personalArr.filter((p) => E911_FUNCIONES_TIEMPO_ACADEMICO.includes(p.PERSONAL_E911_FUNCION) && p.PERSONAL_E911_TIEMPO_DEDICACION === t).length,
+  }));
+  // IV.12 (solo telesecundarias) — directivos con grupo y docentes, por grado que atienden
+  const directivosYDocentes = personalArr.filter((p) => p.PERSONAL_E911_FUNCION === "Personal directivo con grupo" || p.PERSONAL_E911_FUNCION === "Personal docente");
+  const directivosDocentesPorGrado = {
+    primero: directivosYDocentes.filter((p) => p.PERSONAL_GRADO_ATIENDE === "1er grado").length,
+    segundo: directivosYDocentes.filter((p) => p.PERSONAL_GRADO_ATIENDE === "2° grado").length,
+    tercero: directivosYDocentes.filter((p) => p.PERSONAL_GRADO_ATIENDE === "3er grado").length,
+    masDeUnGrado: directivosYDocentes.filter((p) => p.PERSONAL_GRADO_ATIENDE === "2° y 3er grado (bidocente)").length,
+    sinGradoAsignado: directivosYDocentes.filter((p) => !p.PERSONAL_GRADO_ATIENDE).length,
+    total: directivosYDocentes.length,
+  };
+
+  const personal911 = {
+    gridPrincipal: gridPersonal(funcionesPrincipales),
+    gridEspecial: gridPersonal(funcionesEspeciales),
+    funcionesPrincipales,
+    funcionesEspeciales,
+    directivosDocentesPorGrado,
+    totalesPorFuncion: [...funcionesPrincipales, ...funcionesEspeciales].map((fn) => ({ funcion: fn, total: personalArr.filter((p) => p.PERSONAL_E911_FUNCION === fn).length })),
+    totalPersonal: personalArr.length,
+    sinFuncionAsignada: personalArr.filter((p) => !p.PERSONAL_E911_FUNCION).length,
+    sinNivelAsignado: personalArr.filter((p) => !p.PERSONAL_E911_NIVEL_ESTUDIOS).length,
+    sinGenero: personalArr.filter((p) => p.PERSONAL_GENERO !== "H" && p.PERSONAL_GENERO !== "M").length,
+    docentesConDiscapacidad: {
+      hombres: docentesConDiscapacidad.filter((p) => p.PERSONAL_GENERO === "H").length,
+      mujeres: docentesConDiscapacidad.filter((p) => p.PERSONAL_GENERO === "M").length,
+      total: docentesConDiscapacidad.length,
+    },
+    tiempoDedicacion,
+  };
+
+  return {
+    anio, fechaEdadRef, fechaCorteMatricula,
+    porGrado, sinFechaNacimiento, lenguaIndigena, nacidosFuera,
+    procedePrimaria, atendidosUSAER, condicionDetalle, condicionPorGrupo,
+    afromexicanos, residencia,
+    procedenciaPorGrado, procedenciaPorRegion,
+    becas, personal911,
+  };
+}
+
+/* ---------- I. Existencia y Promovidos — datos de cierre del ciclo escolar
+   ANTERIOR. No se pueden sacar del padrón vigente (ese ciclo ya cerró), así
+   que se capturan a mano una sola vez por ciclo y se guardan en un solo
+   registro con las mismas 4 acciones genéricas del backend. ---------- */
+function seccion1E911Vacia() {
+  const filaVacia = (conGrupos) => {
+    const f = { hombres: "", mujeres: "", hablantes: "", nacidosFuera: "", afro: "", discapacidad: "", trastorno: "", aptitudes: "", otras: "" };
+    if (conGrupos) f.grupos = "";
+    return f;
+  };
+  return {
+    existencia: { "1": filaVacia(true), "2": filaVacia(true), "3": filaVacia(true) },
+    promovidos: { "1": filaVacia(false), "2": filaVacia(false), "3": filaVacia(false) },
+  };
+}
+
+const COLUMNAS_SECCION1_E911 = [
+  { clave: "hombres", etiqueta: "Hombres" }, { clave: "mujeres", etiqueta: "Mujeres" },
+  { clave: "hablantes", etiqueta: "Hablantes lengua indígena" }, { clave: "nacidosFuera", etiqueta: "Nacidos fuera de México" },
+  { clave: "afro", etiqueta: "Afro (mex./desc.)" }, { clave: "discapacidad", etiqueta: "Con discapacidad" },
+  { clave: "trastorno", etiqueta: "Con trastorno" }, { clave: "aptitudes", etiqueta: "Aptitudes sobresalientes" },
+  { clave: "otras", etiqueta: "Otras condiciones" },
+];
+
+function TablaSeccion1E911({ valores, bloque, titulo, conGrupos, onCambia }) {
+  return (
+    <div className="card">
+      <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.9rem" }}>{titulo}</div>
+      <div style={{ overflowX: "auto" }}>
+        <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+              <th style={{ padding: "3px 4px", textAlign: "left" }}>Grado</th>
+              {COLUMNAS_SECCION1_E911.map((c) => <th key={c.clave} style={{ padding: "3px 4px", whiteSpace: "nowrap" }}>{c.etiqueta}</th>)}
+              {conGrupos && <th style={{ padding: "3px 4px" }}>Grupos</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {["1", "2", "3"].map((g) => (
+              <tr key={g}>
+                <td style={{ padding: "3px 4px", fontWeight: 700 }}>{g}°</td>
+                {COLUMNAS_SECCION1_E911.map((c) => (
+                  <td key={c.clave} style={{ padding: "2px 3px" }}>
+                    <input className="campo" style={{ width: "3.6rem" }} type="number" min="0"
+                      value={valores[bloque][g][c.clave]}
+                      onChange={(e) => onCambia(bloque, g, c.clave, e.target.value)} />
+                  </td>
+                ))}
+                {conGrupos && (
+                  <td style={{ padding: "2px 3px" }}>
+                    <input className="campo" style={{ width: "3.6rem" }} type="number" min="0"
+                      value={valores[bloque][g].grupos || ""}
+                      onChange={(e) => onCambia(bloque, g, "grupos", e.target.value)} />
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PanelSeccion1E911({ onStamp }) {
+  const claveStorage = "e911-seccion1";
+  const [valores, setValores] = useState(seccion1E911Vacia());
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [guardadoOk, setGuardadoOk] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    getStorage(claveStorage, null).then((v) => {
+      if (!vivo) return;
+      const base = seccion1E911Vacia();
+      if (v && v.existencia && v.promovidos) {
+        setValores({
+          existencia: { "1": { ...base.existencia["1"], ...v.existencia["1"] }, "2": { ...base.existencia["2"], ...v.existencia["2"] }, "3": { ...base.existencia["3"], ...v.existencia["3"] } },
+          promovidos: { "1": { ...base.promovidos["1"], ...v.promovidos["1"] }, "2": { ...base.promovidos["2"], ...v.promovidos["2"] }, "3": { ...base.promovidos["3"], ...v.promovidos["3"] } },
+        });
+      } else {
+        setValores(base);
+      }
+      setCargando(false);
+    });
+    return () => { vivo = false; };
+  }, []);
+
+  const guardar = async () => {
+    setGuardando(true);
+    const ok = await setStorage(claveStorage, valores);
+    setGuardando(false); setGuardadoOk(ok);
+    if (ok && onStamp) onStamp("Guardado");
+    setTimeout(() => setGuardadoOk(false), 2500);
+  };
+
+  const cambiar = (bloque, grado, campo, valor) =>
+    setValores((prev) => ({ ...prev, [bloque]: { ...prev[bloque], [grado]: { ...prev[bloque][grado], [campo]: valor } } }));
+
+  if (cargando) return <div className="card"><p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p></div>;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm" style={{ opacity: 0.6 }}>
+        Esta sección pide los números de cierre del ciclo escolar <b>anterior</b> (2025-2026) — ya no se pueden sacar del padrón vigente (ese ciclo ya cerró), así que se capturan aquí a mano, una sola vez por ciclo, y quedan guardados para cuando los necesites.
+      </p>
+      <TablaSeccion1E911 valores={valores} bloque="existencia" titulo="1. Existencia al final del ciclo 2025-2026" conGrupos onCambia={cambiar} />
+      <TablaSeccion1E911 valores={valores} bloque="promovidos" titulo="2. Promovidos del ciclo 2025-2026" conGrupos={false} onCambia={cambiar} />
+      <button onClick={guardar} disabled={guardando} className="btn-primario" style={{ width: "100%" }}>
+        {guardando ? "Guardando…" : guardadoOk ? "✓ Guardado" : "Guardar"}
+      </button>
+    </div>
+  );
+}
+
+/* ---------- VI. Aulas, VII. Idiomas y VIII. Libros de texto — datos de la
+   escuela (no por alumno), un solo registro con las mismas 4 acciones
+   genéricas del backend. ---------- */
+function infraestructura911Vacia() {
+  return {
+    aulasExistentes: "",
+    aulasEnUso: { "1": "", "2": "", "3": "", masDeUnGrado: "" },
+    aulasAdaptadas: { "1": "", "2": "", "3": "", masDeUnGrado: "" },
+    idiomas: { ingles: false, frances: false, aleman: false, japones: false, italiano: false, otro: false, otroEspecifique: "" },
+    librosCompletos: "",
+    librosSemana: "",
+  };
+}
+
+function PanelInfraestructura911({ onStamp }) {
+  const claveStorage = "infraestructura911";
+  const [valores, setValores] = useState(infraestructura911Vacia());
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [guardadoOk, setGuardadoOk] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    getStorage(claveStorage, null).then((v) => {
+      if (!vivo) return;
+      const base = infraestructura911Vacia();
+      setValores(v ? {
+        ...base, ...v,
+        aulasEnUso: { ...base.aulasEnUso, ...(v.aulasEnUso || {}) },
+        aulasAdaptadas: { ...base.aulasAdaptadas, ...(v.aulasAdaptadas || {}) },
+        idiomas: { ...base.idiomas, ...(v.idiomas || {}) },
+      } : base);
+      setCargando(false);
+    });
+    return () => { vivo = false; };
+  }, []);
+
+  const guardar = async () => {
+    setGuardando(true);
+    const ok = await setStorage(claveStorage, valores);
+    setGuardando(false); setGuardadoOk(ok);
+    if (ok && onStamp) onStamp("Guardado");
+    setTimeout(() => setGuardadoOk(false), 2500);
+  };
+
+  const cambiar = (campo, valor) => setValores((prev) => ({ ...prev, [campo]: valor }));
+  const cambiarAnidado = (grupo, campo, valor) => setValores((prev) => ({ ...prev, [grupo]: { ...prev[grupo], [campo]: valor } }));
+
+  if (cargando) return <div className="card"><p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p></div>;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>VI. Aulas</div>
+        <div className="flex items-center justify-between mb-3">
+          <label className="text-sm">Aulas existentes (total)</label>
+          <input className="campo" style={{ maxWidth: "6rem" }} type="number" min="0" value={valores.aulasExistentes}
+            onChange={(e) => cambiar("aulasExistentes", e.target.value)} />
+        </div>
+        <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+              <th style={{ textAlign: "left", padding: "4px 6px" }}></th>
+              <th style={{ padding: "4px 6px" }}>1°</th>
+              <th style={{ padding: "4px 6px" }}>2°</th>
+              <th style={{ padding: "4px 6px" }}>3°</th>
+              <th style={{ padding: "4px 6px" }}>Más de un grado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ padding: "4px 6px" }}>En uso</td>
+              {["1", "2", "3", "masDeUnGrado"].map((k) => (
+                <td key={k} style={{ padding: "4px 6px" }}>
+                  <input className="campo" style={{ width: "4rem" }} type="number" min="0" value={valores.aulasEnUso[k]}
+                    onChange={(e) => cambiarAnidado("aulasEnUso", k, e.target.value)} />
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td style={{ padding: "4px 6px" }}>Adaptadas</td>
+              {["1", "2", "3", "masDeUnGrado"].map((k) => (
+                <td key={k} style={{ padding: "4px 6px" }}>
+                  <input className="campo" style={{ width: "4rem" }} type="number" min="0" value={valores.aulasAdaptadas[k]}
+                    onChange={(e) => cambiarAnidado("aulasAdaptadas", k, e.target.value)} />
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>VII. Idiomas</div>
+        <p className="text-sm mb-2" style={{ opacity: 0.6 }}>Marca los que se imparten en la escuela.</p>
+        <div className="flex flex-col gap-1.5">
+          {E911_IDIOMAS.map((idm) => (
+            <label key={idm.clave} className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={!!valores.idiomas[idm.clave]} onChange={(e) => cambiarAnidado("idiomas", idm.clave, e.target.checked)} />
+              {idm.etiqueta}
+            </label>
+          ))}
+          {valores.idiomas.otro && (
+            <input className="campo" placeholder="Especifique el idioma" value={valores.idiomas.otroEspecifique}
+              onChange={(e) => cambiarAnidado("idiomas", "otroEspecifique", e.target.value)} />
+          )}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>VIII. Libros de texto</div>
+        <div className="flex items-center gap-3 mb-2" style={{ flexWrap: "wrap" }}>
+          <label className="text-sm">¿La escuela ya cuenta con los libros de texto completos?</label>
+          <select className="campo" style={{ maxWidth: "8rem" }} value={valores.librosCompletos} onChange={(e) => cambiar("librosCompletos", e.target.value)}>
+            <option value="">—</option>
+            <option value="Sí">Sí</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+        {valores.librosCompletos === "No" && (
+          <div className="flex items-center gap-3" style={{ flexWrap: "wrap" }}>
+            <label className="text-sm">¿En qué semana se completaron?</label>
+            <select className="campo" value={valores.librosSemana} onChange={(e) => cambiar("librosSemana", e.target.value)}>
+              <option value="">—</option>
+              {E911_SEMANAS_LIBROS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+        )}
+      </div>
+
+      <button onClick={guardar} disabled={guardando} className="btn-primario" style={{ width: "100%" }}>
+        {guardando ? "Guardando…" : guardadoOk ? "✓ Guardado" : "Guardar"}
+      </button>
+    </div>
+  );
 }
 
 function Estadistica911Imprimible({ e911 }) {
@@ -17838,9 +18380,21 @@ function Estadistica911Imprimible({ e911 }) {
           )))}
         </tbody>
       </table>
-      <p style={{ fontSize: "0.68rem", opacity: 0.65, marginBottom: "0.8rem" }}>
-        El 911 pide separar cada renglón en "Nuevo ingreso" y "Repetidor" — repártelo a mano al capturar en la plataforma oficial; Control Escolar no distingue esa condición todavía.
-      </p>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.62rem", marginBottom: "1rem" }}>
+        <thead>
+          <tr>{["Grado", "Sexo", "Nvo. ingreso", "Repetidor"].map((h) => <th key={h} style={{ textAlign: "center", borderBottom: "1.5px solid #000", padding: "0.15rem" }}>{h}</th>)}</tr>
+        </thead>
+        <tbody>
+          {e911.porGrado.map((g) => g.filas.map((f, i) => (
+            <tr key={"ni-" + g.grado + f.sexo}>
+              {i === 0 && <td rowSpan={2} style={{ borderBottom: "1px solid #ccc", padding: "0.15rem", fontWeight: 700, verticalAlign: "middle" }}>{g.grado}°</td>}
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.15rem", textAlign: "center" }}>{f.sexo}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.15rem", textAlign: "center" }}>{f.nuevoIngreso.total}</td>
+              <td style={{ borderBottom: "1px solid #ccc", padding: "0.15rem", textAlign: "center" }}>{f.repetidor.total}</td>
+            </tr>
+          )))}
+        </tbody>
+      </table>
       <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>IV.2 — Hablantes de lengua indígena</div>
       <table style={{ width: "60%", borderCollapse: "collapse", fontSize: "0.75rem", marginBottom: "0.8rem" }}>
         <tbody>
@@ -17852,7 +18406,7 @@ function Estadistica911Imprimible({ e911 }) {
       {e911.nacidosFuera.length > 0 && (
         <>
           <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>Nacidos fuera de México (por país capturado)</div>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem", marginBottom: "0.8rem" }}>
             <thead>
               <tr>{["País", "Hombres", "Mujeres"].map((h) => <th key={h} style={{ textAlign: "left", borderBottom: "1.5px solid #000", padding: "0.2rem 0.4rem" }}>{h}</th>)}</tr>
             </thead>
@@ -17868,21 +18422,38 @@ function Estadistica911Imprimible({ e911 }) {
           </table>
         </>
       )}
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>IV.6 — Condición del alumnado</div>
+      <table style={{ width: "70%", borderCollapse: "collapse", fontSize: "0.72rem", marginBottom: "0.8rem" }}>
+        <tbody>
+          <tr><td style={{ padding: "0.15rem 0.4rem" }}>Con discapacidad</td><td style={{ padding: "0.15rem 0.4rem", textAlign: "right" }}>{e911.condicionPorGrupo.discapacidad}</td></tr>
+          <tr><td style={{ padding: "0.15rem 0.4rem" }}>Con trastorno</td><td style={{ padding: "0.15rem 0.4rem", textAlign: "right" }}>{e911.condicionPorGrupo.trastorno}</td></tr>
+          <tr><td style={{ padding: "0.15rem 0.4rem" }}>Aptitudes sobresalientes</td><td style={{ padding: "0.15rem 0.4rem", textAlign: "right" }}>{e911.condicionPorGrupo.aptitudes}</td></tr>
+          <tr><td style={{ padding: "0.15rem 0.4rem" }}>Otras condiciones</td><td style={{ padding: "0.15rem 0.4rem", textAlign: "right" }}>{e911.condicionPorGrupo.otras}</td></tr>
+        </tbody>
+      </table>
+      <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>IV.13 — Afromexicanos y IV.5 — USAER</div>
+      <table style={{ width: "70%", borderCollapse: "collapse", fontSize: "0.72rem", marginBottom: "0.8rem" }}>
+        <tbody>
+          <tr><td style={{ padding: "0.15rem 0.4rem" }}>Afromexicanos (H/M/Total)</td><td style={{ padding: "0.15rem 0.4rem", textAlign: "right" }}>{e911.afromexicanos.hombres}/{e911.afromexicanos.mujeres}/{e911.afromexicanos.total}</td></tr>
+          <tr><td style={{ padding: "0.15rem 0.4rem" }}>Atendidos por USAER (H/M/Total)</td><td style={{ padding: "0.15rem 0.4rem", textAlign: "right" }}>{e911.atendidosUSAER.hombres}/{e911.atendidosUSAER.mujeres}/{e911.atendidosUSAER.total}</td></tr>
+        </tbody>
+      </table>
       <p style={{ fontSize: "0.7rem", opacity: 0.6, marginTop: "0.8rem" }}>
-        Calculado con el padrón de Inscripciones al {fechaBonita(hoyISO())}. Verifica antes de capturar que la matrícula esté al corte oficial del 30 de septiembre de {e911.anio} (altas y bajas ya reflejadas).
+        Calculado con el padrón de Inscripciones (incluye los campos de la sección "Estadística 911.5 (SEP)" de cada ficha) al {fechaBonita(hoyISO())}. Verifica antes de capturar que la matrícula esté al corte oficial del 30 de septiembre de {e911.anio} (altas y bajas ya reflejadas). No incluye las secciones I, II, III, V, VI, VII ni VIII — consúltalas en pantalla, en sus propias pestañas.
       </p>
     </div>
   );
 }
 
-function Estadistica({ alumnos, gradosPermitidos }) {
+function Estadistica({ alumnos, gradosPermitidos, personal, onStamp }) {
   const [modoImpresion, setModoImpresion] = useState(null); // null | "estadistica" | "tutores" | "edades" | "e911"
   const [fechaRefEdad, setFechaRefEdad] = useState(hoyISO());
   const [filtroGradoEdad, setFiltroGradoEdad] = useState(""); // "" = todos los grados
   const [filtroGrupoEdad, setFiltroGrupoEdad] = useState(""); // "" = todos los grupos
+  const [seccionE911, setSeccionE911] = useState("I");
   const alumnosVisibles = alumnos.filter((a) => gradosPermitidos.includes(a.grado));
   const stats = calcularEstadisticas(alumnosVisibles, gradosPermitidos);
-  const e911 = calcularEstadistica911(alumnosVisibles, gradosPermitidos);
+  const e911 = calcularEstadistica911(alumnosVisibles, gradosPermitidos, personal);
 
   // Grupos disponibles para el filtro — solo los que existen dentro del grado
   // elegido (o de todos los grados permitidos, si no se eligió grado), para no
@@ -18058,91 +18629,309 @@ function Estadistica({ alumnos, gradosPermitidos }) {
 
       <div className="card">
         <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Estadística 911.5 — apoyo de captura</div>
-        <p className="text-sm mb-2" style={{ opacity: 0.6 }}>
-          No sustituye la plataforma oficial del 911: calcula, con tu padrón actual y las mismas reglas del manual oficial (edad al 1° de septiembre de {e911.anio}, matrícula al corte del 30 de septiembre), los números de la sección <b>IV. Alumnado y Grupos</b> que ya se pueden sacar de Inscripciones, para que solo los copies allá.
+        <p className="text-sm mb-3" style={{ opacity: 0.6 }}>
+          No sustituye la plataforma oficial del 911: calcula, con tu padrón y tu personal ya capturados aquí (edad al 1° de septiembre de {e911.anio}, matrícula al corte del 30 de septiembre), los números de cada sección del formato oficial 2026-2027 para que solo los copies allá. Las secciones marcadas con ✎ se llenan solas; la <b>I</b> (datos del ciclo anterior, ya cerrado) y algunos detalles finos de <b>V</b> siguen siendo a mano.
         </p>
         {e911.sinFechaNacimiento > 0 && (
           <p className="text-sm mb-2" style={{ opacity: 0.6 }}>
-            ⚠️ {e911.sinFechaNacimiento} alumno(s) sin fecha de nacimiento capturada — no están incluidos en ningún bucket de edad; complétala en Inscripciones antes de capturar en la plataforma oficial.
-          </p>
-        )}
-        <div style={{ overflowX: "auto" }}>
-          <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid var(--borde)" }}>
-                {["Grado", "Sexo", ...BUCKETS_EDAD_911, "Total", "Grupos"].map((h) => (
-                  <th key={h} style={{ padding: "3px 4px", textAlign: "center", whiteSpace: "nowrap" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {e911.porGrado.map((g) => g.filas.map((f, i) => (
-                <tr key={g.grado + f.sexo} style={{ borderBottom: i === 1 ? "1px solid var(--borde)" : "none" }}>
-                  {i === 0 && <td rowSpan={2} style={{ padding: "3px 4px", fontWeight: 700, verticalAlign: "middle" }}>{g.grado}°</td>}
-                  <td style={{ padding: "3px 4px", textAlign: "center" }}>{f.sexo}</td>
-                  {BUCKETS_EDAD_911.map((b) => <td key={b} style={{ padding: "3px 4px", textAlign: "center" }}>{f.porBucket[b] || "—"}</td>)}
-                  <td style={{ padding: "3px 4px", textAlign: "center", fontWeight: 700 }}>{f.total}</td>
-                  {i === 0 && <td rowSpan={2} style={{ padding: "3px 4px", textAlign: "center", verticalAlign: "middle" }}>{g.grupos}</td>}
-                </tr>
-              )))}
-            </tbody>
-          </table>
-        </div>
-        <p className="text-sm mt-2" style={{ opacity: 0.5 }}>
-          El 911 pide separar cada renglón en "Nuevo ingreso" y "Repetidor" — Control Escolar no distingue eso todavía, así que estos totales por grado/sexo/edad hay que repartirlos tú a mano entre las dos filas de la plataforma oficial.
-        </p>
-
-        <div className="font-display mt-4 mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>IV.2 — Hablantes de lengua indígena</div>
-        <div className="grid grid-cols-3 gap-2 mb-2">
-          <div className="card" style={{ padding: "0.5rem" }}>
-            <div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.6 }}>HOMBRES</div>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>{e911.lenguaIndigena.hombres}</div>
-          </div>
-          <div className="card" style={{ padding: "0.5rem" }}>
-            <div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.6 }}>MUJERES</div>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>{e911.lenguaIndigena.mujeres}</div>
-          </div>
-          <div className="card" style={{ padding: "0.5rem" }}>
-            <div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.6 }}>TOTAL</div>
-            <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>{e911.lenguaIndigena.total}</div>
-          </div>
-        </div>
-        {e911.lenguaIndigena.lista.length > 0 && (
-          <p className="text-sm mb-2" style={{ opacity: 0.55 }}>
-            {e911.lenguaIndigena.lista.map((l) => `${l.nombre} (${l.lengua})`).join(" · ")}
+            ⚠️ {e911.sinFechaNacimiento} alumno(s) sin fecha de nacimiento capturada en Inscripciones — no están incluidos en ningún bucket de edad.
           </p>
         )}
 
-        {e911.nacidosFuera.length > 0 && (
-          <>
-            <div className="font-display mt-4 mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Nacidos fuera de México</div>
-            <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+        <div className="flex gap-2 flex-wrap mb-3">
+          {[
+            { id: "I", label: "I. Existencia y promovidos" },
+            { id: "II", label: "II. De otra escuela" },
+            { id: "III", label: "III. Becas" },
+            { id: "IV", label: "IV. Alumnado y grupos" },
+            { id: "V", label: "V. Personal" },
+            { id: "VI", label: "VI–VIII. Aulas, idiomas y libros" },
+          ].map((t) => (
+            <button key={t.id} onClick={() => setSeccionE911(t.id)} className={`chip-grado ${seccionE911 === t.id ? "activo" : ""}`} style={{ fontSize: "0.72rem" }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {seccionE911 === "I" && <PanelSeccion1E911 onStamp={onStamp} />}
+
+        {seccionE911 === "II" && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm" style={{ opacity: 0.6 }}>
+              Se calcula con los campos "¿Proviene de otra escuela este ciclo?", "¿Repite este grado?" y "¿De dónde proviene?" de la ficha de cada alumno (dentro de Inscripciones → Estadística 911.5).
+            </p>
+            <div style={{ overflowX: "auto" }}>
+              <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+                    {["Grado", "Condición", "Misma entidad (H/M)", "Otra entidad (H/M)", "Otro país (H/M)", "Total (H/M)"].map((h) => (
+                      <th key={h} style={{ padding: "3px 4px", textAlign: "center", whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {e911.procedenciaPorGrado.map((g) => {
+                    const filas = g.grado === 1
+                      ? [{ etiqueta: "Nvo. ingreso", d: g.nuevoIngreso }, { etiqueta: "Repetidor", d: g.repetidor }]
+                      : [{ etiqueta: "—", d: g.total }];
+                    return filas.map((f, i) => (
+                      <tr key={g.grado + f.etiqueta} style={{ borderBottom: i === filas.length - 1 ? "1px solid var(--borde)" : "none" }}>
+                        {i === 0 && <td rowSpan={filas.length} style={{ padding: "3px 4px", fontWeight: 700, verticalAlign: "middle" }}>{g.grado}°</td>}
+                        <td style={{ padding: "3px 4px", textAlign: "center" }}>{f.etiqueta}</td>
+                        <td style={{ padding: "3px 4px", textAlign: "center" }}>{f.d.mismaEntidad.hombres}/{f.d.mismaEntidad.mujeres}</td>
+                        <td style={{ padding: "3px 4px", textAlign: "center" }}>{f.d.otraEntidad.hombres}/{f.d.otraEntidad.mujeres}</td>
+                        <td style={{ padding: "3px 4px", textAlign: "center" }}>{f.d.otroPais.hombres}/{f.d.otroPais.mujeres}</td>
+                        <td style={{ padding: "3px 4px", textAlign: "center", fontWeight: 700 }}>{f.d.totalHombres}/{f.d.totalMujeres}</td>
+                      </tr>
+                    ));
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>II.2 — De otro país, por región</div>
+              <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--borde)" }}><th style={{ textAlign: "left", padding: "3px 4px" }}>Región</th><th style={{ padding: "3px 4px" }}>H</th><th style={{ padding: "3px 4px" }}>M</th></tr>
+                </thead>
+                <tbody>
+                  {e911.procedenciaPorRegion.map((r) => (
+                    <tr key={r.region}><td style={{ padding: "3px 4px" }}>{r.region}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{r.hombres}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{r.mujeres}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {seccionE911 === "III" && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm" style={{ opacity: 0.6 }}>
+              Se calcula con los campos "¿Tiene beca?" y "Origen de la beca" de la ficha de cada alumno.
+            </p>
+            <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
               <thead>
-                <tr>
-                  <th style={{ textAlign: "left", padding: "3px 5px" }}>País (según Inscripciones)</th>
-                  <th style={{ padding: "3px 5px" }}>H</th>
-                  <th style={{ padding: "3px 5px" }}>M</th>
+                <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+                  {["", "Hombres", "Mujeres", "Total", "Con discapacidad", "Hablan lengua indígena", "Nacidos fuera"].map((h) => <th key={h} style={{ padding: "3px 4px" }}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {e911.nacidosFuera.map((p) => (
-                  <tr key={p.pais}>
-                    <td style={{ padding: "3px 5px" }}>{p.pais}</td>
-                    <td style={{ padding: "3px 5px", textAlign: "center" }}>{p.hombres}</td>
-                    <td style={{ padding: "3px 5px", textAlign: "center" }}>{p.mujeres}</td>
-                  </tr>
-                ))}
+                <tr><td style={{ padding: "3px 4px", fontWeight: 700 }}>Con beca</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.conBeca.hombres}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.conBeca.mujeres}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.conBeca.total}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.conBeca.conDiscapacidad}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.conBeca.hablantesLengua}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.conBeca.nacidosFuera}</td></tr>
+                <tr><td style={{ padding: "3px 4px", fontWeight: 700 }}>Sin beca</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.sinBeca.hombres}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.sinBeca.mujeres}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.sinBeca.total}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.sinBeca.conDiscapacidad}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.sinBeca.hablantesLengua}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.becas.sinBeca.nacidosFuera}</td></tr>
               </tbody>
             </table>
-            <p className="text-sm mt-1" style={{ opacity: 0.5 }}>
-              El 911 los agrupa por región (Estados Unidos, Canadá, Centroamérica y el Caribe, Sudamérica, África, Asia, Europa, Oceanía) — ubica cada país en su región al capturarlo allá.
-            </p>
-          </>
+            <div>
+              <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>III.2 — Por origen de la beca</div>
+              <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
+                <thead><tr style={{ borderBottom: "1px solid var(--borde)" }}><th style={{ textAlign: "left", padding: "3px 4px" }}>Origen</th><th style={{ padding: "3px 4px" }}>H</th><th style={{ padding: "3px 4px" }}>M</th></tr></thead>
+                <tbody>
+                  {e911.becas.porOrigen.map((o) => (
+                    <tr key={o.origen}><td style={{ padding: "3px 4px" }}>{o.origen}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{o.hombres}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{o.mujeres}</td></tr>
+                  ))}
+                  <tr style={{ borderTop: "1px solid var(--borde)" }}><td style={{ padding: "3px 4px", fontWeight: 700 }}>Total becas federales</td><td colSpan={2} style={{ padding: "3px 4px", textAlign: "center", fontWeight: 700 }}>{e911.becas.totalFederales}</td></tr>
+                  <tr><td style={{ padding: "3px 4px", fontWeight: 700 }}>Total otras becas</td><td colSpan={2} style={{ padding: "3px 4px", textAlign: "center", fontWeight: 700 }}>{e911.becas.totalOtras}</td></tr>
+                </tbody>
+              </table>
+              {e911.becas.sinOrigenEspecificado > 0 && (
+                <p className="text-sm mt-1" style={{ opacity: 0.6 }}>⚠️ {e911.becas.sinOrigenEspecificado} alumno(s) marcados "con beca" sin origen especificado.</p>
+              )}
+            </div>
+          </div>
         )}
 
-        <button onClick={() => imprimir("e911")} className="btn-secundario mt-3" style={{ width: "100%" }}>
-          <Printer size={14} /> Imprimir apoyo 911.5
-        </button>
+        {seccionE911 === "IV" && (
+          <div className="flex flex-col gap-4">
+            <div style={{ overflowX: "auto" }}>
+              <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+                    {["Grado", "Sexo", ...BUCKETS_EDAD_911, "Total", "Grupos"].map((h) => (
+                      <th key={h} style={{ padding: "3px 4px", textAlign: "center", whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {e911.porGrado.map((g) => g.filas.map((f, i) => (
+                    <tr key={g.grado + f.sexo} style={{ borderBottom: i === 1 ? "1px solid var(--borde)" : "none" }}>
+                      {i === 0 && <td rowSpan={2} style={{ padding: "3px 4px", fontWeight: 700, verticalAlign: "middle" }}>{g.grado}°</td>}
+                      <td style={{ padding: "3px 4px", textAlign: "center" }}>{f.sexo}</td>
+                      {BUCKETS_EDAD_911.map((b) => <td key={b} style={{ padding: "3px 4px", textAlign: "center" }}>{f.porBucket[b] || "—"}</td>)}
+                      <td style={{ padding: "3px 4px", textAlign: "center", fontWeight: 700 }}>{f.total}</td>
+                      {i === 0 && <td rowSpan={2} style={{ padding: "3px 4px", textAlign: "center", verticalAlign: "middle" }}>{g.grupos}</td>}
+                    </tr>
+                  )))}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.82rem" }}>Mismo cuadro, separado en nuevo ingreso / repetidor (campo "¿Repite este grado?")</div>
+              <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.68rem" }}>
+                <thead><tr style={{ borderBottom: "1px solid var(--borde)" }}><th style={{ textAlign: "left", padding: "3px 4px" }}>Grado</th><th style={{ padding: "3px 4px" }}>Sexo</th><th style={{ padding: "3px 4px" }}>Nvo. ingreso</th><th style={{ padding: "3px 4px" }}>Repetidor</th></tr></thead>
+                <tbody>
+                  {e911.porGrado.map((g) => g.filas.map((f, i) => (
+                    <tr key={"ni-" + g.grado + f.sexo} style={{ borderBottom: i === 1 ? "1px solid var(--borde)" : "none" }}>
+                      {i === 0 && <td rowSpan={2} style={{ padding: "3px 4px", fontWeight: 700, verticalAlign: "middle" }}>{g.grado}°</td>}
+                      <td style={{ padding: "3px 4px", textAlign: "center" }}>{f.sexo}</td>
+                      <td style={{ padding: "3px 4px", textAlign: "center" }}>{f.nuevoIngreso.total}</td>
+                      <td style={{ padding: "3px 4px", textAlign: "center" }}>{f.repetidor.total}</td>
+                    </tr>
+                  )))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="card" style={{ padding: "0.5rem" }}><div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.6 }}>LENGUA INDÍGENA (H/M/TOTAL)</div><div style={{ fontWeight: 800, fontSize: "1.05rem" }}>{e911.lenguaIndigena.hombres}/{e911.lenguaIndigena.mujeres}/{e911.lenguaIndigena.total}</div></div>
+              <div className="card" style={{ padding: "0.5rem" }}><div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.6 }}>USAER (H/M/TOTAL)</div><div style={{ fontWeight: 800, fontSize: "1.05rem" }}>{e911.atendidosUSAER.hombres}/{e911.atendidosUSAER.mujeres}/{e911.atendidosUSAER.total}</div></div>
+              <div className="card" style={{ padding: "0.5rem" }}><div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.6 }}>AFROMEXICANOS (H/M/TOTAL)</div><div style={{ fontWeight: 800, fontSize: "1.05rem" }}>{e911.afromexicanos.hombres}/{e911.afromexicanos.mujeres}/{e911.afromexicanos.total}</div></div>
+            </div>
+            {e911.lenguaIndigena.lista.length > 0 && (
+              <p className="text-sm" style={{ opacity: 0.55 }}>{e911.lenguaIndigena.lista.map((l) => `${l.nombre} (${l.lengua})`).join(" · ")}</p>
+            )}
+
+            <div>
+              <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>IV.3 — Procede de primaria</div>
+              <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
+                <thead><tr style={{ borderBottom: "1px solid var(--borde)" }}><th style={{ textAlign: "left", padding: "3px 4px" }}>Tipo</th><th style={{ padding: "3px 4px" }}>H</th><th style={{ padding: "3px 4px" }}>M</th><th style={{ padding: "3px 4px" }}>Total</th></tr></thead>
+                <tbody>
+                  {e911.procedePrimaria.map((p) => (
+                    <tr key={p.tipo}><td style={{ padding: "3px 4px" }}>{p.tipo}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{p.hombres}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{p.mujeres}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{p.total}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>IV.6 — Condición del alumnado</div>
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                <div className="card" style={{ padding: "0.5rem" }}><div className="font-mono" style={{ fontSize: "0.58rem", opacity: 0.6 }}>CON DISCAPACIDAD</div><div style={{ fontWeight: 800, fontSize: "1.05rem" }}>{e911.condicionPorGrupo.discapacidad}</div></div>
+                <div className="card" style={{ padding: "0.5rem" }}><div className="font-mono" style={{ fontSize: "0.58rem", opacity: 0.6 }}>CON TRASTORNO</div><div style={{ fontWeight: 800, fontSize: "1.05rem" }}>{e911.condicionPorGrupo.trastorno}</div></div>
+                <div className="card" style={{ padding: "0.5rem" }}><div className="font-mono" style={{ fontSize: "0.58rem", opacity: 0.6 }}>APTITUDES SOBRESALIENTES</div><div style={{ fontWeight: 800, fontSize: "1.05rem" }}>{e911.condicionPorGrupo.aptitudes}</div></div>
+                <div className="card" style={{ padding: "0.5rem" }}><div className="font-mono" style={{ fontSize: "0.58rem", opacity: 0.6 }}>OTRAS CONDICIONES</div><div style={{ fontWeight: 800, fontSize: "1.05rem" }}>{e911.condicionPorGrupo.otras}</div></div>
+              </div>
+              <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
+                <thead><tr style={{ borderBottom: "1px solid var(--borde)" }}><th style={{ textAlign: "left", padding: "3px 4px" }}>Categoría</th><th style={{ padding: "3px 4px" }}>H</th><th style={{ padding: "3px 4px" }}>M</th><th style={{ padding: "3px 4px" }}>Total</th></tr></thead>
+                <tbody>
+                  {e911.condicionDetalle.filter((c) => c.total > 0).map((c) => (
+                    <tr key={c.categoria}><td style={{ padding: "3px 4px" }}>{c.categoria}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{c.hombres}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{c.mujeres}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{c.total}</td></tr>
+                  ))}
+                  {e911.condicionDetalle.every((c) => c.total === 0) && (
+                    <tr><td colSpan={4} style={{ padding: "6px 4px", textAlign: "center", opacity: 0.5 }}>Sin alumnos con condición capturada todavía.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {e911.nacidosFuera.length > 0 && (
+              <div>
+                <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>IV.7 — Nacidos fuera de México (por país capturado)</div>
+                <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
+                  <thead><tr><th style={{ textAlign: "left", padding: "3px 5px" }}>País</th><th style={{ padding: "3px 5px" }}>H</th><th style={{ padding: "3px 5px" }}>M</th></tr></thead>
+                  <tbody>
+                    {e911.nacidosFuera.map((p) => (
+                      <tr key={p.pais}><td style={{ padding: "3px 5px" }}>{p.pais}</td><td style={{ padding: "3px 5px", textAlign: "center" }}>{p.hombres}</td><td style={{ padding: "3px 5px", textAlign: "center" }}>{p.mujeres}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="text-sm mt-1" style={{ opacity: 0.5 }}>El 911 los agrupa por región — ubica cada país en su región al capturarlo allá.</p>
+              </div>
+            )}
+
+            <div>
+              <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>IV.12 — Directivos con grupo y docentes, por grado (solo telesecundarias)</div>
+              <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
+                <thead><tr style={{ borderBottom: "1px solid var(--borde)" }}><th style={{ padding: "3px 4px" }}>Primero</th><th style={{ padding: "3px 4px" }}>Segundo</th><th style={{ padding: "3px 4px" }}>Tercero</th><th style={{ padding: "3px 4px" }}>Más de un grado</th><th style={{ padding: "3px 4px" }}>Total</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.personal911.directivosDocentesPorGrado.primero}</td>
+                    <td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.personal911.directivosDocentesPorGrado.segundo}</td>
+                    <td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.personal911.directivosDocentesPorGrado.tercero}</td>
+                    <td style={{ padding: "3px 4px", textAlign: "center" }}>{e911.personal911.directivosDocentesPorGrado.masDeUnGrado}</td>
+                    <td style={{ padding: "3px 4px", textAlign: "center", fontWeight: 700 }}>{e911.personal911.directivosDocentesPorGrado.total}</td>
+                  </tr>
+                </tbody>
+              </table>
+              {e911.personal911.directivosDocentesPorGrado.sinGradoAsignado > 0 && (
+                <p className="text-sm mt-1" style={{ opacity: 0.6 }}>⚠️ {e911.personal911.directivosDocentesPorGrado.sinGradoAsignado} persona(s) sin "Grado(s) que atiende" capturado en Datos Esc.</p>
+              )}
+            </div>
+
+            <div>
+              <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>IV.14 — Alumnado según su entidad de residencia</div>
+              <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
+                <thead><tr style={{ borderBottom: "1px solid var(--borde)" }}><th style={{ textAlign: "left", padding: "3px 4px" }}>Entidad</th><th style={{ padding: "3px 4px" }}>H</th><th style={{ padding: "3px 4px" }}>M</th></tr></thead>
+                <tbody>
+                  {e911.residencia.map((r) => (
+                    <tr key={r.entidad}><td style={{ padding: "3px 4px" }}>{r.entidad}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{r.hombres}</td><td style={{ padding: "3px 4px", textAlign: "center" }}>{r.mujeres}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <button onClick={() => imprimir("e911")} className="btn-secundario" style={{ width: "100%" }}>
+              <Printer size={14} /> Imprimir apoyo 911.5 (sección IV)
+            </button>
+          </div>
+        )}
+
+        {seccionE911 === "V" && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm" style={{ opacity: 0.6 }}>
+              Se calcula con los campos "Función", "Nivel máximo de estudios", "Tiempo que dedica" y "¿Tiene discapacidad?" de la ficha de cada persona en Datos Esc. No incluye el detalle fino de puestos administrativos específicos (V.2) ni las horas de personal docente especial (V.4) — esos se siguen capturando directo en la plataforma.
+            </p>
+            {(e911.personal911.sinFuncionAsignada > 0 || e911.personal911.sinNivelAsignado > 0 || e911.personal911.sinGenero > 0) && (
+              <p className="text-sm" style={{ opacity: 0.6 }}>
+                ⚠️ De {e911.personal911.totalPersonal} persona(s) en Datos Esc.: {e911.personal911.sinFuncionAsignada} sin función 911 capturada, {e911.personal911.sinNivelAsignado} sin nivel de estudios 911, {e911.personal911.sinGenero} sin género — no se cuentan hasta completarse.
+              </p>
+            )}
+            {["gridPrincipal", "gridEspecial"].map((clave) => {
+              const funciones = clave === "gridPrincipal" ? e911.personal911.funcionesPrincipales : e911.personal911.funcionesEspeciales;
+              return (
+                <div key={clave} style={{ overflowX: "auto" }}>
+                  <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.64rem" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+                        <th style={{ textAlign: "left", padding: "3px 4px" }}>Nivel de estudios</th>
+                        {funciones.map((fn) => <th key={fn} style={{ padding: "3px 4px", whiteSpace: "nowrap" }}>{fn} (H/M)</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(clave === "gridPrincipal" ? e911.personal911.gridPrincipal : e911.personal911.gridEspecial)
+                        .filter((fila) => funciones.some((fn) => fila.porFuncion[fn].hombres + fila.porFuncion[fn].mujeres > 0))
+                        .map((fila) => (
+                          <tr key={fila.nivel}>
+                            <td style={{ padding: "3px 4px" }}>{fila.nivel}</td>
+                            {funciones.map((fn) => <td key={fn} style={{ padding: "3px 4px", textAlign: "center" }}>{fila.porFuncion[fn].hombres}/{fila.porFuncion[fn].mujeres}</td>)}
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+            <div>
+              <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Totales por función</div>
+              <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
+                <tbody>
+                  {e911.personal911.totalesPorFuncion.map((t) => (
+                    <tr key={t.funcion}><td style={{ padding: "2px 4px" }}>{t.funcion}</td><td style={{ padding: "2px 4px", textAlign: "right", fontWeight: 700 }}>{t.total}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="card" style={{ padding: "0.5rem" }}><div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.6 }}>DOCENTES CON DISCAPACIDAD (H/M/TOTAL)</div><div style={{ fontWeight: 800, fontSize: "1.05rem" }}>{e911.personal911.docentesConDiscapacidad.hombres}/{e911.personal911.docentesConDiscapacidad.mujeres}/{e911.personal911.docentesConDiscapacidad.total}</div></div>
+              <div className="card" style={{ padding: "0.5rem" }}>
+                <div className="font-mono mb-1" style={{ fontSize: "0.6rem", opacity: 0.6 }}>TIEMPO DEDICADO A LA FUNCIÓN ACADÉMICA</div>
+                {e911.personal911.tiempoDedicacion.map((t) => (
+                  <div key={t.tiempo} className="flex items-center justify-between text-sm"><span>{t.tiempo}</span><span style={{ fontWeight: 700 }}>{t.total}</span></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {seccionE911 === "VI" && <PanelInfraestructura911 onStamp={onStamp} />}
       </div>
 
       <div className="card">
@@ -19477,7 +20266,7 @@ function App() {
         {tab === "asistencia" && <Asistencia alumnos={alumnos} asistencia={asistencia} setAsistencia={setAsistencia} gradosPermitidos={gradosPermitidos} onStamp={fireStamp} />}
         {tab === "inscripciones" && <Inscripciones alumnos={alumnos} setAlumnos={setAlumnos} gradosPermitidos={gradosPermitidos} rol={rol} onStamp={fireStamp} asistencia={asistencia} calificaciones={calificaciones} bitacora={bitacora} setAsistencia={setAsistencia} setCalificaciones={setCalificaciones} setBitacora={setBitacora} />}
         {tab === "directorio" && <Directorio alumnos={alumnos} gradosPermitidos={gradosPermitidos} />}
-        {tab === "estadistica" && <Estadistica alumnos={alumnos} gradosPermitidos={gradosPermitidos} />}
+        {tab === "estadistica" && <Estadistica alumnos={alumnos} gradosPermitidos={gradosPermitidos} personal={personal} onStamp={fireStamp} />}
         {tab === "calificaciones" && <Calificaciones alumnos={alumnos} calificaciones={calificaciones} setCalificaciones={setCalificaciones} gradosPermitidos={gradosPermitidos} onStamp={fireStamp} />}
         {tab === "incidencias" && <Bitacora alumnos={alumnos} casos={bitacora} setCasos={setBitacora} gradosPermitidos={gradosPermitidos} usuario={usuario.nombre} rolActual={rol} onStamp={fireStamp} />}
         {tab === "avisos" && <Avisos avisos={avisos} setAvisos={setAvisos} usuario={usuario.nombre} rolActual={rol} onStamp={fireStamp} />}
