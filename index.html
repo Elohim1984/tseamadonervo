@@ -549,7 +549,6 @@ this.workerSrc)).WorkerMessageHandler})())}}class WorkerTransport{downloadInfoCa
 <div id="ir-control"><a href="#" id="ir-control-link">Entrar a Control Escolar &rarr;</a></div>
 
 <script type="text/plain" id="codigo-fuente-app">
-
 const { useState, useEffect, useCallback, useMemo } = React;
 
 /* ---------- íconos propios (sin depender de ninguna librería externa) ---------- */
@@ -602,6 +601,8 @@ const BarChart3 = crearIcono('<path d="M3 3v18h18"/><rect x="7" y="12" width="3"
 const Vote = crearIcono('<path d="m9 12 2 2 4-4"/><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z"/><path d="M22 19H2"/>');
 const Camera = crearIcono('<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>');
 const Upload = crearIcono('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>');
+const Wallet = crearIcono('<rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="16" cy="15" r="1"/>');
+const HeartHandshake = crearIcono('<path d="M12 21s-7-4.35-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.65-9.5 9-9.5 9z"/>');
 
 
 /* ---------- estados de México (para campos de entidad) ---------- */
@@ -3339,7 +3340,17 @@ async function listarStorage(prefijo) {
     if (!datos.ok || !Array.isArray(datos.filas)) return [];
     return datos.filas.map((f) => {
       try { return JSON.parse(f.valor); } catch (e) { return null; }
-    }).filter(Boolean);
+    }).filter((v) => {
+      // Solo se aceptan renglones que sean un objeto de verdad (ej. { id, nombre, ... }).
+      // Algunos prefijos (como "alumno:") tienen sub-renglones internos que empiezan
+      // igual (ej. "alumno:foto:<id>:0000" para las fotos guardadas por partes) y que
+      // el filtro "listar" del backend también trae por coincidir el prefijo. Esos
+      // sub-renglones guardan solo un pedazo de texto (no un objeto), así que sin este
+      // filtro se colaban como alumnos fantasma: "(sin nombre capturado)" con miles de
+      // "campos llenos" (cada letra del texto contada como un campo), y el detector de
+      // duplicados los agrupaba entre sí por no tener nombre ni fecha de nacimiento.
+      return v !== null && typeof v === "object" && !Array.isArray(v);
+    });
   } catch (e) {
     return [];
   }
@@ -16724,8 +16735,8 @@ function MapeadorFormatos({ onStamp, rolActual, datosEscuela }) {
   );
 }
 
-function DocumentosDireccion({ alumnos, onStamp, rolActual }) {
-  const [subTab, setSubTab] = useState("apf");
+function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
+  const [subTab, setSubTab] = useState(subTabInicial || "apf");
   const [apfDocTab, setApfDocTab] = useState("convocatoria");
   const grados = [1, 2, 3];
   const tutores = obtenerTutoresUnicos(alumnos);
@@ -20127,6 +20138,8 @@ function App() {
     { id: "pic", label: "Programa Analítico y PIC", icon: Sprout },
     { id: "consejo", label: "Consejo Escolar", icon: Vote },
     { id: "documentos", label: "Documentos de Dirección", icon: FolderKanban },
+    { id: "cortecaja", label: "Corte de Caja", icon: Wallet },
+    { id: "convivenciaescolar", label: "Convivencia Escolar", icon: HeartHandshake },
     { id: "personal", label: "Personal del Plantel", icon: UserRound },
     { id: "recursos", label: "Recursos", icon: FileText },
   ];
@@ -20138,7 +20151,7 @@ function App() {
     { id: "diagnosticos", label: "Diagnósticos", tabs: ["diagnostico", "resultadosdx", "eia"] },
     { id: "pic", tabs: ["pic"] },
     { id: "comunicacion", label: "Comunicación", tabs: ["avisos", "calendario"] },
-    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "consejo", "documentos", "personal"] },
+    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "consejo", "documentos", "cortecaja", "convivenciaescolar", "personal"] },
     { id: "recursos", tabs: ["recursos"] },
   ];
 
@@ -20283,6 +20296,8 @@ function App() {
         {tab === "pic" && <ProgramaAnaliticoPIC onStamp={fireStamp} />}
         {tab === "consejo" && <ConsejoEscolar onStamp={fireStamp} alumnos={alumnos} gradosPermitidos={gradosPermitidos} personal={personal} />}
         {tab === "documentos" && <DocumentosDireccion alumnos={alumnos} onStamp={fireStamp} rolActual={rol} />}
+        {tab === "cortecaja" && <DocumentosDireccion key="cortecaja" alumnos={alumnos} onStamp={fireStamp} rolActual={rol} subTabInicial="bimestral" />}
+        {tab === "convivenciaescolar" && <DocumentosDireccion key="convivenciaescolar" alumnos={alumnos} onStamp={fireStamp} rolActual={rol} subTabInicial="convivencia" />}
         {tab === "personal" && <DatosPersonal personal={personal} setPersonal={setPersonal} onStamp={fireStamp} />}
         {tab === "recursos" && (
           <Recursos
