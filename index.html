@@ -19033,9 +19033,218 @@ function agregarFilasSeccion1PDF(campos, pagina, tabla, columnas, filasBottom) {
   });
 }
 
-// Arma la lista completa de instrucciones de dibujo { pagina, tipo, ... }
-// para esta primera entrega (página 1 parcial + página 2 completa).
-function construirCamposE911PDF(seccion1) {
+// ---- Sección II. Alumnado que proviene de otra escuela (página índice 2) ----
+// II.1 (por grado): usa e911.procedenciaPorGrado, que ya trae, para el grado
+// 1°, la división Nuevo ingreso / Repetidor que pide el formato oficial (las
+// filas 2° y 3° son un solo renglón "total" porque el modelo de datos no
+// distingue ahí). El renglón "Total" de la tabla se calcula aquí sumando los
+// 4 renglones capturados. II.2 (por región) usa e911.procedenciaPorRegion,
+// que ya viene en el mismo orden que E911_REGIONES_PAIS — igual al de la
+// tabla impresa — y solo dibuja las regiones con algún alumno (cero
+// verdadero, no fabricado: si no hay alumnos de esa región, la fila queda en
+// blanco en vez de escribir un "0" en las 3 celdas).
+const E911_PDF_COLUMNAS_II1 = [
+  { clave: "mismaEntidad_h", celda: [369.2, 411.6] },
+  { clave: "mismaEntidad_m", celda: [418.1, 460.5] },
+  { clave: "otraEntidad_h", celda: [466.8, 509.3] },
+  { clave: "otraEntidad_m", celda: [515.7, 558.2] },
+  { clave: "otroPais_h", celda: [564.4, 606.9] },
+  { clave: "otroPais_m", celda: [613.3, 655.8] },
+  { clave: "total_h", celda: [662.1, 704.5] },
+  { clave: "total_m", celda: [711.0, 753.4] },
+];
+const E911_PDF_FILAS_II1 = [211.9, 232.2, 252.5, 272.8, 293.0]; // 1°-Nvo, 1°-Rep, 2°, 3°, Total
+const E911_PDF_COLUMNAS_II2 = [
+  { clave: "hombres", celda: [418.1, 460.4] },
+  { clave: "mujeres", celda: [467.0, 509.3] },
+  { clave: "__total", celda: [516.2, 558.5] },
+];
+const E911_PDF_FILAS_II2 = [375.3, 389.2, 403.4, 417.6, 431.7, 445.9, 460.1, 474.2]; // 8 regiones
+const E911_PDF_FILA_II2_TOTAL = 492.4;
+
+function valoresFilaII1(fila) {
+  return {
+    mismaEntidad_h: fila.mismaEntidad.hombres, mismaEntidad_m: fila.mismaEntidad.mujeres,
+    otraEntidad_h: fila.otraEntidad.hombres, otraEntidad_m: fila.otraEntidad.mujeres,
+    otroPais_h: fila.otroPais.hombres, otroPais_m: fila.otroPais.mujeres,
+    total_h: fila.totalHombres, total_m: fila.totalMujeres,
+  };
+}
+
+function agregarSeccionIIPDF(campos, procedenciaPorGrado, procedenciaPorRegion) {
+  const g1 = procedenciaPorGrado.find((g) => g.grado === 1);
+  const g2 = procedenciaPorGrado.find((g) => g.grado === 2);
+  const g3 = procedenciaPorGrado.find((g) => g.grado === 3);
+  const filas = [
+    g1 ? valoresFilaII1(g1.nuevoIngreso) : null,
+    g1 ? valoresFilaII1(g1.repetidor) : null,
+    g2 ? valoresFilaII1(g2.total) : null,
+    g3 ? valoresFilaII1(g3.total) : null,
+  ];
+  const sumaTotal = {};
+  E911_PDF_COLUMNAS_II1.forEach((col) => { sumaTotal[col.clave] = 0; });
+  let algunaFila = false;
+  filas.forEach((f) => {
+    if (!f) return;
+    algunaFila = true;
+    E911_PDF_COLUMNAS_II1.forEach((col) => { sumaTotal[col.clave] += numE911PDF(f[col.clave]); });
+  });
+  filas.push(algunaFila ? sumaTotal : null);
+  filas.forEach((f, i) => {
+    if (!f) return;
+    E911_PDF_COLUMNAS_II1.forEach((col) => {
+      campos.push({ pagina: 2, tipo: "celda-centrada", celda: col.celda, bottom: E911_PDF_FILAS_II1[i], texto: String(numE911PDF(f[col.clave])) });
+    });
+  });
+
+  let sumaH = 0, sumaM = 0, algunaRegion = false;
+  (procedenciaPorRegion || []).forEach((r) => {
+    const idx = E911_REGIONES_PAIS.indexOf(r.region);
+    if (idx === -1) return;
+    const h = numE911PDF(r.hombres), m = numE911PDF(r.mujeres);
+    if (h === 0 && m === 0) return;
+    algunaRegion = true;
+    sumaH += h; sumaM += m;
+    campos.push({ pagina: 2, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_II2[0].celda, bottom: E911_PDF_FILAS_II2[idx], texto: String(h) });
+    campos.push({ pagina: 2, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_II2[1].celda, bottom: E911_PDF_FILAS_II2[idx], texto: String(m) });
+    campos.push({ pagina: 2, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_II2[2].celda, bottom: E911_PDF_FILAS_II2[idx], texto: String(h + m) });
+  });
+  if (algunaRegion) {
+    campos.push({ pagina: 2, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_II2[0].celda, bottom: E911_PDF_FILA_II2_TOTAL, texto: String(sumaH) });
+    campos.push({ pagina: 2, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_II2[1].celda, bottom: E911_PDF_FILA_II2_TOTAL, texto: String(sumaM) });
+    campos.push({ pagina: 2, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_II2[2].celda, bottom: E911_PDF_FILA_II2_TOTAL, texto: String(sumaH + sumaM) });
+  }
+}
+
+// ---- Sección III. Becas (página índice 3) ----
+// III.1 usa e911.becas.conBeca / sinBeca (mismas 6 columnas que pide el
+// formato) y calcula aquí el renglón "Total". III.2 usa e911.becas.porOrigen,
+// que ya viene en el mismo orden que E911_ORIGENES_BECA — igual al impreso —
+// y calcula "Total becas federales" (las 2 primeras, según
+// E911_BECAS_FEDERALES) y "Total de becas" (las 8).
+const E911_PDF_COLUMNAS_III1 = [
+  { clave: "hombres", celda: [414.2, 464.3] },
+  { clave: "mujeres", celda: [472.1, 522.2] },
+  { clave: "total", celda: [530.0, 580.1] },
+  { clave: "conDiscapacidad", celda: [587.8, 638.0] },
+  { clave: "hablantesLengua", celda: [645.7, 695.9] },
+  { clave: "nacidosFuera", celda: [703.6, 753.8] },
+];
+const E911_PDF_COLUMNAS_III2 = [
+  { clave: "hombres", celda: [373.4, 415.9] },
+  { clave: "mujeres", celda: [510.6, 553.1] },
+  { clave: "__total", celda: [646.9, 703.3] },
+];
+const E911_PDF_FILAS_III2 = [313.5, 326.9, 408.0, 422.1, 436.3, 450.5, 464.7, 478.8]; // 8 orígenes
+const E911_PDF_FILA_III2_TOTAL_FEDERALES = 370.8;
+const E911_PDF_FILA_III2_TOTAL_BECAS = 519.9;
+
+function agregarSeccionIIIPDF(campos, becas) {
+  const filaTotal = {};
+  E911_PDF_COLUMNAS_III1.forEach((col) => { filaTotal[col.clave] = numE911PDF(becas.conBeca[col.clave]) + numE911PDF(becas.sinBeca[col.clave]); });
+  [["conBeca", 181.2], ["sinBeca", 195.7], [null, 219.2]].forEach(([clave, bottom]) => {
+    const fila = clave ? becas[clave] : filaTotal;
+    E911_PDF_COLUMNAS_III1.forEach((col) => {
+      campos.push({ pagina: 3, tipo: "celda-centrada", celda: col.celda, bottom, texto: String(numE911PDF(fila[col.clave])) });
+    });
+  });
+
+  let sumaFederalesH = 0, sumaFederalesM = 0, sumaTodoH = 0, sumaTodoM = 0;
+  (becas.porOrigen || []).forEach((o, i) => {
+    const h = numE911PDF(o.hombres), m = numE911PDF(o.mujeres);
+    sumaTodoH += h; sumaTodoM += m;
+    if (E911_BECAS_FEDERALES.includes(o.origen)) { sumaFederalesH += h; sumaFederalesM += m; }
+    campos.push({ pagina: 3, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_III2[0].celda, bottom: E911_PDF_FILAS_III2[i], texto: String(h) });
+    campos.push({ pagina: 3, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_III2[1].celda, bottom: E911_PDF_FILAS_III2[i], texto: String(m) });
+    campos.push({ pagina: 3, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_III2[2].celda, bottom: E911_PDF_FILAS_III2[i], texto: String(h + m) });
+  });
+  campos.push({ pagina: 3, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_III2[0].celda, bottom: E911_PDF_FILA_III2_TOTAL_FEDERALES, texto: String(sumaFederalesH) });
+  campos.push({ pagina: 3, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_III2[1].celda, bottom: E911_PDF_FILA_III2_TOTAL_FEDERALES, texto: String(sumaFederalesM) });
+  campos.push({ pagina: 3, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_III2[2].celda, bottom: E911_PDF_FILA_III2_TOTAL_FEDERALES, texto: String(sumaFederalesH + sumaFederalesM) });
+  campos.push({ pagina: 3, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_III2[0].celda, bottom: E911_PDF_FILA_III2_TOTAL_BECAS, texto: String(sumaTodoH) });
+  campos.push({ pagina: 3, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_III2[1].celda, bottom: E911_PDF_FILA_III2_TOTAL_BECAS, texto: String(sumaTodoM) });
+  campos.push({ pagina: 3, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_III2[2].celda, bottom: E911_PDF_FILA_III2_TOTAL_BECAS, texto: String(sumaTodoH + sumaTodoM) });
+}
+
+// ---- Sección VI. Aulas (página índice 13) ----
+// Usa infraestructura.aulasExistentes (un solo total, sin desglose por
+// grado — así lo pide el formato), aulasEnUso y aulasAdaptadas (cada una
+// {1,2,3,masDeUnGrado}, igual que el modelo de PanelInfraestructura911). La
+// columna "Total" de cada renglón se calcula aquí, y solo si al menos un
+// grado de ese renglón fue capturado (para no escribir un "0" donde no hay
+// nada capturado todavía).
+const E911_PDF_COLUMNAS_VI = {
+  "1": [482.7, 510.2], "2": [540.0, 567.5], "3": [596.1, 623.6],
+  masDeUnGrado: [652.0, 679.5], __total: [705.3, 732.8],
+};
+const E911_PDF_FILA_VI_EXISTENTES = 515.3;
+const E911_PDF_FILA_VI_EN_USO = 534.0;
+const E911_PDF_FILA_VI_ADAPTADAS = 567.9;
+
+function agregarSeccionVIPDF(campos, infraestructura) {
+  if (infraestructura.aulasExistentes !== "" && infraestructura.aulasExistentes != null) {
+    campos.push({ pagina: 13, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_VI.__total, bottom: E911_PDF_FILA_VI_EXISTENTES, texto: String(numE911PDF(infraestructura.aulasExistentes)) });
+  }
+  const agregarFilaGrados = (obj, bottom) => {
+    const claves = ["1", "2", "3", "masDeUnGrado"];
+    let algunaCapturada = false, suma = 0;
+    claves.forEach((k) => {
+      const v = obj[k];
+      if (v === "" || v == null) return;
+      algunaCapturada = true;
+      suma += numE911PDF(v);
+      campos.push({ pagina: 13, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_VI[k], bottom, texto: String(numE911PDF(v)) });
+    });
+    if (algunaCapturada) campos.push({ pagina: 13, tipo: "celda-centrada", celda: E911_PDF_COLUMNAS_VI.__total, bottom, texto: String(suma) });
+  };
+  agregarFilaGrados(infraestructura.aulasEnUso, E911_PDF_FILA_VI_EN_USO);
+  agregarFilaGrados(infraestructura.aulasAdaptadas, E911_PDF_FILA_VI_ADAPTADAS);
+}
+
+// ---- Secciones VII. Idiomas y VIII. Libros de texto (página índice 14) ----
+// Casillas marcadas con una "X" dibujada centrada, igual que una celda
+// numérica. Usa infraestructura.idiomas (booleanos + otroEspecifique) y
+// infraestructura.librosCompletos / librosSemana (strings, ya validados
+// contra E911_SEMANAS_LIBROS en PanelInfraestructura911).
+const E911_PDF_CASILLA_IDIOMA = {
+  ingles: 189.2, frances: 210.5, aleman: 231.8, japones: 253.1, italiano: 274.3, otro: 295.6,
+};
+const E911_PDF_CELDA_IDIOMA = [136.2, 152.1];
+const E911_PDF_CELDA_SI = [579.3, 595.3];
+const E911_PDF_CELDA_NO = [637.7, 653.6];
+const E911_PDF_FILA_LIBROS_COMPLETOS = 162.6;
+const E911_PDF_CASILLA_SEMANA = {
+  "Primera semana": { celda: [573.9, 589.8], bottom: 266.1 },
+  "Segunda semana": { celda: [573.9, 589.8], bottom: 288.8 },
+  "Tercera semana": { celda: [725.5, 741.5], bottom: 266.1 },
+  "Cuarta semana o más": { celda: [725.5, 741.5], bottom: 288.8 },
+};
+
+function agregarSeccionesVIIVIIIPDF(campos, infraestructura) {
+  const idiomas = infraestructura.idiomas || {};
+  Object.keys(E911_PDF_CASILLA_IDIOMA).forEach((clave) => {
+    if (idiomas[clave]) {
+      campos.push({ pagina: 14, tipo: "celda-centrada", celda: E911_PDF_CELDA_IDIOMA, bottom: E911_PDF_CASILLA_IDIOMA[clave], texto: "X" });
+    }
+  });
+  if (idiomas.otro && idiomas.otroEspecifique) {
+    campos.push({ pagina: 14, tipo: "texto", x: 128, bottom: 318.9, texto: idiomas.otroEspecifique });
+  }
+  if (infraestructura.librosCompletos === "Sí") {
+    campos.push({ pagina: 14, tipo: "celda-centrada", celda: E911_PDF_CELDA_SI, bottom: E911_PDF_FILA_LIBROS_COMPLETOS, texto: "X" });
+  } else if (infraestructura.librosCompletos === "No") {
+    campos.push({ pagina: 14, tipo: "celda-centrada", celda: E911_PDF_CELDA_NO, bottom: E911_PDF_FILA_LIBROS_COMPLETOS, texto: "X" });
+    const sem = E911_PDF_CASILLA_SEMANA[infraestructura.librosSemana];
+    if (sem) campos.push({ pagina: 14, tipo: "celda-centrada", celda: sem.celda, bottom: sem.bottom, texto: "X" });
+  }
+}
+
+// Arma la lista completa de instrucciones de dibujo { pagina, tipo, ... }.
+// Entrega 1: página 1 parcial + Sección I completa. Entrega 2 (agregada
+// aquí): Sección II, Sección III, Sección VI (aulas) y Secciones VII-VIII
+// (idiomas y libros). Quedan pendientes IV (alumnado y grupos) y V
+// (personal), las más grandes del formato.
+function construirCamposE911PDF(seccion1, infraestructura, e911) {
   const campos = [];
   if (DATOS_PLANTEL.cct) campos.push({ pagina: 0, tipo: "celdas", celdas: E911_PDF_CELDAS_CCT, bottom: E911_PDF_CCT_BOTTOM, texto: DATOS_PLANTEL.cct });
   if (DATOS_PLANTEL.cp) campos.push({ pagina: 0, tipo: "celdas", celdas: E911_PDF_CELDAS_CP, bottom: E911_PDF_CP_BOTTOM, texto: DATOS_PLANTEL.cp });
@@ -19044,6 +19253,14 @@ function construirCamposE911PDF(seccion1) {
   });
   agregarFilasSeccion1PDF(campos, 1, seccion1.existencia, E911_PDF_COLUMNAS_EXISTENCIA, E911_PDF_FILAS_EXISTENCIA);
   agregarFilasSeccion1PDF(campos, 1, seccion1.promovidos, E911_PDF_COLUMNAS_PROMOVIDOS, E911_PDF_FILAS_PROMOVIDOS);
+  if (e911) {
+    agregarSeccionIIPDF(campos, e911.procedenciaPorGrado, e911.procedenciaPorRegion);
+    agregarSeccionIIIPDF(campos, e911.becas);
+  }
+  if (infraestructura) {
+    agregarSeccionVIPDF(campos, infraestructura);
+    agregarSeccionesVIIVIIIPDF(campos, infraestructura);
+  }
   return campos;
 }
 
@@ -19051,13 +19268,13 @@ function construirCamposE911PDF(seccion1) {
 // por construirCamposE911PDF y lo descarga — mismo patrón de descarga
 // (Blob + enlace temporal) que descargarCedulaPDF, solo que aquí se dibuja
 // texto libre en vez de llenar campos de formulario.
-async function descargarE911OficialPDF(seccion1) {
+async function descargarE911OficialPDF(seccion1, infraestructura, e911) {
   const { PDFDocument, StandardFonts } = window.PDFLib;
   const bytes = base64ABytes(E911_OFICIAL_PDF_BASE64);
   const pdfDoc = await PDFDocument.load(bytes);
   const fuente = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const paginas = pdfDoc.getPages();
-  const campos = construirCamposE911PDF(seccion1);
+  const campos = construirCamposE911PDF(seccion1, infraestructura, e911);
   const TAM = 9;
   campos.forEach((c) => {
     const page = paginas[c.pagina];
@@ -19088,7 +19305,7 @@ async function descargarE911OficialPDF(seccion1) {
   const url = URL.createObjectURL(blob);
   const enlace = document.createElement("a");
   enlace.href = url;
-  enlace.download = "911.5_Amado_Nervo_Parte1.pdf";
+  enlace.download = "911.5_Amado_Nervo.pdf";
   document.body.appendChild(enlace);
   enlace.click();
   document.body.removeChild(enlace);
@@ -19118,8 +19335,8 @@ function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
   const descargarPDFOficial = async () => {
     setGenerandoPDF(true);
     try {
-      const { seccion1 } = await cargarSeccion1EInfraestructuraE911();
-      await descargarE911OficialPDF(seccion1);
+      const { seccion1, infraestructura } = await cargarSeccion1EInfraestructuraE911();
+      await descargarE911OficialPDF(seccion1, infraestructura, e911);
       if (onStamp) onStamp("Descargado");
     } finally {
       setGenerandoPDF(false);
@@ -19164,10 +19381,10 @@ function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
         </p>
 
         <button onClick={descargarPDFOficial} disabled={generandoPDF} className="btn-secundario mb-1" style={{ width: "100%" }}>
-          <Download size={14} /> {generandoPDF ? "Generando…" : "Descargar 911.5 oficial rellenado (PDF) — entrega 1"}
+          <Download size={14} /> {generandoPDF ? "Generando…" : "Descargar 911.5 oficial rellenado (PDF) — entrega 2"}
         </button>
         <p className="text-sm mb-3" style={{ opacity: 0.55 }}>
-          Este botón sí descarga el <b>documento oficial</b> de 16 páginas (el que subiste), ya con datos reales escritos encima — no el apoyo de arriba. Por ahora llena solo la <b>página de Identificación</b> (clave del centro de trabajo, turno, nombre de la escuela, entidad, municipio, localidad, código postal y nombre del director; lo demás de esa página — vialidades, CURP, RFC, teléfonos, clave de zona escolar — no está capturado en el sistema y se deja en blanco a propósito, para no inventar datos) y la <b>Sección I completa</b> (con el Total de cada columna ya calculado). Las 14 páginas restantes se agregan en una próxima actualización.
+          Este botón sí descarga el <b>documento oficial</b> de 16 páginas (el que subiste), ya con datos reales escritos encima — no el apoyo de arriba. Hasta ahora llena la <b>página de Identificación</b> (clave del centro de trabajo, turno, nombre de la escuela, entidad, municipio, localidad, código postal y nombre del director; lo demás de esa página — vialidades, CURP, RFC, teléfonos, clave de zona escolar — no está capturado en el sistema y se deja en blanco a propósito, para no inventar datos), la <b>Sección I</b> completa, la <b>Sección II</b> (de otra escuela), la <b>Sección III</b> (becas) y las <b>Secciones VI a VIII</b> (aulas, idiomas y libros de texto). Quedan pendientes la <b>Sección IV</b> (alumnado y grupos) y la <b>Sección V</b> (personal) — son las dos más grandes del formato y se agregan en una próxima actualización.
         </p>
 
         {seccionE911 === "I" && <PanelSeccion1E911 onStamp={onStamp} />}
