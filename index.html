@@ -6981,13 +6981,82 @@ const FASES_CRONOGRAMA_PIC = [
   { slug: "evaluacion", nombre: "Evaluación y cierre" },
 ];
 
+// Etapas 1-3 del PIC (Semana de Inicio), según el esquema oficial "Proyecto
+// de integración comunitaria" (Dirección General de Materiales Educativos,
+// SEP) y la hoja "Construcción y validación de la problemática" (Academia
+// Estatal de Fortalecimiento Pedagógico e Innovación Educativa) que compartió
+// el director — 7 de octubre de 2026. La Etapa 1 es un solo trabajo de todo
+// el colectivo (no varía por grado); las Etapas 2 y 3 se trabajan en
+// paralelo en cada grado, cada uno con su propia problemática — así lo pidió
+// el director explícitamente.
+const VALIDACION_RAPIDA_PROBLEMATICA_CRITERIOS = [
+  "Está situada en una realidad concreta y relevante.",
+  "Afecta a un grupo o a la comunidad.",
+  "No tiene una respuesta inmediata o única.",
+  "Requiere investigar, analizar o contrastar información.",
+  "Permite movilizar saberes y vincular aprendizajes.",
+  "Existe posibilidad de intervención desde la escuela.",
+  "Puede generar una respuesta, propuesta o alternativa.",
+];
+
+// Resultado YA trabajado por el colectivo docente de la tabla oficial
+// "Características (culturales, económicas, sociales) / Necesidades
+// comunitarias / Propuestas de solución" de la Etapa 1 — el director
+// confirmó que esta "Problematización de la realidad escolar" (3
+// condiciones) ES ese mismo resultado, solo reorganizado. Es un prellenado
+// (valoresPorDefecto), no texto fijo: el colectivo lo puede editar cada
+// ciclo sin perder lo ya capturado si ya se guardó una vez.
+const ETAPA1_CONDICIONES_PREFILL = {
+  condicionesAcademicas: "Rezago en Saberes y Pensamiento Científico (matemáticas) en los tres grados — confirmado por el examen diagnóstico y por el EIA de Fase 6 (ver gráficas de Diagnóstico Escolar).\nComprensión y redacción de textos — reforzar según Diagnóstico Integral (convivencia/escritura).\nOrtografía.\nSe observa, como colectivo docente, un bajo dominio de las operaciones básicas (suma, resta, multiplicación, división, fracciones y decimales) y una comprensión lectora limitada para la resolución y el análisis de textos, condición confirmada por el Examen Diagnóstico y por el EIA de Fase 6 en los tres grados. Se prioriza reforzar ambas habilidades de forma transversal, apoyándose en el perfil predominantemente visual de la escuela (material gráfico, diagramas y organizadores visuales).",
+  condicionesFamiliares: "Migración de uno o ambos padres (fenómeno relevante en Xoyatla).\nUn número relevante de alumnos vive con la madre sola o con abuelos/otros familiares.\nFalta de acceso a internet en casa (varios alumnos).",
+  condicionesPersonales: "Bullying, apodos y violencia entre compañeros (mencionados en el Diagnóstico Integral).\nBaja disponibilidad de tiempo libre para deporte (mayoría dedica su tiempo a labores del hogar/campo).",
+};
+
+// Planteamiento OFICIAL y PRINCIPAL del PIC de este ciclo, confirmado por el
+// director: es un solo proyecto de escuela (los 3 grados juntos, no por
+// separado) que continúa el trabajo que el PIC del ciclo anterior ya venía
+// atendiendo. Es un prellenado (valoresPorDefecto) editable por el
+// colectivo, no texto fijo.
+const ETAPA2_PLANTEAMIENTO_PRINCIPAL_PREFILL = {
+  planteamientoFinal:
+    "En la comunidad de Xoyatla, Tepeojuma, Pue., la mayoría de los jóvenes e integrantes de la comunidad tienen como lengua materna el náhuatl; no obstante, a pesar de hablarlo de manera cotidiana, no saben cómo escribirlo. Esta desconexión entre la oralidad y la escritura amenaza con debilitar la identidad lingüística y cultural de las nuevas generaciones — problemática que el PIC del ciclo anterior comenzó a atender y que este documento continúa.",
+};
+
+// El colectivo docente descartó 3 de las 5 problemáticas del diagnóstico
+// como candidatas de trabajo para el PIC (quedan fuera del alcance del
+// proyecto, aunque el dato real del diagnóstico se conserva tal cual, sin
+// borrarlo). De las 2 que quedaban activas (Basura y Salud), el director
+// confirmó que el proyecto PRINCIPAL de este ciclo es, en realidad, el del
+// náhuatl (ver ETAPA2_PLANTEAMIENTO_PRINCIPAL_PREFILL arriba, continuación
+// del PIC del ciclo anterior, un solo proyecto para los 3 grados) — Basura y
+// Salud quedan como problemática secundaria/opcional por grado, no obligatoria.
 const DIAGNOSTICO_COMUNITARIO_REF = [
-  { problema: "Agua / escasez de agua", total: 10, g1: 1, g2: 2, g3: 7 },
+  { problema: "Agua / escasez de agua", total: 10, g1: 1, g2: 2, g3: 7, descartada: true },
   { problema: "Manejo de basura y residuos", total: 10, g1: 3, g2: 4, g3: 3 },
-  { problema: "Alumbrado público / electricidad", total: 4, g1: 1, g2: 0, g3: 3 },
-  { problema: "Calles / infraestructura vial", total: 2, g1: 1, g2: 0, g3: 1 },
+  { problema: "Alumbrado público / electricidad", total: 4, g1: 1, g2: 0, g3: 3, descartada: true },
+  { problema: "Calles / infraestructura vial", total: 2, g1: 1, g2: 0, g3: 1, descartada: true },
   { problema: "Servicios de salud", total: 1, g1: 0, g2: 1, g3: 0 },
 ];
+
+// Resultados OFICIALES y ya verificados del EIA (Ejercicios Integradores del
+// Aprendizaje) Fase 6, aplicado al inicio del ciclo 2026-2027 — un solo
+// grupo (A) por grado. Nivel de integración del aprendizaje por campo
+// formativo: SE=Sin evidencias, RA=Requiere apoyo, EPD=En proceso de
+// desarrollo, AD=Aprendizaje desarrollado; en este plantel SE y AD salieron
+// en 0% en los tres grados, por eso solo se muestran RA/EPD. Fuente:
+// reportes oficiales SEP (Reporte por Grupo y por Grado, Folio D20
+// 0010173, 22/09/2026) para 1°, 2° y 3° grado — ya subidos y verificados en
+// SiRVER (ver claude/eia-2026-2027-implementacion.md del proyecto). Esta
+// tabla es de solo referencia (dato fijo oficial), no un formulario
+// autoguardado.
+const EIA_FASE6_RESULTADOS_REF = {
+  porGrado: [
+    { grado: "1", alumnos: 8, LEN: { RA: 75.0, EPD: 25.0 }, SPC: { RA: 25.0, EPD: 75.0 }, ENS: { RA: 50.0, EPD: 50.0 }, HYC: { RA: 62.5, EPD: 37.5 } },
+    { grado: "2", alumnos: 12, LEN: { RA: 16.7, EPD: 83.3 }, SPC: { RA: 75.0, EPD: 25.0 }, ENS: { RA: 33.3, EPD: 66.7 }, HYC: { RA: 16.7, EPD: 83.3 } },
+    { grado: "3", alumnos: 12, LEN: { RA: 50.0, EPD: 50.0 }, SPC: { RA: 58.3, EPD: 41.7 }, ENS: { RA: 50.0, EPD: 50.0 }, HYC: { RA: 41.7, EPD: 58.3 } },
+  ],
+  escuela: { alumnos: 32, LEN: { RA: 43.75, EPD: 56.25 }, SPC: { RA: 56.25, EPD: 43.75 }, ENS: { RA: 43.75, EPD: 56.25 }, HYC: { RA: 37.5, EPD: 62.5 } },
+};
 
 /* Formulario genérico de varios campos que se guarda como UN objeto JSON
    bajo una sola clave — se usa para cada tabla/fase del Programa Analítico
@@ -7221,8 +7290,15 @@ function TablaDiagnosticoRef() {
           </thead>
           <tbody>
             {DIAGNOSTICO_COMUNITARIO_REF.map((r) => (
-              <tr key={r.problema} style={{ borderBottom: "1px solid var(--borde)" }}>
-                <td style={{ padding: "4px 6px" }}>{r.problema}</td>
+              <tr key={r.problema} style={{ borderBottom: "1px solid var(--borde)", opacity: r.descartada ? 0.5 : 1 }}>
+                <td style={{ padding: "4px 6px", textDecoration: r.descartada ? "line-through" : "none" }}>
+                  {r.problema}
+                  {r.descartada && (
+                    <span style={{ marginLeft: "0.4rem", fontSize: "0.72rem", fontWeight: 600, textDecoration: "none", color: "var(--rojo, #c0392b)" }}>
+                      descartada para el PIC
+                    </span>
+                  )}
+                </td>
                 <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.total}</td>
                 <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.g1}</td>
                 <td style={{ padding: "4px 6px", textAlign: "center" }}>{r.g2}</td>
@@ -7232,6 +7308,70 @@ function TablaDiagnosticoRef() {
           </tbody>
         </table>
       </div>
+      <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.5rem" }}>
+        El colectivo docente descartó <b>Agua, Alumbrado</b> y <b>Calles</b> como problemáticas de trabajo para el PIC (el dato del diagnóstico se conserva tal cual, solo se marca como fuera de alcance). Quedan <b>Manejo de basura y residuos</b> y <b>Servicios de salud</b> como las problemáticas activas para elegir, por grado, en la Etapa 2.
+      </p>
+    </div>
+  );
+}
+
+/* Tabla de referencia con los resultados oficiales del EIA Fase 6 (ya
+   aplicado, verificado y subido a SiRVER). Pasando soloGrado se muestra
+   nada más la fila de ese grado (uso dentro de Plano 2 — Contextualización,
+   por grado); sin soloGrado se muestran los 3 grados + el agregado escuela
+   (uso dentro de Etapas 1-3 del PIC, junto a condiciones académicas). */
+function TablaEIAFase6Ref({ soloGrado }) {
+  const filas = soloGrado
+    ? EIA_FASE6_RESULTADOS_REF.porGrado.filter((f) => f.grado === soloGrado)
+    : EIA_FASE6_RESULTADOS_REF.porGrado;
+  const e = EIA_FASE6_RESULTADOS_REF.escuela;
+  return (
+    <div className="card">
+      <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>EIA · Fase 6 — Resultados oficiales{soloGrado ? ` · ${soloGrado}° grado` : " (referencia)"}</div>
+      <p className="text-sm mb-3" style={{ opacity: 0.6 }}>
+        Ejercicios Integradores del Aprendizaje, Fase 6, grupo A (único grupo por grado). % de alumnos en Requiere apoyo (RA) y En proceso de desarrollo (EPD) por campo formativo — Sin evidencias y Aprendizaje desarrollado salieron en 0% en los tres grados. Ya aplicado, capturado en el FRV y verificado en SiRVER (Folio D20 0010173).
+      </p>
+      <div style={{ overflowX: "auto" }}>
+        <table className="text-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--borde)" }}>
+              <th style={{ textAlign: "left", padding: "4px 6px" }}>Grado</th>
+              <th style={{ padding: "4px 6px" }}>Alumnos</th>
+              <th style={{ padding: "4px 6px" }}>Lenguajes</th>
+              <th style={{ padding: "4px 6px" }}>Saberes y P. Científico</th>
+              <th style={{ padding: "4px 6px" }}>Ética, Nat. y Soc.</th>
+              <th style={{ padding: "4px 6px" }}>Humano y Comunitario</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr key={f.grado} style={{ borderBottom: "1px solid var(--borde)" }}>
+                <td style={{ padding: "4px 6px", fontWeight: 600 }}>{f.grado}° grado</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>{f.alumnos}</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>RA {f.LEN.RA}% · EPD {f.LEN.EPD}%</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>RA {f.SPC.RA}% · EPD {f.SPC.EPD}%</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>RA {f.ENS.RA}% · EPD {f.ENS.EPD}%</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>RA {f.HYC.RA}% · EPD {f.HYC.EPD}%</td>
+              </tr>
+            ))}
+            {!soloGrado && (
+              <tr style={{ fontWeight: 700, background: "rgba(31,78,121,0.05)" }}>
+                <td style={{ padding: "4px 6px" }}>Escuela</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>{e.alumnos}</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>RA {e.LEN.RA}% · EPD {e.LEN.EPD}%</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>RA {e.SPC.RA}% · EPD {e.SPC.EPD}%</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>RA {e.ENS.RA}% · EPD {e.ENS.EPD}%</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>RA {e.HYC.RA}% · EPD {e.HYC.EPD}%</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {!soloGrado && (
+        <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.5rem" }}>
+          A nivel escuela, <b>Saberes y Pensamiento Científico</b> (matemáticas) es el campo con mayor % de alumnos en RA (56.25%); por grado, <b>Lenguajes</b> es el más débil en 1° (75.0% en RA) y <b>Saberes y Pensamiento Científico</b> en 2° y 3° (75.0% y 58.3% en RA). Confirma el rezago en operaciones básicas, moda estadística y comprensión/redacción de textos ya identificado en el diagnóstico académico (ver Etapa 1 arriba). Detalle completo por consigna en el informe EIA del proyecto.
+        </p>
+      )}
     </div>
   );
 }
@@ -14886,19 +15026,24 @@ const DOCUMENTOS_PLANEACION_COMPLETOS = [
 
 async function cargarResumenImpresionPIC() {
   const obs = await listarStorage("progObs:");
+  const etapa1 = await getStorage("pic:etapa1", {});
+  const etapa2Principal = await getStorage("pic:etapa2:principal", {});
+  const etapa3Principal = await getStorage("pic:etapa3:principal", {});
   const porGrado = {};
   await Promise.all(["1", "2", "3"].map(async (g) => {
-    const [contextualizacion, codiseno, seleccion, planeacion] = await Promise.all([
+    const [contextualizacion, codiseno, seleccion, planeacion, etapa2, etapa3] = await Promise.all([
       Promise.all(CAMPOS_FORMATIVOS_NEM.map((c) => getStorage(`progAnalitico:${g}:contextualizacion:${c.slug}`, {}).then((v) => ({ ...c, ...v })))),
       Promise.all(TRIMESTRES.map((t) => getStorage(`progAnalitico:${g}:codiseno:${t.slug}`, {}).then((v) => ({ ...t, ...v })))),
       getStorage(`pic:${g}:seleccion`, {}),
       getStorage(`pic:${g}:planeacion`, {}),
+      getStorage(`pic:${g}:etapa2`, {}),
+      getStorage(`pic:${g}:etapa3`, {}),
     ]);
-    porGrado[g] = { contextualizacion, codiseno, seleccion, planeacion };
+    porGrado[g] = { contextualizacion, codiseno, seleccion, planeacion, etapa2, etapa3 };
   }));
   const cronograma = await Promise.all(FASES_CRONOGRAMA_PIC.map((f) => getStorage(`pic:cronograma:${f.slug}`, {}).then((v) => ({ ...f, ...v }))));
   const evaluacionDifusion = await getStorage("pic:evaluacionDifusion", {});
-  return { obs, porGrado, cronograma, evaluacionDifusion };
+  return { obs, etapa1, etapa2Principal, etapa3Principal, porGrado, cronograma, evaluacionDifusion };
 }
 
 /* Muestra, DENTRO de la app (sin abrir otra página), la misma sección
@@ -14964,6 +15109,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
 
   const SUBTABS = [
     { id: "analisis", label: "Resultados y análisis" },
+    { id: "etapas123", label: "PIC — Etapas 1-3" },
     { id: "analitico", label: "Programa Analítico" },
     { id: "pic", label: "PIC" },
   ];
@@ -15012,6 +15158,156 @@ function ProgramaAnaliticoPIC({ onStamp }) {
 
       {subTab === "analisis" && <AnalisisResultadosEmbebido />}
 
+      {subTab === "etapas123" && (
+        <div className="flex flex-col gap-4">
+          <div className="card" style={{ borderColor: "var(--amarillo)", background: "rgba(245,179,67,0.08)" }}>
+            <p className="text-sm">
+              Las 3 primeras Etapas del PIC (Semana de Inicio), según el esquema oficial "Proyecto de integración comunitaria" (Dirección General de Materiales Educativos, SEP) y la hoja "Construcción y validación de la problemática" (Academia Estatal de Fortalecimiento Pedagógico e Innovación Educativa). La <b>Etapa 1</b> es un solo trabajo de todo el colectivo (no varía por grado). El <b>proyecto principal de las Etapas 2 y 3</b> es, de igual forma, uno solo para los 3 grados juntos (continuación del PIC del ciclo anterior) — más abajo queda, aparte y como opcional, el espacio por si algún grado quiere trabajar una problemática secundaria propia.
+            </p>
+          </div>
+
+          <div className="card">
+            <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
+              Etapa 1 — Lectura de la realidad y de la vida cotidiana <span style={{ opacity: 0.5, fontWeight: 400 }}>· "¿Qué haremos?"</span>
+            </div>
+            <p className="text-sm mb-2" style={{ opacity: 0.6 }}>
+              Antes de comenzar, identificarán las actividades del ciclo escolar, examinarán las características de su entorno, su desarrollo personal y comunitario, con la finalidad de potenciar esos elementos y usarlos a su favor.
+            </p>
+            <details>
+              <summary className="text-sm" style={{ cursor: "pointer", opacity: 0.75, fontWeight: 600 }}>Ver guión oficial de la jornada (Día 1)</summary>
+              <div className="text-sm" style={{ opacity: 0.7, marginTop: "0.5rem" }}>
+                <p style={{ fontWeight: 600, marginBottom: "0.25rem" }}>Secuencia de actividades para la jornada:</p>
+                <ul style={{ paddingLeft: "1.1rem", marginBottom: "0.6rem" }}>
+                  <li>Lectura de información para el desarrollo de la jornada.</li>
+                  <li>Reflexión individual sobre las características relevantes del territorio escolar y comunitario.</li>
+                  <li>Diálogo en comunidad sobre cuáles de esas características son fundamentales para el desarrollo personal.</li>
+                  <li>Listado de características relevantes de cada territorio (aula, escuela, comunidad) que pueden potenciar el desarrollo personal.</li>
+                </ul>
+                <p style={{ fontWeight: 600, marginBottom: "0.25rem" }}>Actividades para después (tarea en casa):</p>
+                <p style={{ marginBottom: "0.4rem" }}>
+                  Cuando regresen a casa, observen una vez más su territorio, sus calles, sus casas y a las personas. Intenten responder: ¿Qué características tiene mi comunidad? ¿Qué necesidades tenemos como habitantes?
+                </p>
+                <p>
+                  Mientras llevan a cabo estas actividades, generarán un bagaje conceptual y territorial que les permitirá realizar aportaciones en los siguientes momentos de la semana de inicio. Al compartir el contenido, se darán cuenta de que hay situaciones en las que coinciden y que es necesario atender.
+                </p>
+              </div>
+            </details>
+          </div>
+
+          <FormularioAutoguardado
+            claveStorage="pic:etapa1"
+            titulo='Resultado — "Problematización de la realidad escolar" (todo el colectivo)'
+            ayuda="Resultado ya trabajado de la tabla oficial Características / Necesidades comunitarias / Propuestas de solución, organizado por el colectivo en 3 tipos de condiciones. Territorios: Aula → Escuela → Comunidad."
+            onStamp={onStamp}
+            valoresPorDefecto={ETAPA1_CONDICIONES_PREFILL}
+            campos={[
+              { key: "condicionesAcademicas", etiqueta: "Condiciones académicas", tipo: "area", filas: 6 },
+              { key: "condicionesFamiliares", etiqueta: "Condiciones familiares", tipo: "area", filas: 4 },
+              { key: "condicionesPersonales", etiqueta: "Condiciones personales", tipo: "area", filas: 3 },
+            ]}
+          />
+
+          <TablaEIAFase6Ref />
+
+          <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
+            <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
+              Etapa 2 — Situación problemática <span style={{ opacity: 0.5, fontWeight: 400 }}>· "¡Ese es el problema!" — proyecto principal, los 3 grados juntos</span>
+            </div>
+            <p className="text-sm" style={{ opacity: 0.6 }}>
+              Con base en la Etapa 1, el colectivo reconoce la situación problemática y las causas que la provocan, la redacta en un solo párrafo —clara, contextualizada y que no anticipe una solución única— y la valida con los 7 criterios siguientes. Este es el proyecto que continúa el PIC del ciclo anterior, trabajado por los 3 grados juntos (no por separado).
+            </p>
+            <details style={{ marginTop: "0.5rem" }}>
+              <summary className="text-sm" style={{ cursor: "pointer", opacity: 0.75, fontWeight: 600 }}>¿Cómo redactamos una situación problemática?</summary>
+              <div className="text-sm" style={{ opacity: 0.7, marginTop: "0.5rem" }}>
+                <p style={{ marginBottom: "0.4rem" }}>Transformar una situación real en un enunciado claro para iniciar el aprendizaje. Fórmula sencilla:</p>
+                <p style={{ fontStyle: "italic", marginBottom: "0.5rem" }}>"En <b>(contexto)</b> se observa que <b>(situación problemática)</b>, lo cual afecta <b>(impacto)</b>."</p>
+                <ul style={{ paddingLeft: "1.1rem", marginBottom: "0.5rem" }}>
+                  <li><b>Elemento 1 — ¿Qué está pasando?</b> Describe la situación observable, no una solución ni una actividad.</li>
+                  <li><b>Elemento 2 — ¿A quién le pasa?</b> Precisa el contexto: grupo, escuela, comunidad o actores involucrados.</li>
+                  <li><b>Elemento 3 — ¿Por qué importa?</b> Explica el impacto en el aprendizaje, la convivencia o el desarrollo.</li>
+                </ul>
+                <p style={{ marginBottom: "0.4rem" }}><b>Ejemplo breve:</b> "En la comunidad donde se ubica la telesecundaria se observa una acumulación recurrente de residuos en espacios públicos, lo cual afecta la limpieza, la convivencia y la participación de la comunidad escolar."</p>
+                <p style={{ fontStyle: "italic" }}>Idea clave: no basta con describir lo que ocurre; hay que problematizarlo.</p>
+              </div>
+            </details>
+          </div>
+
+          <FormularioAutoguardado
+            claveStorage="pic:etapa2:principal"
+            titulo="Etapa 2 — Construcción y validación de la problemática principal (todo el colectivo)"
+            ayuda="Continuación del PIC del ciclo anterior: la pérdida de la escritura del náhuatl frente a su uso oral cotidiano. Un solo planteamiento para los 3 grados."
+            onStamp={onStamp}
+            valoresPorDefecto={ETAPA2_PLANTEAMIENTO_PRINCIPAL_PREFILL}
+            campos={[
+              { key: "planteamientoFinal", etiqueta: "Planteamiento final de la situación problemática (un solo párrafo, claro y contextualizado, sin anticipar una solución única)", tipo: "area", filas: 5, placeholder: "En (contexto) se observa que (situación problemática), lo cual afecta (impacto)." },
+              ...VALIDACION_RAPIDA_PROBLEMATICA_CRITERIOS.map((criterio, i) => ({
+                key: `criterio${i + 1}`, etiqueta: `Validación rápida — ${criterio}`, tipo: "select", opciones: ["Sí", "Ajustar"],
+              })),
+              { key: "reflexionFinal", etiqueta: "Reflexión final — ¿Qué diferencia encuentras entre identificar un problema y problematizar una situación para convertirla en una oportunidad de aprendizaje?", tipo: "area", filas: 3 },
+            ]}
+          />
+
+          <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
+            <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
+              Etapa 3 — Horizontes de expectativas <span style={{ opacity: 0.5, fontWeight: 400 }}>· "¡Una propuesta de solución!" — proyecto principal, los 3 grados juntos</span>
+            </div>
+            <p className="text-sm" style={{ opacity: 0.6 }}>
+              Propongan una forma de solucionar la problemática o necesidad de conocimiento (la pérdida de la escritura del náhuatl), a partir de sus saberes personales y comunitarios.
+            </p>
+          </div>
+
+          <FormularioAutoguardado
+            claveStorage="pic:etapa3:principal"
+            titulo="Etapa 3 — Posible acción con lo aprendido (todo el colectivo)"
+            onStamp={onStamp}
+            campos={[
+              { key: "posibleAccion", etiqueta: "¿Qué podrían hacer las y los estudiantes con la información y los aprendizajes construidos?", tipo: "area", filas: 4 },
+            ]}
+          />
+
+          <div className="card" style={{ borderColor: "var(--borde)", opacity: 0.85 }}>
+            <p className="text-sm" style={{ opacity: 0.65 }}>
+              Lo de aquí abajo (diagnóstico de basura/salud, por grado) queda como <b>trabajo secundario y opcional</b> — el proyecto principal de este ciclo es el de arriba (náhuatl), compartido por los 3 grados. Solo lo usan si algún grado decide trabajar, además, una problemática propia.
+            </p>
+          </div>
+
+          <TablaDiagnosticoRef />
+
+          <div className="flex gap-2 flex-wrap" style={{ marginTop: "0.25rem" }}>
+            {["1", "2", "3"].map((g) => (
+              <button key={g} onClick={() => setGrado(g)} className={`chip-grado ${grado === g ? "activo" : ""}`}>
+                {g}° grado
+              </button>
+            ))}
+          </div>
+          <p className="text-sm" style={{ opacity: 0.55, marginTop: "-0.6rem" }}>Problemática secundaria opcional, por grado (entre las no descartadas: basura y salud).</p>
+
+          <FormularioAutoguardado
+            key={`etapa2-${grado}`}
+            claveStorage={`pic:${grado}:etapa2`}
+            titulo={`Problemática secundaria (opcional) · ${grado}° grado`}
+            onStamp={onStamp}
+            campos={[
+              { key: "planteamientoFinal", etiqueta: "Planteamiento final de la situación problemática (un solo párrafo, claro y contextualizado, sin anticipar una solución única)", tipo: "area", filas: 4, placeholder: "En (contexto) se observa que (situación problemática), lo cual afecta (impacto)." },
+              ...VALIDACION_RAPIDA_PROBLEMATICA_CRITERIOS.map((criterio, i) => ({
+                key: `criterio${i + 1}`, etiqueta: `Validación rápida — ${criterio}`, tipo: "select", opciones: ["Sí", "Ajustar"],
+              })),
+              { key: "reflexionFinal", etiqueta: "Reflexión final — ¿Qué diferencia encuentras entre identificar un problema y problematizar una situación para convertirla en una oportunidad de aprendizaje?", tipo: "area", filas: 3 },
+            ]}
+          />
+
+          <FormularioAutoguardado
+            key={`etapa3-${grado}`}
+            claveStorage={`pic:${grado}:etapa3`}
+            titulo={`Posible acción con lo aprendido (secundaria, opcional) · ${grado}° grado`}
+            onStamp={onStamp}
+            campos={[
+              { key: "posibleAccion", etiqueta: "¿Qué podrían hacer las y los estudiantes con la información y los aprendizajes construidos?", tipo: "area", filas: 4 },
+            ]}
+          />
+        </div>
+      )}
+
       {subTab === "analitico" && (
         <div className="flex flex-col gap-4">
           <ObservacionesColectivo onStamp={onStamp} />
@@ -15027,6 +15323,9 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.25rem" }}>
             Plano 2 — Contextualización · {grado}° grado
           </div>
+
+          <TablaEIAFase6Ref soloGrado={grado} />
+
           {CAMPOS_FORMATIVOS_NEM.map((c) => (
             <FormularioAutoguardado
               key={`${grado}-${c.slug}`}
@@ -15143,7 +15442,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
    "solo-impresion" que el resto de la app: al imprimir, se oculta todo lo
    demás y solo se ve esta hoja. */
 function ProgramaAnaliticoPICImprimible({ datos }) {
-  const { obs, porGrado, cronograma, evaluacionDifusion } = datos;
+  const { obs, etapa1, etapa2Principal, etapa3Principal, porGrado, cronograma, evaluacionDifusion } = datos;
   const val = (v) => (v && String(v).trim() ? v : "— sin capturar —");
 
   return (
@@ -15152,6 +15451,37 @@ function ProgramaAnaliticoPICImprimible({ datos }) {
         <div style={{ fontWeight: 800, fontSize: "15px" }}>"Amado Nervo" — CCT 21ETV0473W</div>
         <div style={{ fontWeight: 700, fontSize: "13px", marginTop: "0.15rem" }}>Programa Analítico y PIC — Resumen de lo capturado en Control Escolar</div>
         <div style={{ fontSize: "10px", color: "#555", marginTop: "0.1rem" }}>Ciclo 2026-2027 · Impreso el {fechaBonita(hoyISO())} · Documento de trabajo interno, sujeto a revisión del CTE</div>
+      </div>
+
+      <div style={{ border: "1.4px solid #111", marginBottom: "0.7rem" }}>
+        <div style={{ background: "var(--azul)", color: "#fff", fontWeight: 700, fontSize: "11px", padding: "0.25rem 0.5rem" }}>PIC · Etapa 1 — Lectura de la realidad (todo el colectivo)</div>
+        <div style={{ padding: "0.4rem 0.6rem" }}>
+          <div><b>Condiciones académicas:</b> {val(etapa1.condicionesAcademicas)}</div>
+          <div><b>Condiciones familiares:</b> {val(etapa1.condicionesFamiliares)}</div>
+          <div><b>Condiciones personales:</b> {val(etapa1.condicionesPersonales)}</div>
+          <div style={{ marginTop: "0.3rem", fontSize: "10px", color: "#555" }}>
+            El colectivo descartó <b>Agua, Alumbrado</b> y <b>Calles</b> como problemáticas de trabajo para el PIC. De las que quedaban (Basura y Salud), el proyecto PRINCIPAL de este ciclo es, en realidad, el de abajo (náhuatl) — Basura y Salud quedan como problemática secundaria y opcional, por grado.
+          </div>
+        </div>
+      </div>
+
+      <div style={{ border: "1.4px solid #111", marginBottom: "0.7rem" }}>
+        <div style={{ background: "var(--azul)", color: "#fff", fontWeight: 700, fontSize: "11px", padding: "0.25rem 0.5rem" }}>PIC · Etapa 2 — Situación problemática (proyecto principal, todo el colectivo)</div>
+        <div style={{ padding: "0.4rem 0.6rem" }}>
+          <div><b>Planteamiento final:</b> {val(etapa2Principal.planteamientoFinal)}</div>
+          <div style={{ marginTop: "0.2rem" }}><b>Validación rápida:</b></div>
+          {VALIDACION_RAPIDA_PROBLEMATICA_CRITERIOS.map((criterio, i) => (
+            <div key={i} style={{ fontSize: "9.5px" }}>· {criterio} — {val(etapa2Principal[`criterio${i + 1}`])}</div>
+          ))}
+          <div style={{ marginTop: "0.2rem" }}><b>Reflexión final:</b> {val(etapa2Principal.reflexionFinal)}</div>
+        </div>
+      </div>
+
+      <div style={{ border: "1.4px solid #111", marginBottom: "0.7rem" }}>
+        <div style={{ background: "var(--azul)", color: "#fff", fontWeight: 700, fontSize: "11px", padding: "0.25rem 0.5rem" }}>PIC · Etapa 3 — Horizontes de expectativas (proyecto principal, todo el colectivo)</div>
+        <div style={{ padding: "0.4rem 0.6rem" }}>
+          <div><b>Posible acción con lo aprendido:</b> {val(etapa3Principal.posibleAccion)}</div>
+        </div>
       </div>
 
       <div style={{ border: "1.4px solid #111", marginBottom: "0.7rem" }}>
@@ -15195,6 +15525,21 @@ function ProgramaAnaliticoPICImprimible({ datos }) {
                 <div><b>Fecha de cierre:</b> {val(t.fechaCierre)}</div>
               </div>
             ))}
+
+            <div style={{ fontWeight: 700, fontSize: "10.5px", margin: "0.3rem 0 0.2rem" }}>PIC · Etapa 2 — Problemática secundaria, opcional (basura/salud)</div>
+            <div style={{ border: "1px solid #999", padding: "0.3rem 0.45rem", marginBottom: "0.25rem" }}>
+              <div><b>Planteamiento final:</b> {val(d.etapa2.planteamientoFinal)}</div>
+              <div style={{ marginTop: "0.2rem" }}><b>Validación rápida:</b></div>
+              {VALIDACION_RAPIDA_PROBLEMATICA_CRITERIOS.map((criterio, i) => (
+                <div key={i} style={{ fontSize: "9.5px" }}>· {criterio} — {val(d.etapa2[`criterio${i + 1}`])}</div>
+              ))}
+              <div style={{ marginTop: "0.2rem" }}><b>Reflexión final:</b> {val(d.etapa2.reflexionFinal)}</div>
+            </div>
+
+            <div style={{ fontWeight: 700, fontSize: "10.5px", margin: "0.3rem 0 0.2rem" }}>PIC · Etapa 3 — Horizontes de expectativas (secundaria, opcional)</div>
+            <div style={{ border: "1px solid #999", padding: "0.3rem 0.45rem", marginBottom: "0.25rem" }}>
+              <div><b>Posible acción con lo aprendido:</b> {val(d.etapa3.posibleAccion)}</div>
+            </div>
 
             <div style={{ fontWeight: 700, fontSize: "10.5px", margin: "0.3rem 0 0.2rem" }}>PIC · Fase 2 — Selección y planteamiento del problema</div>
             <div style={{ border: "1px solid #999", padding: "0.3rem 0.45rem", marginBottom: "0.25rem" }}>
