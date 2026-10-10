@@ -18618,6 +18618,24 @@ function calcularEstadistica911(alumnosVisibles, gradosPermitidos, personalVisib
     };
   });
 
+  // IV.3 desglosado como lo pide el PDF oficial: por tipo de primaria, sexo
+  // y columna (1° nuevo ingreso, 1° repetidor, 2°, 3°).
+  const procedePrimariaDetalle = E911_TIPOS_PRIMARIA.map((tipo) => {
+    const deEseTipo = alumnosVisibles.filter((a) => a.E911_PRIMARIA_TIPO === tipo);
+    const porSexo = {};
+    ["H", "M"].forEach((sexo) => {
+      const l = deEseTipo.filter((a) => a.ALUMNO_GENERO === sexo);
+      porSexo[sexo] = {
+        nuevo1: l.filter((a) => a.grado === 1 && a.E911_REPITE_GRADO !== "Sí").length,
+        rep1: l.filter((a) => a.grado === 1 && a.E911_REPITE_GRADO === "Sí").length,
+        seg: l.filter((a) => a.grado === 2).length,
+        ter: l.filter((a) => a.grado === 3).length,
+        total: l.length,
+      };
+    });
+    return { tipo, porSexo };
+  });
+
   // IV.5 — atendidos por la USAER
   const usaerAlumnos = alumnosVisibles.filter((a) => a.E911_USAER === "Sí");
   const atendidosUSAER = {
@@ -18629,11 +18647,20 @@ function calcularEstadistica911(alumnosVisibles, gradosPermitidos, personalVisib
   // IV.6 — condición del alumnado: 13 categorías oficiales y sus 4 columnas agrupadas
   const condicionDetalle = E911_CATEGORIAS_CONDICION.filter((c) => c !== "Ninguna").map((cat) => {
     const deEsaCategoria = alumnosVisibles.filter((a) => a.E911_CONDICION === cat);
+    const porGradoCond = {};
+    GRADOS.forEach((g) => {
+      const delGrado = deEsaCategoria.filter((a) => a.grado === g);
+      porGradoCond[g] = {
+        hombres: delGrado.filter((a) => a.ALUMNO_GENERO === "H").length,
+        mujeres: delGrado.filter((a) => a.ALUMNO_GENERO === "M").length,
+      };
+    });
     return {
       categoria: cat,
       hombres: deEsaCategoria.filter((a) => a.ALUMNO_GENERO === "H").length,
       mujeres: deEsaCategoria.filter((a) => a.ALUMNO_GENERO === "M").length,
       total: deEsaCategoria.length,
+      porGrado: porGradoCond,
     };
   });
   const condicionPorGrupo = { discapacidad: 0, trastorno: 0, aptitudes: 0, otras: 0 };
@@ -18779,7 +18806,7 @@ function calcularEstadistica911(alumnosVisibles, gradosPermitidos, personalVisib
   return {
     anio, fechaEdadRef, fechaCorteMatricula,
     porGrado, sinFechaNacimiento, lenguaIndigena, nacidosFuera,
-    procedePrimaria, atendidosUSAER, condicionDetalle, condicionPorGrupo,
+    procedePrimaria, procedePrimariaDetalle, atendidosUSAER, condicionDetalle, condicionPorGrupo,
     afromexicanos, residencia,
     procedenciaPorGrado, procedenciaPorRegion,
     becas, personal911,
@@ -19910,11 +19937,351 @@ function agregarSeccionesVIIVIIIPDF(campos, infraestructura) {
   }
 }
 
+// ---- Sección IV. Alumnado y grupos (páginas índice 4 a 10) ----
+// Entrega 3. Medidas tomadas de los bordes de cada casilla del PDF oficial
+// (pdfplumber), igual que las entregas anteriores. Criterio para no
+// saturar ni inventar: en las cuadrículas grandes (edades, condición,
+// residencia, personal por nivel) solo se escribe la casilla con algún
+// alumno/persona; los totales y subtotales sí se escriben siempre, aunque
+// sean 0, porque son el dato que la plataforma compara. Las preguntas que
+// dependen del ciclo ANTERIOR y que el sistema no guarda (IV.4 clave de
+// lengua, IV.8 egresados, IV.9-IV.11 reprobados/regularizados/irregulares)
+// se dejan en blanco a propósito.
+function celdaE911(campos, pagina, celda, bottom, valor) {
+  campos.push({ pagina, tipo: "celda-centrada", celda, bottom, texto: String(valor) });
+}
+
+// IV.1 — columnas de edad (mismo orden que BUCKETS_EDAD_911), Total y Grupos.
+const E911_PDF_IV1_EDADES = [
+  [208.3, 250.8], [262.9, 305.3], [317.7, 360.1], [372.4, 414.9],
+  [427.2, 469.7], [482.0, 524.5], [536.8, 579.3], [591.6, 634.1],
+];
+const E911_PDF_IV1_TOTAL = [647.1, 703.3];
+const E911_PDF_IV1_GRUPOS = [718.8, 747.0];
+// Por bloque: 4 renglones (H nuevo, H repetidor, M nuevo, M repetidor) + subtotal.
+const E911_PDF_IV1_BLOQUES = {
+  1: { filas: [266.7, 280.9, 295.0, 309.0], subtotal: 326.7 },
+  2: { filas: [346.8, 361.0, 375.1, 389.1], subtotal: 406.7 },
+  3: { filas: [427.1, 441.3, 455.5, 469.5], subtotal: 487.1 },
+  total: { filas: [507.4, 521.6, 535.7, 549.7], subtotal: 567.3 },
+};
+// Casillas sombreadas del formato ("No utilice las áreas sombreadas"):
+// [bloque][índice de fila o "subtotal"] -> índices de columna de edad.
+function casillaSombreadaIV1(bloque, fila, col) {
+  if (bloque === 1 || bloque === "total") return col === 0 && (fila === 1 || fila === 3);
+  if (bloque === 2) return col === 0;
+  if (bloque === 3) return col === 0 || col === 1;
+  return false;
+}
+
+function agregarSeccionIV1PDF(campos, porGrado) {
+  const P = 4;
+  const vacio = () => ({ edades: BUCKETS_EDAD_911.map(() => 0), total: 0 });
+  const acumTotal = [vacio(), vacio(), vacio(), vacio()];
+  let gruposTotal = 0;
+  const escribirBloque = (bloque, filas4, grupos) => {
+    const cfg = E911_PDF_IV1_BLOQUES[bloque];
+    const sub = vacio();
+    filas4.forEach((f, i) => {
+      f.edades.forEach((n, c) => {
+        sub.edades[c] += n;
+        if (n > 0 && !casillaSombreadaIV1(bloque, i, c)) celdaE911(campos, P, E911_PDF_IV1_EDADES[c], cfg.filas[i], n);
+      });
+      sub.total += f.total;
+      celdaE911(campos, P, E911_PDF_IV1_TOTAL, cfg.filas[i], f.total);
+    });
+    sub.edades.forEach((n, c) => {
+      if (casillaSombreadaIV1(bloque, "subtotal", c)) return;
+      if (bloque === 2 && c === 0) return;
+      if (bloque === 3 && c <= 1) return;
+      celdaE911(campos, P, E911_PDF_IV1_EDADES[c], cfg.subtotal, n);
+    });
+    celdaE911(campos, P, E911_PDF_IV1_TOTAL, cfg.subtotal, sub.total);
+    if (grupos != null) celdaE911(campos, P, E911_PDF_IV1_GRUPOS, cfg.subtotal, grupos);
+  };
+  (porGrado || []).forEach((g) => {
+    if (!E911_PDF_IV1_BLOQUES[g.grado] || g.total === 0) return;
+    const H = g.filas.find((f) => f.sexo === "H");
+    const M = g.filas.find((f) => f.sexo === "M");
+    const deTipo = (x) => ({ edades: BUCKETS_EDAD_911.map((b) => x.porBucket[b] || 0), total: x.total });
+    const filas4 = [deTipo(H.nuevoIngreso), deTipo(H.repetidor), deTipo(M.nuevoIngreso), deTipo(M.repetidor)];
+    filas4.forEach((f, i) => {
+      f.edades.forEach((n, c) => { acumTotal[i].edades[c] += n; });
+      acumTotal[i].total += f.total;
+    });
+    gruposTotal += g.grupos;
+    escribirBloque(g.grado, filas4, g.grupos);
+  });
+  if (acumTotal.some((f) => f.total > 0)) escribirBloque("total", acumTotal, gruposTotal);
+}
+
+// IV.2 / IV.5 — renglón Hombres / Mujeres / Total (página índice 5).
+const E911_PDF_IV_HMT = [[465.6, 508.0], [543.1, 585.4], [620.9, 677.4]];
+// IV.3 — columnas 1° Nvo. ingreso, 1° Repetidor, 2°, 3°, Total; 6 renglones.
+const E911_PDF_IV3_COLUMNAS = [[497.9, 526.2], [556.6, 584.9], [611.1, 639.4], [657.2, 685.5], [702.8, 753.8]];
+const E911_PDF_IV3_FILAS = {
+  "Primaria general": { H: 220.5, M: 237.7 },
+  "Primaria indígena": { H: 254.8, M: 271.9 },
+  "Primaria comunitaria": { H: 289.1, M: 306.2 },
+};
+
+function agregarSeccionIV2a5PDF(campos, e911) {
+  const P = 5;
+  const hmt = (obj, bottom) => {
+    celdaE911(campos, P, E911_PDF_IV_HMT[0], bottom, numE911PDF(obj.hombres));
+    celdaE911(campos, P, E911_PDF_IV_HMT[1], bottom, numE911PDF(obj.mujeres));
+    celdaE911(campos, P, E911_PDF_IV_HMT[2], bottom, numE911PDF(obj.hombres) + numE911PDF(obj.mujeres));
+  };
+  hmt(e911.lenguaIndigena, 127.1);
+  (e911.procedePrimariaDetalle || []).forEach((t) => {
+    const filas = E911_PDF_IV3_FILAS[t.tipo];
+    if (!filas) return;
+    ["H", "M"].forEach((sexo) => {
+      const d = t.porSexo[sexo];
+      if (!d || d.total === 0) return;
+      [d.nuevo1, d.rep1, d.seg, d.ter, d.total].forEach((n, c) => celdaE911(campos, P, E911_PDF_IV3_COLUMNAS[c], filas[sexo], n));
+    });
+  });
+  hmt(e911.atendidosUSAER, 513.2);
+}
+
+// IV.6 — condición del alumnado (página índice 6). Renglones en el orden
+// IMPRESO (que no es el de E911_CATEGORIAS_CONDICION: ahí "Discapacidad
+// múltiple" va antes que "Trastorno del espectro autista"), por eso se
+// busca cada categoría por nombre.
+const E911_PDF_IV6_ORDEN = [
+  "Ceguera", "Baja visión", "Sordera", "Hipoacusia", "Sordoceguera",
+  "Discapacidad motriz", "Discapacidad intelectual", "Discapacidad psicosocial",
+  "Trastorno del espectro autista", "Discapacidad múltiple", "TDAH",
+  "Aptitudes sobresalientes", "Otras condiciones",
+];
+const E911_PDF_IV6_FILAS = [201.1, 217.2, 233.2, 249.3, 265.3, 281.4, 297.4, 313.5, 329.5, 345.6, 361.6, 377.7, 393.7];
+const E911_PDF_IV6_FILA_TOTAL = 409.8;
+// [H, M, Total] para Primero, Segundo, Tercero y Total.
+const E911_PDF_IV6_COLUMNAS = [
+  [[263.4, 291.7], [300.3, 328.6], [337.4, 379.9]],
+  [[388.1, 416.5], [425.0, 453.4], [462.1, 504.7]],
+  [[512.9, 541.2], [549.8, 578.1], [586.9, 629.4]],
+  [[637.6, 665.9], [674.5, 702.8], [711.6, 754.1]],
+];
+
+function agregarSeccionIV6PDF(campos, condicionDetalle) {
+  const P = 6;
+  const suma = [0, 1, 2, 3].map(() => ({ h: 0, m: 0 }));
+  E911_PDF_IV6_ORDEN.forEach((cat, i) => {
+    const d = (condicionDetalle || []).find((x) => x.categoria === cat);
+    if (!d || d.total === 0) return;
+    const grupos = [1, 2, 3].map((g) => ({ h: numE911PDF((d.porGrado || {})[g]?.hombres), m: numE911PDF((d.porGrado || {})[g]?.mujeres) }));
+    grupos.push({ h: numE911PDF(d.hombres), m: numE911PDF(d.mujeres) });
+    grupos.forEach((v, gi) => {
+      suma[gi].h += v.h; suma[gi].m += v.m;
+      const col = E911_PDF_IV6_COLUMNAS[gi];
+      celdaE911(campos, P, col[0], E911_PDF_IV6_FILAS[i], v.h);
+      celdaE911(campos, P, col[1], E911_PDF_IV6_FILAS[i], v.m);
+      celdaE911(campos, P, col[2], E911_PDF_IV6_FILAS[i], v.h + v.m);
+    });
+  });
+  suma.forEach((v, gi) => {
+    const col = E911_PDF_IV6_COLUMNAS[gi];
+    celdaE911(campos, P, col[0], E911_PDF_IV6_FILA_TOTAL, v.h);
+    celdaE911(campos, P, col[1], E911_PDF_IV6_FILA_TOTAL, v.m);
+    celdaE911(campos, P, col[2], E911_PDF_IV6_FILA_TOTAL, v.h + v.m);
+  });
+}
+
+// IV.7 — nacidos fuera de México por región (página índice 7). El sistema
+// guarda el PAÍS como texto libre; se ubica en su región con esta tabla.
+// Si algún país no se reconoce, no se escribe el Total (para no reportar un
+// total que no cuadre) y la app lo deja para captura manual.
+function normalizarTextoE911(t) {
+  return (t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[.,]/g, "").replace(/\s+/g, " ").trim();
+}
+const E911_PAIS_A_REGION = (() => {
+  const m = {};
+  const add = (region, lista) => lista.forEach((p) => { m[normalizarTextoE911(p)] = region; });
+  add("Estados Unidos", ["Estados Unidos", "Estados Unidos de America", "EUA", "EEUU", "EE UU", "USA", "US"]);
+  add("Canadá", ["Canadá"]);
+  add("Centroamérica y el Caribe", ["Guatemala", "Honduras", "El Salvador", "Nicaragua", "Costa Rica", "Panamá", "Belice", "Cuba", "República Dominicana", "Haití", "Puerto Rico", "Jamaica"]);
+  add("Sudamérica", ["Colombia", "Venezuela", "Ecuador", "Perú", "Bolivia", "Chile", "Argentina", "Uruguay", "Paraguay", "Brasil"]);
+  add("Europa", ["España", "Francia", "Alemania", "Italia", "Reino Unido", "Portugal", "Países Bajos", "Holanda", "Suiza"]);
+  add("Asia", ["China", "Japón", "Corea", "Corea del Sur", "India", "Filipinas"]);
+  add("Oceanía", ["Australia", "Nueva Zelanda"]);
+  E911_REGIONES_PAIS.forEach((r) => { m[normalizarTextoE911(r)] = r; });
+  return m;
+})();
+const E911_PDF_IV7_COLUMNAS = [[190.1, 232.2], [247.2, 289.2], [306.5, 348.6]];
+const E911_PDF_IV7_FILAS = [166.6, 179.2, 191.9, 204.6, 217.3, 230.0, 242.6, 255.4];
+const E911_PDF_IV7_FILA_TOTAL = 273.4;
+
+function agregarSeccionIV7PDF(campos, nacidosFuera) {
+  const P = 7;
+  const porRegion = {};
+  let sinRegion = 0;
+  (nacidosFuera || []).forEach((n) => {
+    const region = E911_PAIS_A_REGION[normalizarTextoE911(n.pais)];
+    if (!region) { sinRegion += 1; return; }
+    if (!porRegion[region]) porRegion[region] = { h: 0, m: 0 };
+    porRegion[region].h += numE911PDF(n.hombres);
+    porRegion[region].m += numE911PDF(n.mujeres);
+  });
+  let th = 0, tm = 0;
+  E911_REGIONES_PAIS.forEach((r, i) => {
+    const v = porRegion[r];
+    if (!v) return;
+    th += v.h; tm += v.m;
+    celdaE911(campos, P, E911_PDF_IV7_COLUMNAS[0], E911_PDF_IV7_FILAS[i], v.h);
+    celdaE911(campos, P, E911_PDF_IV7_COLUMNAS[1], E911_PDF_IV7_FILAS[i], v.m);
+    celdaE911(campos, P, E911_PDF_IV7_COLUMNAS[2], E911_PDF_IV7_FILAS[i], v.h + v.m);
+  });
+  if (sinRegion === 0) {
+    celdaE911(campos, P, E911_PDF_IV7_COLUMNAS[0], E911_PDF_IV7_FILA_TOTAL, th);
+    celdaE911(campos, P, E911_PDF_IV7_COLUMNAS[1], E911_PDF_IV7_FILA_TOTAL, tm);
+    celdaE911(campos, P, E911_PDF_IV7_COLUMNAS[2], E911_PDF_IV7_FILA_TOTAL, th + tm);
+  }
+}
+
+// IV.12 (telesecundarias) y IV.13 (afromexicanos) — página índice 9.
+function agregarSeccionIV12y13PDF(campos, e911) {
+  const P = 9;
+  const d = e911.personal911.directivosDocentesPorGrado;
+  [[446.7, 474.9], [510.5, 538.7], [574.2, 602.3], [637.5, 665.7], [708.6, 736.8]].forEach((celda, i) => {
+    const v = [d.primero, d.segundo, d.tercero, d.masDeUnGrado, d.primero + d.segundo + d.tercero + d.masDeUnGrado][i];
+    celdaE911(campos, P, celda, 318.6, numE911PDF(v));
+  });
+  const a = e911.afromexicanos;
+  celdaE911(campos, P, [431.3, 473.7], 416.1, numE911PDF(a.hombres));
+  celdaE911(campos, P, [489.5, 531.8], 416.1, numE911PDF(a.mujeres));
+  celdaE911(campos, P, [552.7, 595.0], 416.1, numE911PDF(a.hombres) + numE911PDF(a.mujeres));
+}
+
+// IV.14 — residencia por entidad (página índice 10): 16 entidades por
+// columna, en el orden impreso; "Fuera de México" y "Total" a la derecha.
+const E911_ENTIDADES_IV14 = [
+  "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Coahuila", "Colima",
+  "Chiapas", "Chihuahua", "Ciudad de México", "Durango", "Guanajuato", "Guerrero", "Hidalgo",
+  "Jalisco", "México", "Michoacán",
+  "Morelos", "Nayarit", "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo",
+  "San Luis Potosí", "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz",
+  "Yucatán", "Zacatecas",
+];
+const E911_PDF_IV14_FILAS = [181.3, 200.3, 219.2, 238.2, 257.1, 276.0, 295.0, 313.9, 332.9, 351.8, 370.8, 389.7, 408.6, 427.6, 446.5, 465.5];
+const E911_PDF_IV14_IZQ = [[192.7, 226.8], [245.2, 279.3]];
+const E911_PDF_IV14_DER = [[396.6, 430.7], [449.1, 483.2]];
+
+function entidadOficialE911(texto) {
+  const t = normalizarTextoE911(texto);
+  if (!t) return null;
+  if (["cdmx", "distrito federal", "df", "ciudad de mexico"].includes(t)) return "Ciudad de México";
+  if (["estado de mexico", "edomex", "edo de mexico", "mexico"].includes(t)) return "México";
+  if (["fuera de mexico", "extranjero", "otro pais"].includes(t)) return "Fuera de México";
+  const exacta = E911_ENTIDADES_IV14.find((e) => normalizarTextoE911(e) === t);
+  if (exacta) return exacta;
+  // "Coahuila de Zaragoza", "Michoacán de Ocampo", "Veracruz de Ignacio de la Llave"…
+  const prefijo = E911_ENTIDADES_IV14.filter((e) => e !== "México").find((e) => t.startsWith(normalizarTextoE911(e) + " "));
+  return prefijo || null;
+}
+
+function agregarSeccionIV14PDF(campos, residencia) {
+  const P = 10;
+  let th = 0, tm = 0, sinEntidad = 0;
+  const acum = {};
+  (residencia || []).forEach((r) => {
+    const ent = entidadOficialE911(r.entidad);
+    if (!ent) { sinEntidad += 1; return; }
+    if (!acum[ent]) acum[ent] = { h: 0, m: 0 };
+    acum[ent].h += numE911PDF(r.hombres);
+    acum[ent].m += numE911PDF(r.mujeres);
+  });
+  Object.keys(acum).forEach((ent) => {
+    const v = acum[ent];
+    th += v.h; tm += v.m;
+    let cols, bottom;
+    if (ent === "Fuera de México") { cols = E911_PDF_IV14_DER; bottom = 495.0; }
+    else {
+      const i = E911_ENTIDADES_IV14.indexOf(ent);
+      cols = i < 16 ? E911_PDF_IV14_IZQ : E911_PDF_IV14_DER;
+      bottom = E911_PDF_IV14_FILAS[i % 16];
+    }
+    if (v.h > 0) celdaE911(campos, P, cols[0], bottom, v.h);
+    if (v.m > 0) celdaE911(campos, P, cols[1], bottom, v.m);
+  });
+  if (sinEntidad === 0 && (th + tm) > 0) {
+    celdaE911(campos, P, E911_PDF_IV14_DER[0], 515.0, th);
+    celdaE911(campos, P, E911_PDF_IV14_DER[1], 515.0, tm);
+  }
+}
+
+// ---- Sección V. Personal por función (páginas índice 11 a 13) ----
+// V.1 usa e911.personal911.gridPrincipal / gridEspecial (21 niveles + Otros,
+// en el mismo orden impreso que E911_NIVELES_ESTUDIO). V.3 (docentes con
+// discapacidad) y V.5 (tiempo dedicado a la función académica) también se
+// llenan. V.2 (detalle por puesto administrativo) y V.4 (horas a la semana
+// del personal docente especial) no existen en el sistema: se dejan en
+// blanco para captura directa en la plataforma.
+const E911_PDF_V1_FILAS_P11 = [238.8, 252.3, 265.8, 279.3, 292.8, 306.3, 319.8, 333.3, 346.8, 360.3, 373.8, 387.3, 400.8, 414.3, 427.8, 441.3, 454.8, 468.2, 481.7, 495.2, 508.7, 530.8];
+const E911_PDF_V1_FILAS_P12 = [212.3, 225.8, 239.3, 252.8, 266.3, 279.8, 293.3, 306.8, 320.3, 333.8, 347.3, 360.8, 374.3, 387.8, 401.2, 414.7, 428.2, 441.7, 455.2, 468.7, 482.2, 504.3];
+// Por función: [celda Hombres, celda Mujeres] dentro de la cuadrícula, y
+// [subtotal H, subtotal M] (las casillas de subtotal son más anchas).
+const E911_PDF_V1_P11 = {
+  "Personal directivo con grupo": { celdas: [[228.3, 242.3], [277.8, 291.9]], sub: [[214.3, 242.3], [263.8, 291.9]] },
+  "Personal directivo sin grupo": { celdas: [[327.5, 341.5], [377.1, 391.1]], sub: [[313.4, 341.5], [363.1, 391.1]] },
+  "Subdirector de gestión escolar": { celdas: [[426.7, 440.7], [476.3, 490.3]], sub: [[412.7, 440.7], [462.3, 490.3]] },
+  "Personal docente": { celdas: [[526.0, 568.1], [603.9, 646.0]], sub: [[511.8, 568.1], [589.7, 646.0]] },
+  "Tutor": { celdas: [[681.7, 695.8], [733.0, 747.0]], sub: [[667.7, 695.8], [719.0, 747.0]] },
+};
+const E911_PDF_V1_P12 = {
+  "Profesor de educación física": { celdas: [[229.0, 243.1], [284.8, 298.9]], sub: [[215.0, 243.1], [270.8, 298.9]] },
+  "Profesor de actividades artísticas": { celdas: [[337.6, 351.7], [392.7, 406.7]], sub: [[323.6, 351.7], [378.7, 406.7]] },
+  "Profesor de actividades tecnológicas": { celdas: [[445.5, 459.5], [500.5, 514.5]], sub: [[431.4, 459.5], [486.5, 514.5]] },
+  "Profesor de idiomas": { celdas: [[553.3, 567.3], [608.3, 622.3]], sub: [[539.3, 567.3], [594.3, 622.3]] },
+  "Personal administrativo, auxiliar y de servicios": { celdas: [[654.2, 696.4], [716.4, 758.6]], sub: [[654.2, 696.4], [716.4, 758.6]] },
+};
+
+function agregarCuadriculaV1PDF(campos, pagina, grid, mapa, filas, bottomSubtotal) {
+  let total = 0;
+  Object.keys(mapa).forEach((fn) => {
+    let sh = 0, sm = 0;
+    (grid || []).forEach((fila) => {
+      const i = E911_NIVELES_ESTUDIO.indexOf(fila.nivel);
+      const v = (fila.porFuncion || {})[fn];
+      if (i === -1 || !v) return;
+      sh += v.hombres; sm += v.mujeres;
+      if (v.hombres > 0) celdaE911(campos, pagina, mapa[fn].celdas[0], filas[i], v.hombres);
+      if (v.mujeres > 0) celdaE911(campos, pagina, mapa[fn].celdas[1], filas[i], v.mujeres);
+    });
+    celdaE911(campos, pagina, mapa[fn].sub[0], bottomSubtotal, sh);
+    celdaE911(campos, pagina, mapa[fn].sub[1], bottomSubtotal, sm);
+    total += sh + sm;
+  });
+  return total;
+}
+
+function agregarSeccionVPDF(campos, personal911) {
+  const t1 = agregarCuadriculaV1PDF(campos, 11, personal911.gridPrincipal, E911_PDF_V1_P11, E911_PDF_V1_FILAS_P11, 580.8);
+  const t2 = agregarCuadriculaV1PDF(campos, 12, personal911.gridEspecial, E911_PDF_V1_P12, E911_PDF_V1_FILAS_P12, 550.4);
+  celdaE911(campos, 12, [695.1, 751.2], 575.1, t1 + t2);
+  // V.3 docentes con discapacidad
+  const dd = personal911.docentesConDiscapacidad;
+  celdaE911(campos, 13, [96.5, 139.1], 579.2, numE911PDF(dd.hombres));
+  celdaE911(campos, 13, [177.7, 220.3], 579.2, numE911PDF(dd.mujeres));
+  celdaE911(campos, 13, [254.0, 310.8], 579.2, numE911PDF(dd.total));
+  // V.5 tiempo que dedica a la función académica (mismo orden que E911_TIEMPOS_DEDICACION)
+  const filasV5 = [276.2, 289.8, 303.4, 316.9];
+  let tt = 0;
+  (personal911.tiempoDedicacion || []).forEach((t, i) => {
+    const idx = E911_TIEMPOS_DEDICACION.indexOf(t.tiempo);
+    if (idx === -1) return;
+    tt += numE911PDF(t.total);
+    celdaE911(campos, 13, [702.7, 745.0], filasV5[idx], numE911PDF(t.total));
+  });
+  celdaE911(campos, 13, [702.7, 745.0], 338.6, tt);
+}
+
 // Arma la lista completa de instrucciones de dibujo { pagina, tipo, ... }.
-// Entrega 1: página 1 parcial + Sección I completa. Entrega 2 (agregada
-// aquí): Sección II, Sección III, Sección VI (aulas) y Secciones VII-VIII
-// (idiomas y libros). Quedan pendientes IV (alumnado y grupos) y V
-// (personal), las más grandes del formato.
+// Entrega 1: página 1 parcial + Sección I completa. Entrega 2: Sección II,
+// Sección III, Sección VI (aulas) y Secciones VII-VIII (idiomas y libros).
+// Entrega 3: Sección IV (alumnado y grupos) y Sección V (personal), con
+// excepción de las preguntas cuyo dato no existe en el sistema.
 function construirCamposE911PDF(seccion1, infraestructura, e911) {
   const campos = [];
   if (DATOS_PLANTEL.cct) campos.push({ pagina: 0, tipo: "celdas", celdas: E911_PDF_CELDAS_CCT, bottom: E911_PDF_CCT_BOTTOM, texto: DATOS_PLANTEL.cct });
@@ -19927,6 +20294,13 @@ function construirCamposE911PDF(seccion1, infraestructura, e911) {
   if (e911) {
     agregarSeccionIIPDF(campos, e911.procedenciaPorGrado, e911.procedenciaPorRegion);
     agregarSeccionIIIPDF(campos, e911.becas);
+    agregarSeccionIV1PDF(campos, e911.porGrado);
+    agregarSeccionIV2a5PDF(campos, e911);
+    agregarSeccionIV6PDF(campos, e911.condicionDetalle);
+    agregarSeccionIV7PDF(campos, e911.nacidosFuera);
+    agregarSeccionIV12y13PDF(campos, e911);
+    agregarSeccionIV14PDF(campos, e911.residencia);
+    agregarSeccionVPDF(campos, e911.personal911);
   }
   if (infraestructura) {
     agregarSeccionVIPDF(campos, infraestructura);
@@ -20052,10 +20426,10 @@ function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
         </p>
 
         <button onClick={descargarPDFOficial} disabled={generandoPDF} className="btn-secundario mb-1" style={{ width: "100%" }}>
-          <Download size={14} /> {generandoPDF ? "Generando…" : "Descargar 911.5 oficial rellenado (PDF) — entrega 2"}
+          <Download size={14} /> {generandoPDF ? "Generando…" : "Descargar 911.5 oficial rellenado (PDF)"}
         </button>
         <p className="text-sm mb-3" style={{ opacity: 0.55 }}>
-          Este botón sí descarga el <b>documento oficial</b> de 16 páginas (el que subiste), ya con datos reales escritos encima — no el apoyo de arriba. Hasta ahora llena la <b>página de Identificación</b> (clave del centro de trabajo, turno, nombre de la escuela, entidad, municipio, localidad, código postal y nombre del director; lo demás de esa página — vialidades, CURP, RFC, teléfonos, clave de zona escolar — no está capturado en el sistema y se deja en blanco a propósito, para no inventar datos), la <b>Sección I</b> completa, la <b>Sección II</b> (de otra escuela), la <b>Sección III</b> (becas) y las <b>Secciones VI a VIII</b> (aulas, idiomas y libros de texto). Quedan pendientes la <b>Sección IV</b> (alumnado y grupos) y la <b>Sección V</b> (personal) — son las dos más grandes del formato y se agregan en una próxima actualización.
+          Este botón sí descarga el <b>documento oficial</b> de 16 páginas (el que subiste), ya con datos reales escritos encima — no el apoyo de arriba. Hasta ahora llena la <b>página de Identificación</b> (clave del centro de trabajo, turno, nombre de la escuela, entidad, municipio, localidad, código postal y nombre del director; lo demás de esa página — vialidades, CURP, RFC, teléfonos, clave de zona escolar — no está capturado en el sistema y se deja en blanco a propósito, para no inventar datos), y las <b>Secciones I a VIII</b>. Quedan en blanco, para que las captures directo en la plataforma, solo las preguntas cuyo dato no existe en el sistema: IV.4 (clave de lengua), IV.8 a IV.11 (egresados, reprobados, regularizados e irregulares del ciclo anterior), V.2 (detalle por puesto administrativo) y V.4 (horas a la semana del personal docente especial).
         </p>
 
         {seccionE911 === "I" && <PanelSeccion1E911 onStamp={onStamp} />}
