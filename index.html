@@ -17532,6 +17532,9 @@ function CredencialComiteTarjeta({ integrante, presidente, director, registro, f
           <div style={{ fontWeight: 800, fontSize: integrante.nombre.length > 34 ? "7.4pt" : "8.6pt", textTransform: "uppercase" }}>{integrante.nombre}</div>
           <div style={{ fontSize: "5.8pt", color: "#555", marginTop: "1mm" }}>CARGO</div>
           <div style={{ fontWeight: 700, fontSize: "7.6pt", color: guinda }}>{integrante.cargos.join(" y ")}</div>
+          {(integrante.telefono || integrante.nota) && (
+            <div style={{ fontSize: "6pt", marginTop: "0.6mm" }}>{[integrante.telefono ? `Tel. ${integrante.telefono}` : "", integrante.nota || ""].filter(Boolean).join(" · ")}</div>
+          )}
           <div style={{ fontSize: "6pt", marginTop: "1mm" }}>Registro APF: {registro || "______________________"}</div>
           <div style={{ fontSize: "6pt" }}>Vigencia: ciclo escolar 2026-2027</div>
         </div>
@@ -17551,8 +17554,13 @@ function CredencialComiteTarjeta({ integrante, presidente, director, registro, f
   );
 }
 
-function CredencialesComite({ mesaDirectiva, contraloria, constancia, tutores, incluirContraloria, imprimible, fotos, onSubirFoto, subiendoFoto }) {
-  const integrantes = integrantesParaCredencial(mesaDirectiva, contraloria, tutores, incluirContraloria);
+function CredencialesComite({ mesaDirectiva, contraloria, constancia, tutores, incluirContraloria, imprimible, fotos, onSubirFoto, subiendoFoto, adicionales, modo }) {
+  // modo: "todos" (comité + adicionales), "comite" o "adicionales".
+  const delComite = modo === "adicionales" ? [] : integrantesParaCredencial(mesaDirectiva, contraloria, tutores, incluirContraloria);
+  const extras = modo === "comite" ? [] : (adicionales || [])
+    .filter((x) => (x.nombre || "").trim())
+    .map((x) => ({ nombre: x.nombre.trim(), cargos: [(x.cargo || "Apoyo").trim()], telefono: (x.telefono || "").trim(), nota: (x.nota || "").trim() }));
+  const integrantes = [...delComite, ...extras.filter((x) => !delComite.some((c) => c.nombre === x.nombre))];
   const nombrePres = ((mesaDirectiva || {}).presidente || "").trim();
   const tutorPres = nombrePres ? buscarTutorPorNombre(tutores || [], nombrePres) : null;
   const presidente = nombrePres ? { nombre: nombrePres, cargoAPF: cargoSegunRol("Presidente", tutorPres ? tutorPres.rol : "") } : null;
@@ -17560,7 +17568,7 @@ function CredencialesComite({ mesaDirectiva, contraloria, constancia, tutores, i
   const registro = ((constancia || {}).registro || "").trim();
   if (integrantes.length === 0) {
     return imprimible ? null : (
-      <div className="card"><p className="text-sm" style={{ opacity: 0.6 }}>Todavía no hay nadie asignado en la Mesa Directiva. Asígnalos en "2. Acta Constitutiva" y vuelve aquí.</p></div>
+      <div className="card"><p className="text-sm" style={{ opacity: 0.6 }}>{modo === "adicionales" ? "Todavía no hay credenciales adicionales. Agrégalas con el formulario de arriba." : "Todavía no hay nadie asignado en la Mesa Directiva. Asígnalos en \"2. Acta Constitutiva\" y vuelve aquí."}</p></div>
     );
   }
   const tarjetas = integrantes.map((it) => {
@@ -17579,11 +17587,15 @@ function CredencialesComite({ mesaDirectiva, contraloria, constancia, tutores, i
     );
   });
   if (imprimible) {
-    return (
-      <div className="solo-impresion">
+    // Se dibuja directo en <body> (portal) y, mientras se imprime, el resto
+    // de la página se oculta con display:none (clase "solo-portal" en
+    // <body>): así no salen hojas en blanco por el alto de la página oculta.
+    return ReactDOM.createPortal(
+      <div className="solo-impresion portal-impresion">
         <div style={{ display: "grid", gridTemplateColumns: "92mm 92mm", gap: "3mm", justifyContent: "center" }}>{tarjetas}</div>
         <p style={{ fontSize: "7pt", color: "#666", marginTop: "3mm", textAlign: "center" }}>Recortar por el borde. Firmar y sellar a mano antes de entregar.</p>
-      </div>
+      </div>,
+      document.body
     );
   }
   return (
@@ -17603,10 +17615,13 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
   const [generandoPDF, setGenerandoPDF] = useState(null); // id del documento que se está generando como PDF oficial
   const [errorPDF, setErrorPDF] = useState("");
   useEffect(() => {
-    window.onafterprint = () => setImprimiendo(null);
-    return () => { window.onafterprint = null; };
+    window.onafterprint = () => { setImprimiendo(null); document.body.classList.remove("solo-portal"); };
+    return () => { window.onafterprint = null; document.body.classList.remove("solo-portal"); };
   }, []);
-  const imprimir = (id) => { setImprimiendo(id); onStamp && onStamp("Preparando"); setTimeout(() => window.print(), 150); };
+  const imprimir = (id) => {
+    if (id === "credenciales") document.body.classList.add("solo-portal");
+    setImprimiendo(id); onStamp && onStamp("Preparando"); setTimeout(() => window.print(), 150);
+  };
 
   const descargarOficial = async (id, fn) => {
     setGenerandoPDF(id);
@@ -17693,11 +17708,39 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
   const [fotosComite, setFotosComite] = useState({});
   const [subiendoFotoComite, setSubiendoFotoComite] = useState(null);
   const [errorFotoComite, setErrorFotoComite] = useState("");
+  // Credenciales adicionales (apoyo u otro cargo), capturadas a mano: un
+  // renglón por persona con prefijo apf:credExtra:<id>.
+  const [credExtras, setCredExtras] = useState([]);
+  const [modoCred, setModoCred] = useState("todos");
+  const extraVacio = { nombre: "", cargo: "", telefono: "", nota: "" };
+  const [formExtra, setFormExtra] = useState(extraVacio);
+  const [editandoExtra, setEditandoExtra] = useState(null);
+  const [errorExtra, setErrorExtra] = useState("");
   useEffect(() => {
     let cancelado = false;
     cargarFotosComite().then((f) => { if (!cancelado) setFotosComite(f); });
+    listarStorage("apf:credExtra:").then((l) => { if (!cancelado) setCredExtras(l.filter((x) => x && x.id)); });
     return () => { cancelado = true; };
   }, []);
+  const guardarExtra = async () => {
+    const nombre = formExtra.nombre.trim();
+    const cargo = formExtra.cargo.trim();
+    if (!nombre || !cargo) { setErrorExtra("Escribe al menos el nombre y el cargo."); return; }
+    setErrorExtra("");
+    const registro = { ...formExtra, nombre, cargo, telefono: formExtra.telefono.trim(), nota: formExtra.nota.trim(), id: editandoExtra || uid() };
+    const ok = await setStorage(`apf:credExtra:${registro.id}`, registro);
+    if (!ok) { setErrorExtra("No se pudo guardar. Revisa la conexión e intenta de nuevo."); return; }
+    setCredExtras((prev) => editandoExtra ? prev.map((x) => (x.id === editandoExtra ? registro : x)) : [...prev, registro]);
+    setFormExtra(extraVacio);
+    setEditandoExtra(null);
+    onStamp && onStamp("Guardado");
+  };
+  const borrarExtra = async (x) => {
+    if (!window.confirm(`¿Quitar la credencial de ${x.nombre}?`)) return;
+    await borrarStorage(`apf:credExtra:${x.id}`);
+    setCredExtras((prev) => prev.filter((y) => y.id !== x.id));
+    if (editandoExtra === x.id) { setEditandoExtra(null); setFormExtra(extraVacio); }
+  };
   const subirFotoComite = async (nombre, archivo) => {
     if (!archivo) return;
     setSubiendoFotoComite(nombre);
@@ -18041,11 +18084,61 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
           <p className="text-sm" style={{ opacity: 0.6, marginTop: "-0.5rem" }}>
             Una credencial por integrante, con los nombres que asignaste en "2. Acta Constitutiva" y el número de "4. Constancia de Registro". Cada una lleva la firma del Director(a) con el lugar del <b>sello</b> de la escuela, y la firma del Presidente(a) de la APF. Las firmas y el sello van a mano sobre la hoja impresa. Con el botón <b>"Subir foto"</b> de cada una se imprime ya con su fotografía (se recorta sola al tamaño del recuadro, 1.7 × 2.1 cm); si no tiene foto, queda el recuadro para pegarla. Medida de cada credencial: 9.2 × 7 cm.
           </p>
+          <div className="card">
+            <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>{editandoExtra ? "Editar credencial adicional" : "Agregar credencial adicional (apoyo u otro cargo)"}</div>
+            <p className="text-sm mb-2" style={{ opacity: 0.6 }}>Para personas que no están en la Mesa Directiva —por ejemplo apoyo de tesorería, comisión de vigilancia, apoyo de cocina— o para alguien del comité con un cargo distinto. Sale con el mismo diseño, firmas y sello; su foto se sube igual, con el botón de su credencial.</p>
+            <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+              <label className="text-sm block">Nombre completo
+                <input className="campo" value={formExtra.nombre} onChange={(e) => setFormExtra({ ...formExtra, nombre: e.target.value })} placeholder="Ej. ANA LÓPEZ PÉREZ" list="lista-tutores-cred" />
+              </label>
+              <label className="text-sm">Cargo
+                <input className="campo" value={formExtra.cargo} onChange={(e) => setFormExtra({ ...formExtra, cargo: e.target.value })} placeholder="Ej. Apoyo de Tesorería" list="lista-cargos-cred" />
+              </label>
+              <label className="text-sm">Teléfono (opcional)
+                <input className="campo" value={formExtra.telefono} onChange={(e) => setFormExtra({ ...formExtra, telefono: e.target.value })} placeholder="Ej. 243 123 4567" />
+              </label>
+              <label className="text-sm">Dato adicional (opcional)
+                <input className="campo" value={formExtra.nota} onChange={(e) => setFormExtra({ ...formExtra, nota: e.target.value })} placeholder="Ej. Madre de alumno de 2°" />
+              </label>
+            </div>
+            <datalist id="lista-tutores-cred">{tutores.map((t) => <option key={t.nombre} value={t.nombre} />)}</datalist>
+            <datalist id="lista-cargos-cred">
+              {["Apoyo de Presidencia", "Apoyo de Tesorería", "Apoyo de Secretaría", "Vocal de apoyo", "Comisión de Vigilancia", "Comisión de Limpieza", "Comisión de Cocina / Desayunos", "Comisión de Seguridad"].map((c) => <option key={c} value={c} />)}
+            </datalist>
+            {errorExtra && <p className="text-sm" style={{ color: "var(--rojo)", marginTop: "0.4rem" }}>{errorExtra}</p>}
+            <div className="flex gap-2 justify-end" style={{ marginTop: "0.6rem" }}>
+              {editandoExtra && <button onClick={() => { setEditandoExtra(null); setFormExtra(extraVacio); setErrorExtra(""); }} className="btn-secundario" style={{ fontSize: "0.75rem" }}>Cancelar</button>}
+              <button onClick={guardarExtra} className="btn-primario" style={{ fontSize: "0.75rem" }}>{editandoExtra ? "Guardar cambios" : "+ Agregar credencial"}</button>
+            </div>
+            {credExtras.length > 0 && (
+              <ul className="text-sm flex flex-col gap-1" style={{ marginTop: "0.6rem" }}>
+                {credExtras.map((x) => (
+                  <li key={x.id} className="flex items-center justify-between gap-2" style={{ borderTop: "1px solid var(--borde)", paddingTop: "0.3rem" }}>
+                    <span><b>{x.nombre}</b> — {x.cargo}{x.telefono ? ` · Tel. ${x.telefono}` : ""}</span>
+                    <span className="flex gap-2">
+                      <button onClick={() => { setEditandoExtra(x.id); setFormExtra({ nombre: x.nombre || "", cargo: x.cargo || "", telefono: x.telefono || "", nota: x.nota || "" }); }} className="btn-secundario" style={{ fontSize: "0.7rem" }}>Editar</button>
+                      <button onClick={() => borrarExtra(x)} className="btn-secundario" style={{ fontSize: "0.7rem" }}>Quitar</button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <label className="text-sm flex items-center gap-2" style={{ cursor: "pointer" }}>
-              <input type="checkbox" checked={credConContraloria} onChange={(e) => setCredConContraloria(e.target.checked)} />
-              Incluir también a la Contraloría Social
-            </label>
+            <div className="flex items-center gap-3 flex-wrap">
+              <label className="text-sm">Mostrar e imprimir:{" "}
+                <select className="campo" style={{ width: "auto", display: "inline-block" }} value={modoCred} onChange={(e) => setModoCred(e.target.value)}>
+                  <option value="todos">Comité + adicionales</option>
+                  <option value="comite">Solo el Comité</option>
+                  <option value="adicionales">Solo las adicionales</option>
+                </select>
+              </label>
+              <label className="text-sm flex items-center gap-2" style={{ cursor: "pointer" }}>
+                <input type="checkbox" checked={credConContraloria} onChange={(e) => setCredConContraloria(e.target.checked)} />
+                Incluir también a la Contraloría Social
+              </label>
+            </div>
             <div className="flex gap-2">
               <button onClick={cargarVistaActa} className="btn-secundario" style={{ fontSize: "0.75rem" }}>↻ Actualizar</button>
               <button onClick={() => imprimir("credenciales")} className="btn-primario" style={{ fontSize: "0.75rem" }}>
@@ -18061,10 +18154,10 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
           ) : (
             <>
             {errorFotoComite && <p className="text-sm" style={{ color: "var(--rojo)" }}>{errorFotoComite}</p>}
-            <CredencialesComite mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} constancia={vistaActa.constancia} tutores={tutores} incluirContraloria={credConContraloria} imprimible={false} fotos={fotosComite} onSubirFoto={subirFotoComite} subiendoFoto={subiendoFotoComite} />
+            <CredencialesComite mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} constancia={vistaActa.constancia} tutores={tutores} incluirContraloria={credConContraloria} imprimible={false} fotos={fotosComite} onSubirFoto={subirFotoComite} subiendoFoto={subiendoFotoComite} adicionales={credExtras} modo={modoCred} />
             </>
           )}
-          {imprimiendo === "credenciales" && <CredencialesComite mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} constancia={vistaActa.constancia} tutores={tutores} incluirContraloria={credConContraloria} imprimible={true} fotos={fotosComite} />}
+          {imprimiendo === "credenciales" && <CredencialesComite mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} constancia={vistaActa.constancia} tutores={tutores} incluirContraloria={credConContraloria} imprimible={true} fotos={fotosComite} adicionales={credExtras} modo={modoCred} />}
           </>
           )}
         </div>
@@ -22016,6 +22109,8 @@ function App() {
       .solo-impresion tr, .solo-impresion thead { page-break-inside: avoid; break-inside: avoid; }
       .solo-impresion thead { display: table-header-group; }
       .solo-impresion .firma-grupo { page-break-inside: avoid; break-inside: avoid; }
+      body.solo-portal > :not(.portal-impresion) { display: none !important; }
+      body.solo-portal .portal-impresion { position: static !important; }
     }
     /* ---- Cédula de Registro y Actualización de Datos (vista previa + impresión) ---- */
     .ced-modal-fondo { position: fixed; inset: 0; background: rgba(20,10,10,.55); display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; z-index: 60; }
