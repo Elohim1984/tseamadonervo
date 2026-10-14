@@ -17408,6 +17408,123 @@ function MapeadorFormatos({ onStamp, rolActual, datosEscuela }) {
   );
 }
 
+/* ---------- Credenciales del Comité de la APF (14 oct 2026) ----------
+   Una credencial por integrante de la Mesa Directiva (y, opcional, de la
+   Contraloría Social), armada con lo ya capturado en "2. Acta Constitutiva"
+   y "4. Constancia de Registro". Lleva dos firmas: la del Director(a) —con
+   el círculo para el SELLO de la escuela encima— y la del Presidente(a) de
+   la APF. Las firmas y el sello son a mano sobre el papel impreso: aquí
+   solo se imprime el nombre debajo de cada línea. Si una misma persona
+   ocupa más de un puesto, sale UNA sola credencial con los puestos juntos.
+   El cargo se escribe en femenino cuando en Inscripciones la tutora quedó
+   registrada como "Madre (tutor)". */
+const CARGO_FEMENINO = {
+  Presidente: "Presidenta", Vicepresidente: "Vicepresidenta", Secretario: "Secretaria", Tesorero: "Tesorera",
+};
+function cargoSegunRol(etiqueta, rol) {
+  if (rol && rol.indexOf("Madre") === 0) return CARGO_FEMENINO[etiqueta] || etiqueta;
+  if (rol && rol.indexOf("Padre") === 0) return etiqueta;
+  return CARGO_FEMENINO[etiqueta] ? `${etiqueta}(a)` : etiqueta;
+}
+
+function integrantesParaCredencial(mesaDirectiva, contraloria, tutores, incluirContraloria) {
+  const porNombre = new Map();
+  const agregar = (puestos, datos, sufijo) => {
+    puestos.forEach(({ key, etiqueta }) => {
+      const nombre = ((datos || {})[key] || "").trim();
+      if (!nombre) return;
+      const tutor = buscarTutorPorNombre(tutores || [], nombre);
+      const rol = tutor ? tutor.rol : "";
+      const cargo = cargoSegunRol(etiqueta, rol) + sufijo;
+      if (!porNombre.has(nombre)) porNombre.set(nombre, { nombre, rol, cargos: [] });
+      porNombre.get(nombre).cargos.push(cargo);
+    });
+  };
+  agregar(PUESTOS_MESA_DIRECTIVA, mesaDirectiva, "");
+  if (incluirContraloria) agregar(PUESTOS_CONTRALORIA, contraloria, " de Contraloría Social");
+  return Array.from(porNombre.values());
+}
+
+function CredencialComiteTarjeta({ integrante, presidente, director, registro }) {
+  const ink = "#1b1b1b";
+  const guinda = "#7a1f1f";
+  const lineaFirma = { borderTop: "1px solid #222", paddingTop: "1.2mm", fontSize: "6.3pt", lineHeight: 1.15, textAlign: "center" };
+  return (
+    <div className="credencial-apf" style={{
+      width: "92mm", height: "70mm", border: "1.2px solid " + guinda, borderRadius: "3mm", padding: "3mm 3.5mm",
+      boxSizing: "border-box", fontFamily: "Arial, Helvetica, sans-serif", color: ink, background: "#fff",
+      display: "flex", flexDirection: "column", position: "relative", overflow: "hidden",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "2.5mm" }}>
+        <img src={ESCUDO_ESCUELA} alt="" style={{ width: "11mm", height: "11mm", objectFit: "contain" }} />
+        <div style={{ lineHeight: 1.15 }}>
+          <div style={{ fontWeight: 800, fontSize: "8pt" }}>Telesecundaria Estatal "{DATOS_PLANTEL.nombre}"</div>
+          <div style={{ fontSize: "6.3pt" }}>C.C.T. {DATOS_PLANTEL.cct} · {DATOS_PLANTEL.localidad}, {DATOS_PLANTEL.municipio}, {DATOS_PLANTEL.estado}</div>
+        </div>
+      </div>
+      <div style={{ background: guinda, color: "#fff", textAlign: "center", fontWeight: 700, fontSize: "6.8pt", letterSpacing: "0.04em", padding: "0.8mm 0", margin: "1.6mm -3.5mm 1.8mm" }}>
+        ASOCIACIÓN DE PADRES DE FAMILIA · CICLO ESCOLAR 2026-2027
+      </div>
+      <div style={{ display: "flex", gap: "3mm", flex: 1 }}>
+        <div style={{ width: "17mm", height: "21mm", border: "1px dashed #888", fontSize: "5.5pt", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", flexShrink: 0 }}>
+          FOTOGRAFÍA
+        </div>
+        <div style={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
+          <div style={{ fontSize: "5.8pt", color: "#555" }}>NOMBRE</div>
+          <div style={{ fontWeight: 800, fontSize: integrante.nombre.length > 34 ? "7.4pt" : "8.6pt", textTransform: "uppercase" }}>{integrante.nombre}</div>
+          <div style={{ fontSize: "5.8pt", color: "#555", marginTop: "1mm" }}>CARGO</div>
+          <div style={{ fontWeight: 700, fontSize: "7.6pt", color: guinda }}>{integrante.cargos.join(" y ")}</div>
+          <div style={{ fontSize: "6pt", marginTop: "1mm" }}>Registro APF: {registro || "______________________"}</div>
+          <div style={{ fontSize: "6pt" }}>Vigencia: ciclo escolar 2026-2027</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: "5mm", alignItems: "flex-end", marginTop: "1mm", flexShrink: 0 }}>
+        <div style={{ flex: 1, position: "relative" }}>
+          <div style={{ position: "absolute", left: "50%", bottom: "5mm", transform: "translateX(-50%)", width: "13mm", height: "13mm", border: "1px dashed #aaa", borderRadius: "50%", fontSize: "5pt", color: "#aaa", display: "flex", alignItems: "center", justifyContent: "center" }}>SELLO</div>
+          <div style={{ height: "10mm" }} />
+          <div style={lineaFirma}><b>{director}</b><br />Director(a) de la escuela</div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ height: "10mm" }} />
+          <div style={lineaFirma}><b>{presidente ? presidente.nombre : "______________________"}</b><br />{presidente ? presidente.cargoAPF : "Presidente(a)"} de la APF</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CredencialesComite({ mesaDirectiva, contraloria, constancia, tutores, incluirContraloria, imprimible }) {
+  const integrantes = integrantesParaCredencial(mesaDirectiva, contraloria, tutores, incluirContraloria);
+  const nombrePres = ((mesaDirectiva || {}).presidente || "").trim();
+  const tutorPres = nombrePres ? buscarTutorPorNombre(tutores || [], nombrePres) : null;
+  const presidente = nombrePres ? { nombre: nombrePres, cargoAPF: cargoSegunRol("Presidente", tutorPres ? tutorPres.rol : "") } : null;
+  const director = NOMBRE_COMPLETO.directora;
+  const registro = ((constancia || {}).registro || "").trim();
+  if (integrantes.length === 0) {
+    return imprimible ? null : (
+      <div className="card"><p className="text-sm" style={{ opacity: 0.6 }}>Todavía no hay nadie asignado en la Mesa Directiva. Asígnalos en "2. Acta Constitutiva" y vuelve aquí.</p></div>
+    );
+  }
+  const tarjetas = integrantes.map((it) => (
+    <div key={it.nombre} style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+      <CredencialComiteTarjeta integrante={it} presidente={presidente} director={director} registro={registro} />
+    </div>
+  ));
+  if (imprimible) {
+    return (
+      <div className="solo-impresion">
+        <div style={{ display: "grid", gridTemplateColumns: "92mm 92mm", gap: "3mm", justifyContent: "center" }}>{tarjetas}</div>
+        <p style={{ fontSize: "7pt", color: "#666", marginTop: "3mm", textAlign: "center" }}>Recortar por el borde. Firmar y sellar a mano antes de entregar.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="card" style={{ overflowX: "auto" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "center" }}>{tarjetas}</div>
+    </div>
+  );
+}
+
 function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
   const [subTab, setSubTab] = useState(subTabInicial || "apf");
   const [apfDocTab, setApfDocTab] = useState("convocatoria");
@@ -17502,7 +17619,9 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
     { id: "constitutiva", label: "2. Acta Constitutiva" },
     { id: "entrega", label: "3. Entrega-Recepción" },
     { id: "constancia", label: "4. Constancia de Registro" },
+    { id: "credenciales", label: "5. Credenciales del Comité" },
   ];
+  const [credConContraloria, setCredConContraloria] = useState(false);
 
   return (
     <div className="flex flex-col gap-4">
@@ -17819,6 +17938,38 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
             <ConstanciaRegistroVista datos={vistaActa.constancia} imprimible={false} />
           )}
           {imprimiendo === "constancia" && <ConstanciaRegistroVista datos={vistaActa.constancia} imprimible={true} />}
+          </>
+          )}
+
+          {apfDocTab === "credenciales" && (
+          <>
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.5rem" }}>
+            Credenciales del Comité de Padres de Familia
+          </div>
+          <p className="text-sm" style={{ opacity: 0.6, marginTop: "-0.5rem" }}>
+            Una credencial por integrante, con los nombres que asignaste en "2. Acta Constitutiva" y el número de "4. Constancia de Registro". Cada una lleva la firma del Director(a) con el lugar del <b>sello</b> de la escuela, y la firma del Presidente(a) de la APF. Las firmas y el sello van a mano sobre la hoja impresa; también hay un recuadro para pegar la foto.
+          </p>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <label className="text-sm flex items-center gap-2" style={{ cursor: "pointer" }}>
+              <input type="checkbox" checked={credConContraloria} onChange={(e) => setCredConContraloria(e.target.checked)} />
+              Incluir también a la Contraloría Social
+            </label>
+            <div className="flex gap-2">
+              <button onClick={cargarVistaActa} className="btn-secundario" style={{ fontSize: "0.75rem" }}>↻ Actualizar</button>
+              <button onClick={() => imprimir("credenciales")} className="btn-primario" style={{ fontSize: "0.75rem" }}>
+                <Printer size={14} /> Imprimir credenciales
+              </button>
+            </div>
+          </div>
+          <p className="text-sm" style={{ opacity: 0.55, marginTop: "-0.3rem" }}>
+            Salen 6 por hoja tamaño carta. En el cuadro de impresión deja la escala al 100% (sin "Ajustar a la página") para que conserven su tamaño; si quieres el archivo, cambia "Destino" a "Guardar como PDF".
+          </p>
+          {vistaActa.cargando ? (
+            <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>
+          ) : (
+            <CredencialesComite mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} constancia={vistaActa.constancia} tutores={tutores} incluirContraloria={credConContraloria} imprimible={false} />
+          )}
+          {imprimiendo === "credenciales" && <CredencialesComite mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} constancia={vistaActa.constancia} tutores={tutores} incluirContraloria={credConContraloria} imprimible={true} />}
           </>
           )}
         </div>
