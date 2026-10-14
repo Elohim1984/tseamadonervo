@@ -3560,6 +3560,60 @@ function prepararFotoAlumno(archivo) {
   });
 }
 
+// --- Fotos del Comité de la APF para sus credenciales (14 oct 2026) ---
+// Mismo guardado por partes que las fotos de alumnos, con su propio prefijo
+// (apf:foto:<clave>:). La clave sale del nombre de la persona (sin acentos ni
+// espacios), porque los integrantes del comité se eligen por nombre en el
+// Acta Constitutiva y no tienen un id propio. La foto se recorta VERTICAL
+// (proporción 17:21, la del recuadro de la credencial), no cuadrada.
+function claveFotoComite(nombre) {
+  return (nombre || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+async function guardarFotoComite(nombre, base64) {
+  const prefijo = `apf:foto:${claveFotoComite(nombre)}:`;
+  const previas = await listarStorageObjeto(prefijo);
+  for (const i of Object.keys(previas)) await borrarStorage(`${prefijo}${i}`);
+  const total = Math.max(1, Math.ceil(base64.length / TAMANO_PARTE_PDF));
+  for (let i = 0; i < total; i++) {
+    const indice = String(i).padStart(4, "0");
+    const ok = await setStorage(`${prefijo}${indice}`, base64.slice(i * TAMANO_PARTE_PDF, (i + 1) * TAMANO_PARTE_PDF));
+    if (!ok) throw new Error(`No se pudo guardar la parte ${indice} de la foto.`);
+  }
+}
+// Trae TODAS las fotos del comité en un solo viaje: { clave: base64 }.
+async function cargarFotosComite() {
+  const partes = await listarStorageObjeto("apf:foto:");
+  const porClave = {};
+  Object.keys(partes).sort().forEach((k) => {
+    const [clave] = k.split(":");
+    if (!clave || typeof partes[k] !== "string") return;
+    porClave[clave] = (porClave[clave] || "") + partes[k];
+  });
+  return porClave;
+}
+function prepararFotoRetrato(archivo) {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onerror = () => reject(new Error("No se pudo leer el archivo."));
+    lector.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("El archivo no parece ser una imagen válida."));
+      img.onload = () => {
+        const W = 340, H = 420; // 17:21
+        const canvas = document.createElement("canvas");
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext("2d");
+        const escala = Math.max(W / img.width, H / img.height);
+        const sw = W / escala, sh = H / escala;
+        ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, W, H);
+        resolve(canvas.toDataURL("image/jpeg", 0.82).split(",")[1]);
+      };
+      img.src = lector.result;
+    };
+    lector.readAsDataURL(archivo);
+  });
+}
+
 async function probarConexion(url) {
   try {
     const resp = await fetch(`${url}?action=ping`);
@@ -17445,7 +17499,7 @@ function integrantesParaCredencial(mesaDirectiva, contraloria, tutores, incluirC
   return Array.from(porNombre.values());
 }
 
-function CredencialComiteTarjeta({ integrante, presidente, director, registro }) {
+function CredencialComiteTarjeta({ integrante, presidente, director, registro, foto }) {
   const ink = "#1b1b1b";
   const guinda = "#7a1f1f";
   const lineaFirma = { borderTop: "1px solid #222", paddingTop: "1.2mm", fontSize: "6.3pt", lineHeight: 1.15, textAlign: "center" };
@@ -17466,9 +17520,13 @@ function CredencialComiteTarjeta({ integrante, presidente, director, registro })
         ASOCIACIÓN DE PADRES DE FAMILIA · CICLO ESCOLAR 2026-2027
       </div>
       <div style={{ display: "flex", gap: "3mm", flex: 1 }}>
-        <div style={{ width: "17mm", height: "21mm", border: "1px dashed #888", fontSize: "5.5pt", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", flexShrink: 0 }}>
-          FOTOGRAFÍA
-        </div>
+        {foto ? (
+          <img src={`data:image/jpeg;base64,${foto}`} alt="" style={{ width: "17mm", height: "21mm", objectFit: "cover", border: "1px solid #888", flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: "17mm", height: "21mm", border: "1px dashed #888", fontSize: "5.5pt", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", flexShrink: 0 }}>
+            FOTOGRAFÍA
+          </div>
+        )}
         <div style={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
           <div style={{ fontSize: "5.8pt", color: "#555" }}>NOMBRE</div>
           <div style={{ fontWeight: 800, fontSize: integrante.nombre.length > 34 ? "7.4pt" : "8.6pt", textTransform: "uppercase" }}>{integrante.nombre}</div>
@@ -17493,7 +17551,7 @@ function CredencialComiteTarjeta({ integrante, presidente, director, registro })
   );
 }
 
-function CredencialesComite({ mesaDirectiva, contraloria, constancia, tutores, incluirContraloria, imprimible }) {
+function CredencialesComite({ mesaDirectiva, contraloria, constancia, tutores, incluirContraloria, imprimible, fotos, onSubirFoto, subiendoFoto }) {
   const integrantes = integrantesParaCredencial(mesaDirectiva, contraloria, tutores, incluirContraloria);
   const nombrePres = ((mesaDirectiva || {}).presidente || "").trim();
   const tutorPres = nombrePres ? buscarTutorPorNombre(tutores || [], nombrePres) : null;
@@ -17505,11 +17563,21 @@ function CredencialesComite({ mesaDirectiva, contraloria, constancia, tutores, i
       <div className="card"><p className="text-sm" style={{ opacity: 0.6 }}>Todavía no hay nadie asignado en la Mesa Directiva. Asígnalos en "2. Acta Constitutiva" y vuelve aquí.</p></div>
     );
   }
-  const tarjetas = integrantes.map((it) => (
-    <div key={it.nombre} style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
-      <CredencialComiteTarjeta integrante={it} presidente={presidente} director={director} registro={registro} />
-    </div>
-  ));
+  const tarjetas = integrantes.map((it) => {
+    const foto = (fotos || {})[claveFotoComite(it.nombre)] || "";
+    return (
+      <div key={it.nombre} style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+        <CredencialComiteTarjeta integrante={it} presidente={presidente} director={director} registro={registro} foto={foto} />
+        {!imprimible && onSubirFoto && (
+          <label className="btn-secundario" style={{ fontSize: "0.72rem", marginTop: "6px", display: "inline-flex", alignItems: "center", gap: "4px", cursor: "pointer" }}>
+            <Camera size={13} /> {subiendoFoto === it.nombre ? "Guardando…" : foto ? "Cambiar foto ✓" : "Subir foto"}
+            <input type="file" accept="image/*" style={{ display: "none" }} disabled={subiendoFoto === it.nombre}
+              onChange={(e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; onSubirFoto(it.nombre, f); }} />
+          </label>
+        )}
+      </div>
+    );
+  });
   if (imprimible) {
     return (
       <div className="solo-impresion">
@@ -17622,6 +17690,30 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
     { id: "credenciales", label: "5. Credenciales del Comité" },
   ];
   const [credConContraloria, setCredConContraloria] = useState(false);
+  const [fotosComite, setFotosComite] = useState({});
+  const [subiendoFotoComite, setSubiendoFotoComite] = useState(null);
+  const [errorFotoComite, setErrorFotoComite] = useState("");
+  useEffect(() => {
+    let cancelado = false;
+    cargarFotosComite().then((f) => { if (!cancelado) setFotosComite(f); });
+    return () => { cancelado = true; };
+  }, []);
+  const subirFotoComite = async (nombre, archivo) => {
+    if (!archivo) return;
+    setSubiendoFotoComite(nombre);
+    setErrorFotoComite("");
+    try {
+      const base64 = await prepararFotoRetrato(archivo);
+      await guardarFotoComite(nombre, base64);
+      setFotosComite((prev) => ({ ...prev, [claveFotoComite(nombre)]: base64 }));
+      onStamp && onStamp("Guardado");
+    } catch (e) {
+      console.error("No se pudo guardar la foto del comité:", e);
+      setErrorFotoComite(`No se pudo guardar la foto de ${nombre}. Intenta con otra imagen.`);
+    } finally {
+      setSubiendoFotoComite(null);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -17947,7 +18039,7 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
             Credenciales del Comité de Padres de Familia
           </div>
           <p className="text-sm" style={{ opacity: 0.6, marginTop: "-0.5rem" }}>
-            Una credencial por integrante, con los nombres que asignaste en "2. Acta Constitutiva" y el número de "4. Constancia de Registro". Cada una lleva la firma del Director(a) con el lugar del <b>sello</b> de la escuela, y la firma del Presidente(a) de la APF. Las firmas y el sello van a mano sobre la hoja impresa; también hay un recuadro para pegar la foto.
+            Una credencial por integrante, con los nombres que asignaste en "2. Acta Constitutiva" y el número de "4. Constancia de Registro". Cada una lleva la firma del Director(a) con el lugar del <b>sello</b> de la escuela, y la firma del Presidente(a) de la APF. Las firmas y el sello van a mano sobre la hoja impresa. Con el botón <b>"Subir foto"</b> de cada una se imprime ya con su fotografía (se recorta sola al tamaño del recuadro, 1.7 × 2.1 cm); si no tiene foto, queda el recuadro para pegarla. Medida de cada credencial: 9.2 × 7 cm.
           </p>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <label className="text-sm flex items-center gap-2" style={{ cursor: "pointer" }}>
@@ -17967,9 +18059,12 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
           {vistaActa.cargando ? (
             <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>
           ) : (
-            <CredencialesComite mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} constancia={vistaActa.constancia} tutores={tutores} incluirContraloria={credConContraloria} imprimible={false} />
+            <>
+            {errorFotoComite && <p className="text-sm" style={{ color: "var(--rojo)" }}>{errorFotoComite}</p>}
+            <CredencialesComite mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} constancia={vistaActa.constancia} tutores={tutores} incluirContraloria={credConContraloria} imprimible={false} fotos={fotosComite} onSubirFoto={subirFotoComite} subiendoFoto={subiendoFotoComite} />
+            </>
           )}
-          {imprimiendo === "credenciales" && <CredencialesComite mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} constancia={vistaActa.constancia} tutores={tutores} incluirContraloria={credConContraloria} imprimible={true} />}
+          {imprimiendo === "credenciales" && <CredencialesComite mesaDirectiva={vistaActa.mesaDirectiva} contraloria={vistaActa.contraloria} constancia={vistaActa.constancia} tutores={tutores} incluirContraloria={credConContraloria} imprimible={true} fotos={fotosComite} />}
           </>
           )}
         </div>
