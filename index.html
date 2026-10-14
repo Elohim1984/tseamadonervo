@@ -3565,7 +3565,7 @@ function prepararFotoAlumno(archivo) {
 // (apf:foto:<clave>:). La clave sale del nombre de la persona (sin acentos ni
 // espacios), porque los integrantes del comité se eligen por nombre en el
 // Acta Constitutiva y no tienen un id propio. La foto se recorta VERTICAL
-// (proporción 17:21, la del recuadro de la credencial), no cuadrada.
+// (proporción 5:6, la del recuadro de 2.5 × 3 cm de la credencial), no cuadrada.
 function claveFotoComite(nombre) {
   return (nombre || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
@@ -3599,7 +3599,7 @@ function prepararFotoRetrato(archivo) {
       const img = new Image();
       img.onerror = () => reject(new Error("El archivo no parece ser una imagen válida."));
       img.onload = () => {
-        const W = 340, H = 420; // 17:21
+        const W = 350, H = 420; // 5:6 (2.5 × 3 cm)
         const canvas = document.createElement("canvas");
         canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext("2d");
@@ -17500,54 +17500,62 @@ function integrantesParaCredencial(mesaDirectiva, contraloria, tutores, incluirC
 }
 
 function CredencialComiteTarjeta({ integrante, presidente, director, registro, foto }) {
+  // Diseño VERTICAL (14 oct 2026): 8 × 12.2 cm. Abajo a la izquierda hay un
+  // recuadro propio de 3 × 5 cm para el sello vertical de la escuela (la
+  // firma del Director(a) va sobre el sello), para que el sello ya no tape
+  // el nombre, el cargo ni la foto. La foto es tamaño infantil, 2.5 × 3 cm.
   const ink = "#1b1b1b";
   const guinda = "#7a1f1f";
-  const lineaFirma = { borderTop: "1px solid #222", paddingTop: "1.2mm", fontSize: "6.3pt", lineHeight: 1.15, textAlign: "center" };
+  const exacto = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
+  const pie = { borderTop: "1px solid #222", paddingTop: "1mm", fontSize: "6pt", lineHeight: 1.15, textAlign: "center" };
   return (
     <div className="credencial-apf" style={{
-      width: "92mm", height: "70mm", border: "1.2px solid " + guinda, borderRadius: "3mm", padding: "3mm 3.5mm",
+      ...exacto,
+      width: "80mm", height: "122mm", border: "1.2px solid " + guinda, borderRadius: "3mm", padding: "3mm 3.5mm",
       boxSizing: "border-box", fontFamily: "Arial, Helvetica, sans-serif", color: ink, background: "#fff",
-      display: "flex", flexDirection: "column", position: "relative", overflow: "hidden",
+      display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: "2.5mm" }}>
         <img src={ESCUDO_ESCUELA} alt="" style={{ width: "11mm", height: "11mm", objectFit: "contain" }} />
         <div style={{ lineHeight: 1.15 }}>
-          <div style={{ fontWeight: 800, fontSize: "8pt" }}>Telesecundaria "{DATOS_PLANTEL.nombre}"</div>
-          <div style={{ fontSize: "6.3pt" }}>C.C.T. {DATOS_PLANTEL.cct} · {DATOS_PLANTEL.localidad}, {DATOS_PLANTEL.municipio}, {DATOS_PLANTEL.estado}</div>
+          <div style={{ fontWeight: 800, fontSize: "8.6pt" }}>Telesecundaria "{DATOS_PLANTEL.nombre}"</div>
+          <div style={{ fontSize: "6.3pt" }}>C.C.T. {DATOS_PLANTEL.cct}</div>
+          <div style={{ fontSize: "6.3pt" }}>{DATOS_PLANTEL.localidad}, {DATOS_PLANTEL.municipio}, {DATOS_PLANTEL.estado}</div>
         </div>
       </div>
-      <div style={{ background: guinda, color: "#fff", textAlign: "center", fontWeight: 700, fontSize: "6.8pt", letterSpacing: "0.04em", padding: "0.8mm 0", margin: "1.6mm -3.5mm 1.8mm" }}>
-        ASOCIACIÓN DE PADRES DE FAMILIA · CICLO ESCOLAR 2026-2027
+      <div style={{ ...exacto, background: guinda, color: "#fff", textAlign: "center", fontWeight: 700, fontSize: "6.6pt", letterSpacing: "0.03em", lineHeight: 1.25, padding: "0.8mm 1mm", margin: "1.4mm -3.5mm 1.8mm" }}>
+        ASOCIACIÓN DE PADRES DE FAMILIA<br />CICLO ESCOLAR 2026-2027
       </div>
-      <div style={{ display: "flex", gap: "3mm", flex: 1 }}>
+      <div style={{ display: "flex", gap: "3mm" }}>
         {foto ? (
-          <img src={`data:image/jpeg;base64,${foto}`} alt="" style={{ width: "17mm", height: "21mm", objectFit: "cover", border: "1px solid #888", flexShrink: 0 }} />
+          <img src={`data:image/jpeg;base64,${foto}`} alt="" style={{ width: "25mm", height: "30mm", objectFit: "cover", border: "1px solid #888", flexShrink: 0 }} />
         ) : (
-          <div style={{ width: "17mm", height: "21mm", border: "1px dashed #888", fontSize: "5.5pt", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", flexShrink: 0 }}>
-            FOTOGRAFÍA
+          <div style={{ width: "25mm", height: "30mm", border: "1px dashed #888", fontSize: "5.5pt", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", flexShrink: 0 }}>
+            FOTOGRAFÍA<br />2.5 × 3 cm
           </div>
         )}
-        <div style={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
-          <div style={{ fontSize: "5.8pt", color: "#555" }}>NOMBRE</div>
-          <div style={{ fontWeight: 800, fontSize: integrante.nombre.length > 34 ? "7.4pt" : "8.6pt", textTransform: "uppercase" }}>{integrante.nombre}</div>
-          <div style={{ fontSize: "5.8pt", color: "#555", marginTop: "1mm" }}>CARGO</div>
+        <div style={{ flex: 1, minWidth: 0, lineHeight: 1.22 }}>
+          <div style={{ fontSize: "5.6pt", color: "#555" }}>NOMBRE</div>
+          <div style={{ fontWeight: 800, fontSize: integrante.nombre.length > 30 ? "7.2pt" : "8.2pt", textTransform: "uppercase" }}>{integrante.nombre}</div>
+          <div style={{ fontSize: "5.6pt", color: "#555", marginTop: "1.2mm" }}>CARGO</div>
           <div style={{ fontWeight: 700, fontSize: "7.6pt", color: guinda }}>{integrante.cargos.join(" y ")}</div>
           {(integrante.telefono || integrante.nota) && (
-            <div style={{ fontSize: "6pt", marginTop: "0.6mm" }}>{[integrante.telefono ? `Tel. ${integrante.telefono}` : "", integrante.nota || ""].filter(Boolean).join(" · ")}</div>
+            <div style={{ fontSize: "5.8pt", marginTop: "0.8mm" }}>{[integrante.telefono ? `Tel. ${integrante.telefono}` : "", integrante.nota || ""].filter(Boolean).join(" · ")}</div>
           )}
-          <div style={{ fontSize: "6pt", marginTop: "1mm" }}>Registro APF: {registro || "______________________"}</div>
-          <div style={{ fontSize: "6pt" }}>Vigencia: ciclo escolar 2026-2027</div>
         </div>
       </div>
-      <div style={{ display: "flex", gap: "5mm", alignItems: "flex-end", marginTop: "1mm", flexShrink: 0 }}>
-        <div style={{ flex: 1, position: "relative" }}>
-          <div style={{ position: "absolute", left: "50%", bottom: "5mm", transform: "translateX(-50%)", width: "13mm", height: "13mm", border: "1px dashed #aaa", borderRadius: "50%", fontSize: "5pt", color: "#aaa", display: "flex", alignItems: "center", justifyContent: "center" }}>SELLO</div>
-          <div style={{ height: "10mm" }} />
-          <div style={lineaFirma}><b>{director}</b><br />Director(a) de la escuela</div>
+      <div style={{ fontSize: "5.8pt", marginTop: "1.2mm", lineHeight: 1.3 }}>
+        Registro APF: {registro || "______________________"}<br />Vigencia: ciclo escolar 2026-2027
+      </div>
+      <div style={{ display: "flex", gap: "4mm", alignItems: "flex-end", marginTop: "auto" }}>
+        <div style={{ width: "32mm", flexShrink: 0 }}>
+          <div style={{ width: "30mm", height: "50mm", margin: "0 auto", border: "1px dashed #bbb", borderRadius: "1.5mm", color: "#c3c3c3", fontSize: "5.5pt", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+            SELLO<br />3 × 5 cm
+          </div>
+          <div style={{ ...pie, marginTop: "1mm" }}><b>{director}</b><br />Director(a) de la escuela</div>
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ height: "10mm" }} />
-          <div style={lineaFirma}><b>{presidente ? presidente.nombre : "______________________"}</b><br />{presidente ? presidente.cargoAPF : "Presidente(a)"} de la APF</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={pie}><b>{presidente ? presidente.nombre : "______________________"}</b><br />{presidente ? presidente.cargoAPF : "Presidente(a)"} de la APF</div>
         </div>
       </div>
     </div>
@@ -17592,8 +17600,8 @@ function CredencialesComite({ mesaDirectiva, contraloria, constancia, tutores, i
     // <body>): así no salen hojas en blanco por el alto de la página oculta.
     return ReactDOM.createPortal(
       <div className="solo-impresion portal-impresion">
-        <div style={{ display: "grid", gridTemplateColumns: "92mm 92mm", gap: "3mm", justifyContent: "center" }}>{tarjetas}</div>
-        <p style={{ fontSize: "7pt", color: "#666", marginTop: "3mm", textAlign: "center" }}>Recortar por el borde. Firmar y sellar a mano antes de entregar.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "80mm 80mm", gap: "4mm", justifyContent: "center" }}>{tarjetas}</div>
+        <p style={{ fontSize: "6.5pt", color: "#666", marginTop: "1.5mm", textAlign: "center" }}>Recortar por el borde. Firmar y sellar a mano antes de entregar.</p>
       </div>,
       document.body
     );
@@ -18082,7 +18090,7 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
             Credenciales del Comité de Padres de Familia
           </div>
           <p className="text-sm" style={{ opacity: 0.6, marginTop: "-0.5rem" }}>
-            Una credencial por integrante, con los nombres que asignaste en "2. Acta Constitutiva" y el número de "4. Constancia de Registro". Cada una lleva la firma del Director(a) con el lugar del <b>sello</b> de la escuela, y la firma del Presidente(a) de la APF. Las firmas y el sello van a mano sobre la hoja impresa. Con el botón <b>"Subir foto"</b> de cada una se imprime ya con su fotografía (se recorta sola al tamaño del recuadro, 1.7 × 2.1 cm); si no tiene foto, queda el recuadro para pegarla. Medida de cada credencial: 9.2 × 7 cm.
+            Una credencial por integrante, con los nombres que asignaste en "2. Acta Constitutiva" y el número de "4. Constancia de Registro". Cada una lleva la firma del Director(a) con el lugar del <b>sello</b> de la escuela, y la firma del Presidente(a) de la APF. Las firmas y el sello van a mano sobre la hoja impresa. Con el botón <b>"Subir foto"</b> de cada una se imprime ya con su fotografía (se recorta sola al tamaño infantil del recuadro, 2.5 × 3 cm); si no tiene foto, queda el recuadro para pegarla. Medida de cada credencial: 8 × 12.2 cm (vertical), con un recuadro de 3 × 5 cm para el sello.
           </p>
           <div className="card">
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>{editandoExtra ? "Editar credencial adicional" : "Agregar credencial adicional (apoyo u otro cargo)"}</div>
@@ -18147,7 +18155,7 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
             </div>
           </div>
           <p className="text-sm" style={{ opacity: 0.55, marginTop: "-0.3rem" }}>
-            Salen 6 por hoja tamaño carta. En el cuadro de impresión deja la escala al 100% (sin "Ajustar a la página") para que conserven su tamaño; si quieres el archivo, cambia "Destino" a "Guardar como PDF".
+            Salen 4 por hoja tamaño carta. En el cuadro de impresión deja la escala al 100% (sin "Ajustar a la página") para que conserven su tamaño; si quieres el archivo, cambia "Destino" a "Guardar como PDF".
           </p>
           {vistaActa.cargando ? (
             <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>
@@ -22110,7 +22118,8 @@ function App() {
       .solo-impresion thead { display: table-header-group; }
       .solo-impresion .firma-grupo { page-break-inside: avoid; break-inside: avoid; }
       body.solo-portal > :not(.portal-impresion) { display: none !important; }
-      body.solo-portal .portal-impresion { position: static !important; }
+      body.solo-portal .portal-impresion { position: static !important; padding: 0 !important; }
+      .credencial-apf, .credencial-apf * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
     /* ---- Cédula de Registro y Actualización de Datos (vista previa + impresión) ---- */
     .ced-modal-fondo { position: fixed; inset: 0; background: rgba(20,10,10,.55); display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; z-index: 60; }
