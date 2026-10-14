@@ -3708,7 +3708,7 @@ function SeleccionUsuario({ onSelect }) {
           Control Escolar
         </h1>
         <p className="font-mono" style={{ color: "var(--tinta)", opacity: 0.65, fontSize: "0.8rem", letterSpacing: "0.04em" }}>
-          TELESECUNDARIA ESTATAL AMADO NERVO · XOYATLA, TEPEOJUMA, PUEBLA
+          TELESECUNDARIA AMADO NERVO · XOYATLA, TEPEOJUMA, PUEBLA
         </p>
         <p className="font-mono" style={{ color: "var(--tinta)", opacity: 0.4, fontSize: "0.62rem", letterSpacing: "0.03em" }}>
           C.C.T. 21ETV0473W
@@ -6446,7 +6446,7 @@ function IncidenciaImprimible({ caso, alumno, nombreDelAlumno }) {
 /* ---------- construir contenido de respaldo ---------- */
 function construirReporteTexto({ alumnos, asistencia, calificaciones, avisos, eventos, sesiones, casos }) {
   const L = [];
-  L.push("RESPALDO — TELESECUNDARIA ESTATAL AMADO NERVO · XOYATLA, TEPEOJUMA, PUEBLA · C.C.T. 21ETV0473W");
+  L.push("RESPALDO — TELESECUNDARIA AMADO NERVO · XOYATLA, TEPEOJUMA, PUEBLA · C.C.T. 21ETV0473W");
   L.push(`Generado: ${new Date().toLocaleString("es-MX")}`);
   L.push("");
   GRADOS.forEach((g) => {
@@ -17512,7 +17512,7 @@ function CredencialComiteTarjeta({ integrante, presidente, director, registro, f
       <div style={{ display: "flex", alignItems: "center", gap: "2.5mm" }}>
         <img src={ESCUDO_ESCUELA} alt="" style={{ width: "11mm", height: "11mm", objectFit: "contain" }} />
         <div style={{ lineHeight: 1.15 }}>
-          <div style={{ fontWeight: 800, fontSize: "8pt" }}>Telesecundaria Estatal "{DATOS_PLANTEL.nombre}"</div>
+          <div style={{ fontWeight: 800, fontSize: "8pt" }}>Telesecundaria "{DATOS_PLANTEL.nombre}"</div>
           <div style={{ fontSize: "6.3pt" }}>C.C.T. {DATOS_PLANTEL.cct} · {DATOS_PLANTEL.localidad}, {DATOS_PLANTEL.municipio}, {DATOS_PLANTEL.estado}</div>
         </div>
       </div>
