@@ -21305,10 +21305,16 @@ function DatosGeneralesConsejo({ onStamp }) {
   const [guardando, setGuardando] = useState(false);
   const [guardadoOk, setGuardadoOk] = useState(false);
   const [imprimiendoConvocatoria, setImprimiendoConvocatoria] = useState(false);
+  const [nombreDirector, setNombreDirector] = useState("");
 
   useEffect(() => {
     let vivo = true;
     getStorage(claveStorage, {}).then((v) => { if (vivo) { setValores(v || {}); setCargando(false); } });
+    // Nombre del director (Secretario Técnico del Consejo) para la línea de firma.
+    listarStorage("consejo-integrante:").then((ints) => {
+      const d = (ints || []).find((i) => /secretari/i.test(i.cargo || "") || i.calidad === "Directivo");
+      if (vivo && d) setNombreDirector([d.nombre, d.apellidoPaterno, d.apellidoMaterno].map((x) => (x || "").trim()).filter(Boolean).join(" "));
+    });
     return () => { vivo = false; };
   }, []);
 
@@ -21323,11 +21329,21 @@ function DatosGeneralesConsejo({ onStamp }) {
 
   if (cargando) return <div className="card"><p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p></div>;
 
-  const imprimirConvocatoria = () => { setImprimiendoConvocatoria(true); onStamp && onStamp("Preparando"); setTimeout(() => window.print(), 150); };
+  // Se imprime por un portal directo en <body> (clase "solo-portal"), igual que las
+  // credenciales, para que no salga una segunda hoja en blanco.
+  const imprimirConvocatoria = () => {
+    setImprimiendoConvocatoria(true); onStamp && onStamp("Preparando");
+    document.body.classList.add("solo-portal");
+    window.onafterprint = () => { document.body.classList.remove("solo-portal"); setImprimiendoConvocatoria(false); window.onafterprint = null; };
+    setTimeout(() => window.print(), 150);
+  };
 
   return (
     <div className="flex flex-col gap-4">
-      {imprimiendoConvocatoria && <ConvocatoriaImprimibleConsejo datos={valores} />}
+      {imprimiendoConvocatoria && ReactDOM.createPortal(
+        <div className="solo-impresion portal-impresion"><ConvocatoriaImprimibleConsejo datos={valores} director={nombreDirector} /></div>,
+        document.body
+      )}
       <div className="card">
         <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Datos fijos del centro de trabajo</div>
         <p className="text-sm mb-2" style={{ opacity: 0.6 }}>Igual que en el SIGED — vienen precargados en REPASE y no se pueden modificar allá. Aquí solo son tu referencia.</p>
@@ -21396,7 +21412,7 @@ function DatosGeneralesConsejo({ onStamp }) {
   );
 }
 
-function ConvocatoriaImprimibleConsejo({ datos }) {
+function ConvocatoriaImprimibleConsejo({ datos, director }) {
   const MESES_L = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
   let diaTxt = "________", mesTxt = "________", anioTxt = "2026";
   if (datos.fechaSesion) {
@@ -21409,7 +21425,7 @@ function ConvocatoriaImprimibleConsejo({ datos }) {
   const celdaLabel = { fontWeight: 700, padding: "0.2rem 0.35rem", background: "#d9d9d9", border: "1px solid #000" };
   const celdaValor = { padding: "0.2rem 0.35rem", border: "1px solid #000" };
   return (
-    <div className="solo-impresion">
+    <div style={{ zoom: 0.86 }}>
       <img src={CONVOCATORIA_CONSEJO_ENCABEZADO} alt="" style={{ width: "100%", maxWidth: "620px", marginBottom: "0.5rem" }} />
       <div style={{ textAlign: "center", fontWeight: 700, fontSize: "0.82rem", background: "#d9d9d9", padding: "0.25rem" }}>CONSEJO ESTATAL DE PARTICIPACIÓN SOCIAL EN LA EDUCACIÓN</div>
       <div style={{ textAlign: "center", fontWeight: 700, fontSize: "0.78rem", background: "#d9d9d9", padding: "0.3rem", marginBottom: "0.6rem" }}>
@@ -21424,7 +21440,7 @@ function ConvocatoriaImprimibleConsejo({ datos }) {
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem", margin: "0.5rem 0" }}>
         <tbody>
           <tr>
-            <td style={celdaLabel}>NOMBRE:</td><td style={celdaValor} colSpan={5}>{DATOS_PLANTEL.nombre}</td>
+            <td style={celdaLabel}>NOMBRE:</td><td style={celdaValor} colSpan={5}>Telesecundaria "{DATOS_PLANTEL.nombre}"</td>
           </tr>
           <tr>
             <td style={celdaLabel}>C.C.T:</td><td style={celdaValor}>{DATOS_PLANTEL.cct}</td>
@@ -21463,9 +21479,11 @@ function ConvocatoriaImprimibleConsejo({ datos }) {
         <li>Elección de los consejeros, de los cuales la mitad más uno serán madres, padres de familia y/o tutores y habrán de ser hasta 15 consejeros, para conformar dicho Consejo, así como los integrantes de los diversos comités.</li>
         <li>Asuntos generales.</li>
       </ol>
-      <div style={{ marginTop: "2rem", textAlign: "center", fontSize: "0.76rem" }}>Atentamente</div>
-      <div style={{ marginTop: "1.5rem", fontSize: "0.74rem" }}>Sello</div>
-      <div className="firma-grupo" style={{ marginTop: "2.5rem", textAlign: "center" }}>
+      {/* Firma y sello juntos, para que todo quepa en una sola hoja carta. */}
+      <div className="firma-grupo" style={{ marginTop: "1.2rem", textAlign: "center", fontSize: "0.76rem" }}>
+        <div>Atentamente</div>
+        <div style={{ textAlign: "left", fontSize: "0.74rem", marginTop: "0.6rem" }}>Sello</div>
+        <div style={{ fontWeight: 700, fontSize: "0.76rem", marginTop: "1.6rem", minHeight: "1rem" }}>{director || ""}</div>
         <div style={{ borderTop: "1px solid #000", width: "260px", margin: "0 auto" }} />
         <div style={{ fontWeight: 700, fontSize: "0.76rem", marginTop: "0.2rem" }}>Nombre y Firma del director (a)</div>
       </div>
