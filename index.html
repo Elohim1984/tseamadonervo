@@ -21298,6 +21298,31 @@ function ListaCRUDConsejo({ prefijo, campos, itemVacio, renderItem, tituloForm, 
   );
 }
 
+// Formato oficial "Evidencias para Educación Básica" convertido en PDF rellenable
+// (archivos fijos en assets/consejo/). Cada recuadro de foto es un botón que abre
+// el selector de imagen en Adobe Acrobat Reader; el pie de foto es texto editable.
+function EvidenciasConsejoRellenable() {
+  const estiloBoton = { fontSize: "0.8rem", textDecoration: "none" };
+  return (
+    <div className="card flex flex-col gap-3">
+      <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem" }}>Evidencias del Consejo (formato oficial rellenable)</div>
+      <p className="text-sm" style={{ opacity: 0.75 }}>
+        Descarga el formato, llénalo en tu computadora y guárdalo. Se entrega en PDF: revisión por la Supervisión del <b>3 al 17 de noviembre</b> y registro de actas y evidencias del <b>1 al 18 de diciembre</b>.
+      </p>
+      <div className="flex gap-2 flex-wrap">
+        <a href="assets/consejo/Evidencias_Consejo_rellenable_comites_instalados.pdf" download className="btn-primario" style={estiloBoton}><Download size={14} /> Evidencias — solo comités instalados (4 hojas)</a>
+        <a href="assets/consejo/Evidencias_Consejo_rellenable_completo.pdf" download className="btn-secundario" style={estiloBoton}><Download size={14} /> Evidencias — formato completo (11 comités + Otro)</a>
+      </div>
+      <ol className="text-sm" style={{ paddingLeft: "1.1rem", opacity: 0.85, display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+        <li>Ábrelo con <b>Adobe Acrobat Reader</b> (gratuito). En Chrome o Edge se puede escribir, pero no se pueden insertar fotos.</li>
+        <li>Da clic dentro de cada recuadro rojo (Fotografía 1 / Fotografía 2) y elige la foto: se acomoda sola.</li>
+        <li>En "Pie de foto" escribe Actividad, Fecha, Objetivo y Participantes.</li>
+        <li>CCT, nombre de la escuela y turno ya vienen llenos. Guarda con <b>Archivo → Guardar como</b>.</li>
+      </ol>
+    </div>
+  );
+}
+
 function DatosGeneralesConsejo({ onStamp }) {
   const claveStorage = "consejo-datos";
   const [valores, setValores] = useState({});
@@ -21404,6 +21429,7 @@ function DatosGeneralesConsejo({ onStamp }) {
             <button onClick={guardar} disabled={guardando} className="btn-primario">{guardando ? "Guardando…" : <><Check size={16} /> Guardar</>}</button>
             {guardadoOk && <span className="text-sm" style={{ color: "var(--verde)" }}>✓ Guardado en tu Hoja</span>}
             <button onClick={imprimirConvocatoria} className="btn-secundario" style={{ fontSize: "0.75rem" }}><Printer size={14} /> Imprimir Convocatoria</button>
+            <a href="assets/consejo/Convocatoria_Consejo_Escolar_rellenable.pdf" download className="btn-secundario" style={{ fontSize: "0.75rem", textDecoration: "none" }}><Download size={14} /> Convocatoria oficial rellenable (PDF)</a>
           </div>
           <p className="text-sm" style={{ opacity: 0.55 }}>Genera la convocatoria oficial (mismo formato del Consejo Estatal de Participación Social en la Educación) ya llena con los datos de arriba — falta solo que definas fecha de publicación, fecha/hora de la sesión y el lugar. Actualiza el módulo “Integrantes” y estos campos antes de imprimir.</p>
         </div>
@@ -21831,6 +21857,7 @@ function ConsejoEscolar({ onStamp, alumnos, gradosPermitidos, personal }) {
     { id: "preguntas", label: "Preguntas" },
     { id: "programas", label: "Programas" },
     { id: "acciones", label: "Acciones Salud Escolar" },
+    { id: "evidencias", label: "Evidencias" },
     { id: "resumen", label: "Resumen / Imprimir" },
   ];
 
@@ -21857,6 +21884,7 @@ function ConsejoEscolar({ onStamp, alumnos, gradosPermitidos, personal }) {
       </div>
 
       {subTab === "datos" && <DatosGeneralesConsejo onStamp={onStamp} />}
+      {subTab === "evidencias" && <EvidenciasConsejoRellenable />}
       {subTab === "integrantes" && (
         <ListaCRUDConsejo
           prefijo="consejo-integrante:"
