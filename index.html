@@ -22109,6 +22109,15 @@ function App() {
     @keyframes selloIn { 0% { transform: scale(2.2) rotate(-18deg); opacity: 0; } 12% { transform: scale(0.95) rotate(-6deg); opacity: 1; } 20% { transform: scale(1) rotate(-8deg); } 82% { opacity: 1; } 100% { opacity: 0; transform: scale(1) rotate(-8deg); } }
     .pasado { opacity: 0.45; }
     .solo-impresion { display: none; }
+    /* Documentos oficiales: sin la fecha/hora, el título "Portal Amado Nervo",
+       la dirección de la página ni el número de página que Chrome agrega
+       arriba y abajo. Al declarar las cajas de margen de @page (aunque
+       vacías), Chrome deja de imprimir sus encabezados y pies de página. */
+    @page {
+      margin: 12mm 12mm;
+      @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; }
+      @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: ""; }
+    }
     @media print {
       body * { visibility: hidden; }
       .solo-impresion, .solo-impresion * { visibility: visible; }
