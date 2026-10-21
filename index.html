@@ -19267,6 +19267,9 @@ function PanelSeccion1E911({ onStamp }) {
       <p className="text-sm" style={{ opacity: 0.6 }}>
         Esta sección pide los números de cierre del ciclo escolar <b>anterior</b> (2025-2026) — ya no se pueden sacar del padrón vigente (ese ciclo ya cerró), así que se capturan aquí a mano, una sola vez por ciclo, y quedan guardados para cuando los necesites.
       </p>
+      <button type="button" onClick={() => setValores(JSON.parse(JSON.stringify(SECCION1_PLATAFORMA_911_2026)))} className="btn-secundario" style={{ fontSize: "0.75rem" }}>
+        Usar los datos de la plataforma oficial (21 oct 2026): 1° 3 H y 9 M · 2° 6 H y 6 M · 3° 3 H y 6 M · 1 grupo por grado · hablantes 0 — después da Guardar
+      </button>
       <TablaSeccion1E911 valores={valores} bloque="existencia" titulo="1. Existencia al final del ciclo 2025-2026" conGrupos onCambia={cambiar} />
       <TablaSeccion1E911 valores={valores} bloque="promovidos" titulo="2. Promovidos del ciclo 2025-2026" conGrupos={false} onCambia={cambiar} />
       <button onClick={guardar} disabled={guardando} className="btn-primario" style={{ width: "100%" }}>
@@ -20656,7 +20659,7 @@ function agregarSeccionVPDF(campos, personal911) {
 // Sección III, Sección VI (aulas) y Secciones VII-VIII (idiomas y libros).
 // Entrega 3: Sección IV (alumnado y grupos) y Sección V (personal), con
 // excepción de las preguntas cuyo dato no existe en el sistema.
-function construirCamposE911PDF(seccion1, infraestructura, e911) {
+function construirCamposE911PDF(seccion1, infraestructura, e911, complementos) {
   const campos = [];
   if (DATOS_PLANTEL.cct) campos.push({ pagina: 0, tipo: "celdas", celdas: E911_PDF_CELDAS_CCT, bottom: E911_PDF_CCT_BOTTOM, texto: DATOS_PLANTEL.cct });
   if (DATOS_PLANTEL.cp) campos.push({ pagina: 0, tipo: "celdas", celdas: E911_PDF_CELDAS_CP, bottom: E911_PDF_CP_BOTTOM, texto: DATOS_PLANTEL.cp });
@@ -20667,7 +20670,8 @@ function construirCamposE911PDF(seccion1, infraestructura, e911) {
   agregarFilasSeccion1PDF(campos, 1, seccion1.promovidos, E911_PDF_COLUMNAS_PROMOVIDOS, E911_PDF_FILAS_PROMOVIDOS);
   if (e911) {
     agregarSeccionIIPDF(campos, e911.procedenciaPorGrado, e911.procedenciaPorRegion);
-    agregarSeccionIIIPDF(campos, e911.becas);
+    agregarSeccionIIIPDF(campos, complementos ? becasDesdeComplementos911(complementos) : e911.becas);
+    if (complementos) agregarSeccionIV8PDF(campos, complementos);
     agregarSeccionIV1PDF(campos, e911.porGrado);
     agregarSeccionIV2a5PDF(campos, e911);
     agregarSeccionIV6PDF(campos, e911.condicionDetalle);
@@ -20687,13 +20691,13 @@ function construirCamposE911PDF(seccion1, infraestructura, e911) {
 // por construirCamposE911PDF y lo descarga — mismo patrón de descarga
 // (Blob + enlace temporal) que descargarCedulaPDF, solo que aquí se dibuja
 // texto libre en vez de llenar campos de formulario.
-async function descargarE911OficialPDF(seccion1, infraestructura, e911) {
+async function descargarE911OficialPDF(seccion1, infraestructura, e911, complementos) {
   const { PDFDocument, StandardFonts } = window.PDFLib;
   const bytes = base64ABytes(await obtenerE911OficialPdfBase64());
   const pdfDoc = await PDFDocument.load(bytes);
   const fuente = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const paginas = pdfDoc.getPages();
-  const campos = construirCamposE911PDF(seccion1, infraestructura, e911);
+  const campos = construirCamposE911PDF(seccion1, infraestructura, e911, complementos);
   const TAM = 9;
   campos.forEach((c) => {
     const page = paginas[c.pagina];
@@ -20731,6 +20735,369 @@ async function descargarE911OficialPDF(seccion1, infraestructura, e911) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
+/* ---------- 911 · 2026-2027: apartados que pide la plataforma oficial y que el
+   formato impreso 2025-2026 no traía (o que no salen del padrón vigente) ----------
+   Se capturan aquí una vez por ciclo y quedan guardados en la Hoja
+   ("e911-complementos-2026-2027"). Los valores iniciales son los que ya estaban
+   capturados en la plataforma oficial el 21 de octubre de 2026 (revisados pestaña
+   por pestaña con el director), para que el próximo llenado solo se actualice.
+   Cada pregunta es un registro sencillo:
+     numeros → tabla de filas × columnas (valor numérico por celda)
+     opcion  → una sola respuesta
+     varias  → casillas (puede marcar más de una)
+     texto   → texto libre */
+const SI_NO = ["Sí", "No"];
+const GRADOS_HM = ["1°", "2°", "3°"];
+const COLS_HMT = ["Hombres", "Mujeres", "Total"];
+const COLS_CONDICIONES_EGRESO = ["Hombres", "Mujeres", "Total", "Hablantes de lenguas indígenas", "Nacidos fuera de México", "Con discapacidad", "Con trastorno", "Aptitudes sobresalientes", "Otras condiciones"];
+const MOTIVOS_NO_CONCLUSION_911 = [
+  "Acoso escolar (Bullying)", "Baja administrativa (disciplina)", "Baja temporal", "Cambio de escuela",
+  "Cambio de residencia", "Consumo y/o abuso de sustancias", "Desinterés/falta de motivación",
+  "Desplazamiento forzado o crisis humanitaria", "Desvinculación de la familia con la escuela",
+  "Distancia o dificultad para llegar a la escuela", "Embarazo o unión conyugal temprana",
+  "Enfermedad o incapacidad sin apoyo suficiente", "Falta de recursos (transporte, uniforme, etc.)",
+  "Falta de tiempo para brindar atención diferenciada", "Malas condiciones (otras)", "Otro motivo",
+];
+
+const APARTADOS_911_COMPLEMENTOS = [
+  {
+    id: "fin", titulo: "Fin de cursos 2025-2026 (ciclo anterior) — lo que no sale del padrón actual",
+    preguntas: [
+      { id: "noConcluyeron", tipo: "numeros", texto: "Alumnas y alumnos que no concluyeron el ciclo escolar 2025-2026 (ES_05, pregunta 1).", filas: ["Total"], columnas: COLS_HMT },
+      { id: "motivos", tipo: "numeros", texto: "2. Motivo por el que no concluyeron el ciclo escolar.", filas: MOTIVOS_NO_CONCLUSION_911, columnas: COLS_HMT },
+      { id: "becas", tipo: "numeros", texto: "III.1 Alumnas y alumnos con beca y sin beca del ciclo 2025-2026 (solo becas monetarias).", filas: ["Con beca", "Sin beca"], columnas: ["Hombres", "Mujeres", "Total", "Con discapacidad", "Hablantes de lenguas indígenas", "Nacidos fuera de México"] },
+      { id: "becasOrigen", tipo: "numeros", texto: "III.2 Origen de la beca.", filas: ["Beca Rita Cetina", "Otra beca federal", "Beca estatal", "Beca de fundaciones y asociaciones civiles", "Beca de la propia escuela", "Beca particular", "Beca municipal", "Otras"], columnas: COLS_HMT },
+      { id: "egresados", tipo: "numeros", texto: "IV.8 Egresados de 3er. grado durante el ciclo 2025-2026 (incluya regularizados al 30 de septiembre), por edad.", filas: ["13 años o menos", "14 años", "15 años", "16 años", "17 años", "18 años y más"], columnas: COLS_CONDICIONES_EGRESO },
+      { id: "reprobados", tipo: "numeros", texto: "IV.9 Alumnas y alumnos que reprobaron una o más asignaturas en 2025-2026.", filas: GRADOS_HM, columnas: ["Hombres", "Mujeres"] },
+      { id: "regularizados", tipo: "numeros", texto: "IV.10 De los reprobados, cuántos se regularizaron.", filas: GRADOS_HM, columnas: ["Hombres", "Mujeres"] },
+      { id: "irregulares", tipo: "numeros", texto: "IV.11 De los reprobados, inscritos este ciclo que continúan como irregulares (grado que cursan ahora).", filas: ["Segundo", "Tercero"], columnas: ["Hombres", "Mujeres"] },
+    ],
+  },
+  {
+    id: "lsm", titulo: "X. Lengua de Señas Mexicana",
+    preguntas: [
+      { id: "lsm", tipo: "numeros", texto: "1. Alumnas y alumnos que utilizan la Lengua de Señas Mexicana como principal medio de comunicación.", filas: ["Total"], columnas: COLS_HMT },
+    ],
+  },
+  {
+    id: "ods", titulo: "Atención a los Objetivos de Desarrollo Sostenible",
+    preguntas: [
+      { id: "electricidad", tipo: "opcion", texto: "1. ¿La escuela cuenta con electricidad?", opciones: SI_NO },
+      { id: "computadorasPedagogicas", tipo: "opcion", texto: "2. ¿Cuenta con computadoras para propósitos pedagógicos?", opciones: SI_NO },
+      { id: "internetPedagogico", tipo: "opcion", texto: "3. ¿Cuenta con conexión a internet para propósitos pedagógicos?", opciones: SI_NO },
+      { id: "infraAdaptada", tipo: "opcion", texto: "4. ¿Cuenta con infraestructura adaptada para atender a personas con discapacidad?", opciones: SI_NO },
+      { id: "materialesAdaptados", tipo: "opcion", texto: "5. ¿Cuenta con materiales adaptados para atender a personas con discapacidad?", opciones: SI_NO },
+      { id: "aguaPotable", tipo: "opcion", texto: "6. ¿Tiene acceso a servicio de agua potable?", opciones: SI_NO },
+      { id: "lavadoManos", tipo: "opcion", texto: "7. ¿Cuenta con servicios básicos de lavado de manos (agua y jabón)?", opciones: SI_NO },
+      { id: "sanitarios", tipo: "opcion", texto: "8. Sanitarios:", opciones: ["Sanitarios independientes", "Sanitarios mixtos"] },
+    ],
+  },
+  {
+    id: "computo", titulo: "Anexo de recursos computacionales y audiovisuales",
+    preguntas: [
+      { id: "tabletas", tipo: "opcion", texto: "1. ¿La escuela cuenta con tabletas para uso educativo, docente o administrativo?", opciones: SI_NO },
+      { id: "tabletasCuantas", tipo: "numeros", texto: "1-2. ¿Cuántas? y a quiénes fueron asignadas.", filas: ["Tabletas"], columnas: ["Total", "Alumnos", "Docentes", "Administrativos"] },
+      { id: "computadoras", tipo: "opcion", texto: "3. ¿La escuela cuenta con computadoras?", opciones: SI_NO },
+      { id: "compEstatus", tipo: "numeros", texto: "4. Total de computadoras según su estatus.", filas: ["a) En operación", "b) En reparación", "c) Guardadas o en reserva"], columnas: ["Cantidad"] },
+      { id: "compUso", tipo: "numeros", texto: "5. Computadoras en operación según su uso.", filas: ["En operación"], columnas: ["Alumnos", "Docentes", "Directivos / Administrativos", "Total"] },
+      { id: "compInternet", tipo: "numeros", texto: "6. De ellas, cuántas cuentan con acceso a internet, por uso.", filas: ["Con internet"], columnas: ["Alumnos", "Docentes", "Directivos / Administrativos", "Total"] },
+      { id: "compTipo", tipo: "numeros", texto: "7. Computadoras para uso educativo en operación, por tipo.", filas: ["Cantidad"], columnas: ["De escritorio con CPU propio", "Portátiles", "Terminales"] },
+      { id: "compRam", tipo: "numeros", texto: "8. Memoria RAM.", filas: ["Cantidad"], columnas: ["1 GB o menos", "2 o 3 GB", "4 GB o más", "Total"] },
+      { id: "compSO", tipo: "numeros", texto: "8. Sistema operativo.", filas: ["Cantidad"], columnas: ["Windows", "Linux", "Mac OS", "Total"] },
+      { id: "compDisco", tipo: "numeros", texto: "8. Capacidad del disco duro.", filas: ["Cantidad"], columnas: ["30 GB o menos", "De 31 a 200 GB", "201 GB o más", "Total"] },
+      { id: "compAntiguedad", tipo: "numeros", texto: "8. Antigüedad del equipo.", filas: ["Cantidad"], columnas: ["1 año o menos", "De 2 a 3 años", "4 años o más", "Total"] },
+      { id: "compAdquisicion", tipo: "numeros", texto: "8. Tipo de adquisición.", filas: ["Cantidad"], columnas: ["Rentada", "Comprada por la escuela", "Dependencia administrativa", "Donada", "Total"] },
+      { id: "compEnAula", tipo: "numeros", texto: "9. Computadoras para uso educativo que están en el aula o laboratorio de cómputo.", filas: ["Cantidad"], columnas: ["Cantidad"] },
+      { id: "internet", tipo: "opcion", texto: "10. ¿La escuela cuenta con internet?", opciones: SI_NO },
+      { id: "compConectadas", tipo: "numeros", texto: "11. Número de computadoras conectadas a internet.", filas: ["Cantidad"], columnas: ["Número"] },
+      { id: "tipoConexion", tipo: "varias", texto: "12. Tipo de conexión a internet.", opciones: ["Cable coaxial", "Satelital", "Inalámbrica fija", "Línea telefónica (DSL)", "Fibra óptica", "Red móvil (3G, 4G, 5G)", "No sabe", "Otro"] },
+      { id: "proveedor", tipo: "varias", texto: "13. Empresa que provee el servicio de internet.", opciones: ["Telmex", "Totalplay", "Megacable", "Izzi", "CFE", "Otro"] },
+      { id: "velocidad", tipo: "opcion", texto: "14. Velocidad de conexión.", opciones: ["Menos de 10 Mbps", "De 10 a 30 Mbps", "De 31 a 50 Mbps", "De 51 a 100 Mbps", "De 101 a 200 Mbps", "De 201 a 500 Mbps", "De 501 a 1 Gbps", "Más de 1 Gbps", "No sabe"] },
+      { id: "laboratorio", tipo: "opcion", texto: "15. ¿Cuenta con aula o laboratorio de cómputo?", opciones: SI_NO },
+      { id: "impresoraAlumnos", tipo: "opcion", texto: "16. ¿El aula o laboratorio de cómputo tiene impresora para uso de alumnos?", opciones: SI_NO },
+      { id: "impresionesGratis", tipo: "opcion", texto: "17. ¿Las impresiones son gratuitas para los alumnos?", opciones: SI_NO },
+      { id: "wifi", tipo: "opcion", texto: "18. ¿Cuenta con internet inalámbrico (Wi-Fi)?", opciones: SI_NO },
+      { id: "espaciosInternet", tipo: "varias", texto: "19. Espacios de la escuela con acceso a internet.", opciones: ["Dirección / áreas administrativas", "Sala de maestros", "Aula o laboratorio de cómputo", "Algunas aulas", "Todas las aulas", "Otros espacios"] },
+      { id: "accesoWifi", tipo: "varias", texto: "20. ¿Quiénes tienen acceso a internet inalámbrico Wi-Fi?", opciones: ["Alumnos", "Docentes", "Directivos / Administrativos"] },
+      { id: "redEscolar", tipo: "opcion", texto: "21. ¿Participa en la Red Escolar?", opciones: SI_NO },
+      { id: "redEscolarForma", tipo: "varias", texto: "21. Si participa, ¿de qué forma?", opciones: ["Fue equipada", "Utiliza correo electrónico e internet", "Participa en proyectos colaborativos y foros de discusión"] },
+      { id: "edusat", tipo: "opcion", texto: "22. ¿Participa en la Red EduSat?", opciones: SI_NO },
+      { id: "edusatForma", tipo: "varias", texto: "22. Si participa, ¿de qué forma?", opciones: ["Antena", "Cable", "Señal abierta"] },
+      { id: "servidores", tipo: "opcion", texto: "23. ¿La escuela tiene servidores?", opciones: SI_NO },
+      { id: "servidoresNum", tipo: "numeros", texto: "24-25. Servidores y computadoras habilitadas como servidor.", filas: ["Cantidad"], columnas: ["Servidores", "Computadoras habilitadas"] },
+      { id: "automatizacion", tipo: "numeros", texto: "26. Grado de automatización (escriba a, b, c o d): a) sin herramientas de cómputo · b) Excel, Word, etc. · c) sistemas no integrados · d) sistema integrado.", filas: ["Inscripción y control de alumnos", "Gestión del personal docente", "Registro de calificaciones"], columnas: ["Letra"], letras: true },
+      { id: "audiovisuales", tipo: "opcion", texto: "28. ¿La escuela tiene equipos audiovisuales?", opciones: SI_NO },
+      { id: "audiovisualesNum", tipo: "numeros", texto: "28. Equipos audiovisuales.", filas: ["En operación", "Descompuestos", "Guardados o en reserva"], columnas: ["TV", "Video grabadora", "Proyectores", "DVD", "Blu-ray", "Pantalla plana", "Pizarrones electrónicos"] },
+      { id: "videoteca", tipo: "opcion", texto: "29. ¿La escuela tiene videoteca?", opciones: SI_NO },
+    ],
+  },
+  {
+    id: "infra", titulo: "Anexo de infraestructura (911.I) — características del inmueble",
+    nota: "La plataforma sigue con más pestañas de este anexo (servicios, espacios, mobiliario, etc.); aquí quedan las primeras preguntas. Lo demás se captura directo en la plataforma.",
+    preguntas: [
+      { id: "ctsInmueble", tipo: "numeros", texto: "1. Número de centros de trabajo que utilizan las instalaciones del inmueble.", filas: ["Cantidad"], columnas: ["Número"] },
+      { id: "nivelesInmueble", tipo: "varias", texto: "2. Niveles o servicios educativos que se imparten en el inmueble.", opciones: ["Inicial", "Preescolar", "Primaria", "Secundaria", "Capacitación para el Trabajo", "Bachillerato General", "Bachillerato Tecnológico o Equivalente", "Técnico Profesional", "Licenciatura", "Posgrado"] },
+      { id: "construidoEducativo", tipo: "opcion", texto: "3. ¿El inmueble se construyó para uso educativo?", opciones: SI_NO },
+    ],
+  },
+];
+
+// Lo que estaba capturado en la plataforma oficial al 21 de octubre de 2026.
+// Celdas: "<pregunta>|<fila>|<columna>". Lo que no aparece aquí vale 0 / vacío.
+const VALORES_PLATAFORMA_911_2026 = {
+  "becas|Con beca|Hombres": "12", "becas|Con beca|Mujeres": "21", "becas|Con beca|Total": "33",
+  "becasOrigen|Beca Rita Cetina|Hombres": "12", "becasOrigen|Beca Rita Cetina|Mujeres": "21", "becasOrigen|Beca Rita Cetina|Total": "33",
+  "egresados|13 años o menos|Hombres": "1", "egresados|13 años o menos|Mujeres": "3", "egresados|13 años o menos|Total": "4",
+  "egresados|14 años|Hombres": "2", "egresados|14 años|Mujeres": "3", "egresados|14 años|Total": "5",
+  electricidad: "Sí", computadorasPedagogicas: "Sí", internetPedagogico: "Sí", infraAdaptada: "No", materialesAdaptados: "No",
+  aguaPotable: "Sí", lavadoManos: "Sí", sanitarios: "Sanitarios independientes",
+  tabletas: "No", computadoras: "Sí",
+  "compEstatus|a) En operación|Cantidad": "5",
+  "compUso|En operación|Alumnos": "3", "compUso|En operación|Docentes": "1", "compUso|En operación|Directivos / Administrativos": "1", "compUso|En operación|Total": "5",
+  "compInternet|Con internet|Alumnos": "3", "compInternet|Con internet|Docentes": "1", "compInternet|Con internet|Directivos / Administrativos": "1", "compInternet|Con internet|Total": "5",
+  "compTipo|Cantidad|Portátiles": "3",
+  "compRam|Cantidad|4 GB o más": "3", "compRam|Cantidad|Total": "3",
+  "compSO|Cantidad|Windows": "3", "compSO|Cantidad|Total": "3",
+  "compDisco|Cantidad|201 GB o más": "3", "compDisco|Cantidad|Total": "3",
+  "compAntiguedad|Cantidad|1 año o menos": "3", "compAntiguedad|Cantidad|Total": "3",
+  "compAdquisicion|Cantidad|Donada": "3", "compAdquisicion|Cantidad|Total": "3",
+  internet: "Sí", "compConectadas|Cantidad|Número": "5",
+  "tipoConexion|Inalámbrica fija": true, "proveedor|Telmex": true, velocidad: "De 101 a 200 Mbps",
+  laboratorio: "No", wifi: "Sí",
+  "espaciosInternet|Dirección / áreas administrativas": true, "espaciosInternet|Algunas aulas": true,
+  "accesoWifi|Docentes": true, "accesoWifi|Directivos / Administrativos": true,
+  redEscolar: "No", edusat: "Sí", "edusatForma|Antena": true, servidores: "No",
+  "automatizacion|Inscripción y control de alumnos|Letra": "a", "automatizacion|Gestión del personal docente|Letra": "a", "automatizacion|Registro de calificaciones|Letra": "a",
+  audiovisuales: "Sí", "audiovisualesNum|En operación|Proyectores": "3", "audiovisualesNum|En operación|Pantalla plana": "3", videoteca: "No",
+  "ctsInmueble|Cantidad|Número": "1", "nivelesInmueble|Secundaria": true, construidoEducativo: "Sí",
+};
+
+// Sección I tal como la tiene la plataforma oficial (fin de cursos 2025-2026).
+const SECCION1_PLATAFORMA_911_2026 = (() => {
+  const fila = (h, m, conGrupos) => {
+    const f = { hombres: String(h), mujeres: String(m), hablantes: "0", nacidosFuera: "0", afro: "0", discapacidad: "0", trastorno: "0", aptitudes: "0", otras: "0" };
+    if (conGrupos) f.grupos = "1";
+    return f;
+  };
+  return {
+    existencia: { "1": fila(3, 9, true), "2": fila(6, 6, true), "3": fila(3, 6, true) },
+    promovidos: { "1": fila(3, 9, false), "2": fila(6, 6, false), "3": fila(3, 6, false) },
+  };
+})();
+
+const CLAVE_COMPLEMENTOS_911 = "e911-complementos-2026-2027";
+
+function valorComplemento911(valores, clave, tipo) {
+  if (Object.prototype.hasOwnProperty.call(valores, clave)) return valores[clave];
+  return tipo === "numeros" ? "0" : tipo === "varias" ? false : "";
+}
+
+function PreguntaComplemento911({ p, valores, onCambia, soloLectura }) {
+  const estiloCelda = { padding: "2px 3px", textAlign: "center" };
+  if (p.tipo === "numeros") {
+    return (
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid #ccc" }}>
+              <th style={{ ...estiloCelda, textAlign: "left" }}></th>
+              {p.columnas.map((c) => <th key={c} style={{ ...estiloCelda, fontWeight: 600 }}>{c}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {p.filas.map((f) => (
+              <tr key={f} style={{ borderBottom: "1px solid #eee" }}>
+                <td style={{ ...estiloCelda, textAlign: "left" }}>{f}</td>
+                {p.columnas.map((c) => {
+                  const clave = `${p.id}|${f}|${c}`;
+                  const v = valorComplemento911(valores, clave, "numeros");
+                  return (
+                    <td key={c} style={estiloCelda}>
+                      {soloLectura ? <span style={{ fontWeight: v && v !== "0" ? 700 : 400 }}>{v === "" ? "—" : v}</span> : (
+                        <input className="campo" style={{ width: p.letras ? "3rem" : "3.6rem", textAlign: "center" }}
+                          type={p.letras ? "text" : "number"} min="0" maxLength={p.letras ? 1 : undefined}
+                          value={v} onChange={(e) => onCambia(clave, p.letras ? e.target.value.toLowerCase() : e.target.value)} />
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+  if (p.tipo === "opcion") {
+    const v = valorComplemento911(valores, p.id, "opcion");
+    if (soloLectura) return <div style={{ fontSize: "0.78rem" }}>Respuesta: <b>{v || "— (sin respuesta)"}</b></div>;
+    return (
+      <div className="flex gap-3 flex-wrap" style={{ fontSize: "0.78rem" }}>
+        {p.opciones.map((o) => (
+          <label key={o} className="flex items-center gap-1" style={{ cursor: "pointer" }}>
+            <input type="radio" name={`c911-${p.id}`} checked={v === o} onChange={() => onCambia(p.id, o)} /> {o}
+          </label>
+        ))}
+        {v && <button type="button" className="btn-secundario" style={{ fontSize: "0.65rem", padding: "0.1rem 0.4rem" }} onClick={() => onCambia(p.id, "")}>Quitar</button>}
+      </div>
+    );
+  }
+  if (p.tipo === "varias") {
+    if (soloLectura) {
+      const marcadas = p.opciones.filter((o) => valorComplemento911(valores, `${p.id}|${o}`, "varias") === true);
+      return <div style={{ fontSize: "0.78rem" }}>Marcadas: <b>{marcadas.length ? marcadas.join(", ") : "ninguna"}</b></div>;
+    }
+    return (
+      <div className="flex gap-3 flex-wrap" style={{ fontSize: "0.78rem" }}>
+        {p.opciones.map((o) => {
+          const clave = `${p.id}|${o}`;
+          return (
+            <label key={o} className="flex items-center gap-1" style={{ cursor: "pointer" }}>
+              <input type="checkbox" checked={valorComplemento911(valores, clave, "varias") === true} onChange={(e) => onCambia(clave, e.target.checked)} /> {o}
+            </label>
+          );
+        })}
+      </div>
+    );
+  }
+  const v = valorComplemento911(valores, p.id, "texto");
+  return soloLectura ? <div style={{ fontSize: "0.78rem" }}>{v || "—"}</div>
+    : <input className="campo" value={v} onChange={(e) => onCambia(p.id, e.target.value)} />;
+}
+
+function Complementos911Imprimible({ valores }) {
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#111" }}>
+      <EncabezadoImpresionEstadistica subtitulo="Borrador 911 · 2026-2027 — apartados complementarios (fin de cursos, Lengua de Señas, ODS, anexos de cómputo e infraestructura)" />
+      {APARTADOS_911_COMPLEMENTOS.map((a) => (
+        <div key={a.id} style={{ marginBottom: "0.8rem" }}>
+          <div style={{ fontWeight: 700, fontSize: "0.85rem", background: "#e6e6e6", padding: "0.2rem 0.4rem", marginBottom: "0.3rem" }}>{a.titulo}</div>
+          {a.preguntas.map((p) => (
+            <div key={p.id} className="firma-grupo" style={{ marginBottom: "0.45rem", breakInside: "avoid" }}>
+              <div style={{ fontSize: "0.74rem", marginBottom: "0.15rem" }}>{p.texto}</div>
+              <PreguntaComplemento911 p={p} valores={valores} soloLectura />
+            </div>
+          ))}
+          {a.nota && <div style={{ fontSize: "0.68rem", fontStyle: "italic", opacity: 0.7 }}>{a.nota}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PanelComplementos911({ onStamp }) {
+  const [valores, setValores] = useState({ ...VALORES_PLATAFORMA_911_2026 });
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [guardadoOk, setGuardadoOk] = useState(false);
+  const [yaGuardado, setYaGuardado] = useState(false);
+  const [abierto, setAbierto] = useState("fin");
+  const [imprimiendo, setImprimiendo] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    getStorage(CLAVE_COMPLEMENTOS_911, null).then((v) => {
+      if (!vivo) return;
+      if (v && typeof v === "object" && v.valores) { setValores(v.valores); setYaGuardado(true); }
+      setCargando(false);
+    });
+    return () => { vivo = false; };
+  }, []);
+
+  const cambiar = (clave, valor) => setValores((prev) => ({ ...prev, [clave]: valor }));
+  const guardar = async () => {
+    setGuardando(true);
+    const ok = await setStorage(CLAVE_COMPLEMENTOS_911, { valores, actualizado: hoyISO() });
+    setGuardando(false); setGuardadoOk(ok); if (ok) setYaGuardado(true);
+    if (ok && onStamp) onStamp("Guardado");
+    setTimeout(() => setGuardadoOk(false), 2500);
+  };
+  const usarPlataforma = () => setValores({ ...VALORES_PLATAFORMA_911_2026 });
+  const imprimir = () => {
+    setImprimiendo(true); onStamp && onStamp("Preparando");
+    document.body.classList.add("solo-portal");
+    window.onafterprint = () => { document.body.classList.remove("solo-portal"); setImprimiendo(false); window.onafterprint = null; };
+    setTimeout(() => window.print(), 150);
+  };
+
+  if (cargando) return <div className="card"><p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p></div>;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {imprimiendo && ReactDOM.createPortal(
+        <div className="solo-impresion portal-impresion"><Complementos911Imprimible valores={valores} /></div>,
+        document.body
+      )}
+      <p className="text-sm" style={{ opacity: 0.65 }}>
+        Apartados que pide la plataforma 911 de 2026-2027 y que no salen del padrón actual (datos del ciclo anterior, Lengua de Señas, Objetivos de Desarrollo Sostenible y los anexos de cómputo e infraestructura).
+        {yaGuardado ? " Lo que ves es lo que está guardado en tu Hoja." : <> Vienen <b>precargados con lo que ya estaba capturado en la plataforma oficial el 21 de octubre de 2026</b>; revísalos y da <b>Guardar</b> para dejarlos en tu Hoja.</>}
+      </p>
+      <div className="flex gap-2 flex-wrap">
+        {APARTADOS_911_COMPLEMENTOS.map((a) => (
+          <button key={a.id} onClick={() => setAbierto(a.id)} className={`chip-grado ${abierto === a.id ? "activo" : ""}`} style={{ fontSize: "0.7rem" }}>{a.titulo.split(" — ")[0]}</button>
+        ))}
+      </div>
+      {APARTADOS_911_COMPLEMENTOS.filter((a) => a.id === abierto).map((a) => (
+        <div key={a.id} className="card flex flex-col gap-3">
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.88rem" }}>{a.titulo}</div>
+          {a.preguntas.map((p) => (
+            <div key={p.id}>
+              <div className="text-sm mb-1" style={{ fontWeight: 600 }}>{p.texto}</div>
+              <PreguntaComplemento911 p={p} valores={valores} onCambia={cambiar} />
+            </div>
+          ))}
+          {a.nota && <p className="text-sm" style={{ opacity: 0.6 }}>{a.nota}</p>}
+        </div>
+      ))}
+      <div className="flex gap-2 flex-wrap">
+        <button onClick={guardar} disabled={guardando} className="btn-primario">{guardando ? "Guardando…" : guardadoOk ? "✓ Guardado" : "Guardar"}</button>
+        <button onClick={imprimir} className="btn-secundario"><Printer size={14} /> Imprimir borrador de estos apartados</button>
+        <button onClick={usarPlataforma} className="btn-secundario" style={{ fontSize: "0.75rem" }}>Volver a los datos de la plataforma (21 oct 2026)</button>
+      </div>
+    </div>
+  );
+}
+
+// Trae de la Hoja los apartados complementarios (o, si nunca se guardaron, los
+// valores que tenía la plataforma oficial el 21 oct 2026).
+async function cargarComplementos911() {
+  const v = await getStorage(CLAVE_COMPLEMENTOS_911, null);
+  return (v && v.valores) ? v.valores : { ...VALORES_PLATAFORMA_911_2026 };
+}
+
+// III. Becas del formato: la plataforma 2026-2027 la pide del ciclo ANTERIOR
+// (fin de cursos 2025-2026), así que sale de los complementos, no del padrón.
+function becasDesdeComplementos911(c) {
+  const n = (clave) => numE911PDF(valorComplemento911(c, clave, "numeros"));
+  const fila = (f) => ({
+    hombres: n(`becas|${f}|Hombres`), mujeres: n(`becas|${f}|Mujeres`), total: n(`becas|${f}|Total`),
+    conDiscapacidad: n(`becas|${f}|Con discapacidad`), hablantesLengua: n(`becas|${f}|Hablantes de lenguas indígenas`), nacidosFuera: n(`becas|${f}|Nacidos fuera de México`),
+  });
+  const FILAS = ["Beca Rita Cetina", "Otra beca federal", "Beca estatal", "Beca de fundaciones y asociaciones civiles", "Beca de la propia escuela", "Beca particular", "Beca municipal", "Otras"];
+  return {
+    conBeca: fila("Con beca"), sinBeca: fila("Sin beca"),
+    porOrigen: FILAS.map((f, i) => ({ origen: E911_ORIGENES_BECA[i], hombres: n(`becasOrigen|${f}|Hombres`), mujeres: n(`becasOrigen|${f}|Mujeres`) })),
+  };
+}
+
+// IV.8 Egresados de 3er. grado (página índice 7): 6 renglones de edad + Total,
+// 9 columnas (H, M, Total, hablantes, nacidos fuera, discapacidad, trastorno,
+// aptitudes, otras). Coordenadas medidas del PDF oficial.
+const E911_PDF_IV8_BOTTOMS = [442.4, 463.7, 484.9, 506.2, 527.4, 548.7, 569.9];
+const E911_PDF_IV8_COLUMNAS = [[106.1, 148.2], [166.6, 208.7], [237.5, 279.6], [310.6, 352.7], [384.1, 426.2], [462.0, 504.1], [539.8, 581.8], [620.8, 662.9], [706.6, 748.7]];
+function agregarSeccionIV8PDF(campos, c) {
+  const filas = ["13 años o menos", "14 años", "15 años", "16 años", "17 años", "18 años y más"];
+  const totales = COLS_CONDICIONES_EGRESO.map(() => 0);
+  filas.forEach((f, i) => {
+    COLS_CONDICIONES_EGRESO.forEach((col, j) => {
+      const v = numE911PDF(valorComplemento911(c, `egresados|${f}|${col}`, "numeros"));
+      totales[j] += v;
+      celdaE911(campos, 7, E911_PDF_IV8_COLUMNAS[j], E911_PDF_IV8_BOTTOMS[i], v);
+    });
+  });
+  totales.forEach((v, j) => celdaE911(campos, 7, E911_PDF_IV8_COLUMNAS[j], E911_PDF_IV8_BOTTOMS[6], v));
+}
+
 /* ---------- Estadística 911.5 — ahora en su propia pestaña (ya no dentro de
    Alumnos → Estadística), igual que Programa Analítico y PIC. ---------- */
 function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
@@ -20754,8 +21121,8 @@ function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
   const descargarPDFOficial = async () => {
     setGenerandoPDF(true);
     try {
-      const { seccion1, infraestructura } = await cargarSeccion1EInfraestructuraE911();
-      await descargarE911OficialPDF(seccion1, infraestructura, e911);
+      const [{ seccion1, infraestructura }, complementos] = await Promise.all([cargarSeccion1EInfraestructuraE911(), cargarComplementos911()]);
+      await descargarE911OficialPDF(seccion1, infraestructura, e911, complementos);
       if (onStamp) onStamp("Descargado");
     } finally {
       setGenerandoPDF(false);
@@ -20785,6 +21152,7 @@ function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
             { id: "IV", label: "IV. Alumnado y grupos" },
             { id: "V", label: "V. Personal" },
             { id: "VI", label: "VI–VIII. Aulas, idiomas y libros" },
+            { id: "C", label: "Apartados nuevos 2026-2027 (anexos)" },
           ].map((t) => (
             <button key={t.id} onClick={() => setSeccionE911(t.id)} className={`chip-grado ${seccionE911 === t.id ? "activo" : ""}`} style={{ fontSize: "0.72rem" }}>
               {t.label}
@@ -20803,10 +21171,11 @@ function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
           <Download size={14} /> {generandoPDF ? "Generando…" : "Descargar 911.5 oficial rellenado (PDF)"}
         </button>
         <p className="text-sm mb-3" style={{ opacity: 0.55 }}>
-          Este botón sí descarga el <b>documento oficial</b> de 16 páginas (el que subiste), ya con datos reales escritos encima — no el apoyo de arriba. Hasta ahora llena la <b>página de Identificación</b> (clave del centro de trabajo, turno, nombre de la escuela, entidad, municipio, localidad, código postal y nombre del director; lo demás de esa página — vialidades, CURP, RFC, teléfonos, clave de zona escolar — no está capturado en el sistema y se deja en blanco a propósito, para no inventar datos), y las <b>Secciones I a VIII</b>. Quedan en blanco, para que las captures directo en la plataforma, solo las preguntas cuyo dato no existe en el sistema: IV.4 (clave de lengua), IV.8 a IV.11 (egresados, reprobados, regularizados e irregulares del ciclo anterior), V.2 (detalle por puesto administrativo) y V.4 (horas a la semana del personal docente especial).
+          Este botón sí descarga el <b>documento oficial</b> de 16 páginas (el que subiste), ya con datos reales escritos encima — no el apoyo de arriba. Hasta ahora llena la <b>página de Identificación</b> (clave del centro de trabajo, turno, nombre de la escuela, entidad, municipio, localidad, código postal y nombre del director; lo demás de esa página — vialidades, CURP, RFC, teléfonos, clave de zona escolar — no está capturado en el sistema y se deja en blanco a propósito, para no inventar datos), y las <b>Secciones I a VIII</b>. Quedan en blanco, para que las captures directo en la plataforma, solo las preguntas cuyo dato no existe en el sistema: IV.4 (clave de lengua), IV.9 a IV.11 (reprobados, regularizados e irregulares del ciclo anterior; los egresados IV.8 y las becas III salen de la pestaña "Apartados nuevos 2026-2027"), V.2 (detalle por puesto administrativo) y V.4 (horas a la semana del personal docente especial).
         </p>
 
         {seccionE911 === "I" && <PanelSeccion1E911 onStamp={onStamp} />}
+        {seccionE911 === "C" && <PanelComplementos911 onStamp={onStamp} />}
 
         {seccionE911 === "II" && (
           <div className="flex flex-col gap-4">
