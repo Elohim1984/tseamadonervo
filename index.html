@@ -21095,11 +21095,11 @@ function agregarSeccionIV8PDF(campos, c) {
    guardan en el repositorio (es público): el director los sube aquí y quedan en su
    Hoja privada, partidos en renglones (mismo método que los PDF del Mapeador). */
 const DOCS_OFICIALES_911_2026 = [
-  { id: "911-comprobante-2026", titulo: "Comprobante de captura 911 (oficializado)", archivo: "C911_ComprobanteCaptura_20261021.pdf" },
-  { id: "911-cuestionario-2026", titulo: "Cuestionario 911.5 Secundaria 2026-2027", archivo: "C911_ES_2026_21ETV0473W.pdf" },
-  { id: "911-computo-2026", titulo: "Anexo de recursos computacionales y audiovisuales", archivo: "C911_ES_AnexoComputo_2026_21ETV0473W.pdf" },
-  { id: "911-infraestructura-2026", titulo: "Anexo de infraestructura (911.I)", archivo: "C911_ES_AnexoInfraestructura_2026_21ETV0473W.pdf" },
-  { id: "911-ods-2026", titulo: "Atención a los Objetivos de Desarrollo Sostenible", archivo: "C911_ES_ObjetivosDesarrolloSostenible_2026_21ETV0473W.pdf" },
+  { id: "911-comprobante-2026", titulo: "Comprobante de captura 911 (oficializado)", archivo: "C911_ComprobanteCaptura_20261021.pdf", blanco: "assets/formatos911/2026-2027/Comprobante_911_2026-2027_rellenable.pdf" },
+  { id: "911-cuestionario-2026", titulo: "Cuestionario 911.5 Secundaria 2026-2027", archivo: "C911_ES_2026_21ETV0473W.pdf", blanco: "assets/formatos911/2026-2027/911.5_Secundaria_2026-2027_rellenable.pdf" },
+  { id: "911-computo-2026", titulo: "Anexo de recursos computacionales y audiovisuales", archivo: "C911_ES_AnexoComputo_2026_21ETV0473W.pdf", blanco: "assets/formatos911/2026-2027/Anexo_Computo_2026-2027_rellenable.pdf" },
+  { id: "911-infraestructura-2026", titulo: "Anexo de infraestructura (911.I)", archivo: "C911_ES_AnexoInfraestructura_2026_21ETV0473W.pdf", blanco: "assets/formatos911/2026-2027/Anexo_Infraestructura_2026-2027_rellenable.pdf" },
+  { id: "911-ods-2026", titulo: "Atención a los Objetivos de Desarrollo Sostenible", archivo: "C911_ES_ObjetivosDesarrolloSostenible_2026_21ETV0473W.pdf", blanco: "assets/formatos911/2026-2027/ODS_2026-2027_rellenable.pdf" },
 ];
 const DOCS_OFICIALES_REPASE_2026 = [
   { id: "repase-acta-2026", titulo: "Acta de instalación y primera sesión (REPASE, 7 oct 2026)", archivo: "473W_REPASE_2026.pdf" },
@@ -21177,8 +21177,9 @@ function PanelDocumentosOficiales({ titulo, documentos, nota }) {
               <div style={{ fontWeight: 600 }}>{m ? "✓ " : ""}{d.titulo}</div>
               <div style={{ fontSize: "0.7rem", opacity: 0.6 }}>{m ? `${m.nombre} · subido el ${fechaBonita(m.fecha)}` : `Pendiente de subir (${d.archivo})`}</div>
             </div>
-            <div className="flex gap-2">
-              {m && <button className="btn-secundario" style={{ fontSize: "0.72rem" }} disabled={ocupado === d.id} onClick={() => descargar(d)}><Download size={13} /> Descargar</button>}
+            <div className="flex gap-2 flex-wrap">
+              {d.blanco && <a href={d.blanco} download className="btn-secundario" style={{ fontSize: "0.72rem", textDecoration: "none" }} title="Mismo formato oficial, en blanco y con casillas para escribir (sin CURP, RFC ni teléfonos)"><Download size={13} /> En blanco rellenable</a>}
+              {m && <button className="btn-secundario" style={{ fontSize: "0.72rem" }} disabled={ocupado === d.id} onClick={() => descargar(d)}><Download size={13} /> Descargar oficial</button>}
               <label className="btn-secundario" style={{ fontSize: "0.72rem", cursor: "pointer" }}>
                 {ocupado === d.id ? "Subiendo…" : m ? "Reemplazar" : "Subir PDF"}
                 <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={(e) => { subir(d, e.target.files && e.target.files[0]); e.target.value = ""; }} />
@@ -21387,6 +21388,362 @@ async function aplicarActaOficialREPASE2026(opciones = {}) {
   return resultados;
 }
 
+/* ---------- Impresión en el FORMATO OFICIAL 2026-2027 (22 oct 2026) ----------
+   Reproduce la estructura de los documentos que entrega la plataforma 911
+   (cuestionario 911.5, anexos de cómputo e infraestructura, ODS y comprobante),
+   llenos con lo que hoy tiene la app. Así, si algo se modifica, se vuelve a
+   imprimir igual que el oficial. */
+const IDENT_911_OFICIAL = {
+  cct: "21ETV0473W", turno: "1", turnoNombre: "MATUTINO", nombre: "AMADO NERVO",
+  vialidadPrincipal: "CALLE CERRO DEL VIGILANTE", vialidadPosterior: "NINGUNO NINGUNO", vialidadDerecha: "NINGUNO NINGUNO", vialidadIzquierda: "NINGUNO NINGUNO",
+  numExt: "0", numInt: "0", asentamiento: "PUEBLO TEPEOJUMA", cp: "74390", entidad: "PUEBLA", municipio: "TEPEOJUMA", localidad: "TEPEOJUMA",
+  telefono: "2431218498", extension: "", celular: "2225570348", sostenimiento: "FEDERAL TRANSFERIDO-ESTATAL",
+  tipoNivel: "BÁSICA - SECUNDARIA - TELESECUNDARIA", caracteristica: "NO APLICA",
+  dependencia: "GOBIERNO DEL ESTADO - SECRETARÍA DE EDUCACIÓN DEL GOBIERNO DEL ESTADO", correo: "neftalid.ortan.agui@seppue.gob.mx",
+  dirAp1: "ORTAN", dirAp2: "AGUILAR", dirNombre: "NEFTALID BLADIMIR", curp: "OAAN840711HPLRGF02", rfc: "OAAN840711UM1", tipoDirector: "ENCARGADO",
+  jefatura: "21FTS7011U", zona: "21FTV8052O", servicioRegional: "21ADG0016C",
+};
+const FO = {
+  hoja: { fontFamily: "Arial, Helvetica, sans-serif", color: "#111", fontSize: "8.5px", pageBreakAfter: "always", breakAfter: "page" },
+  barra: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: "2px solid #1f4e3d", paddingBottom: "3px", marginBottom: "6px" },
+  tit: { fontWeight: 700, fontSize: "10px", margin: "6px 0 3px" },
+  preg: { margin: "5px 0 3px", fontSize: "8.5px" },
+  tabla: { borderCollapse: "collapse", width: "100%", marginBottom: "5px" },
+  th: { border: "1px solid #666", padding: "2px 3px", fontWeight: 700, textAlign: "center", background: "#eef3ef", fontSize: "8px" },
+  td: { border: "1px solid #999", padding: "2px 3px", textAlign: "center", fontSize: "8.5px" },
+  tdl: { border: "1px solid #999", padding: "2px 3px", textAlign: "left", fontSize: "8.5px" },
+  gris: { border: "1px solid #999", background: "#d9d9d9" },
+};
+const n0 = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0; };
+
+function EncabezadoFO({ izquierda, centro, derecha, codigo }) {
+  return (
+    <div style={FO.barra}>
+      <div style={{ fontWeight: 800, fontSize: "11px", color: "#1f4e3d" }}>EDUCACIÓN<div style={{ fontWeight: 400, fontSize: "8px", color: "#555" }}>{izquierda}</div></div>
+      <div style={{ textAlign: "center", fontWeight: 700, fontSize: "10px" }}>{centro}</div>
+      <div style={{ textAlign: "right", fontSize: "9px" }}>{derecha}<div style={{ fontWeight: 800, fontSize: "12px" }}>{codigo}</div></div>
+    </div>
+  );
+}
+function TablaFO({ cabeceras, filas, anchoPrimera }) {
+  return (
+    <table style={FO.tabla}>
+      {cabeceras && (
+        <thead>
+          {(Array.isArray(cabeceras[0]) ? cabeceras : [cabeceras]).map((fila, i) => (
+            <tr key={i}>{fila.map((c, j) => typeof c === "object" && c !== null
+              ? <th key={j} colSpan={c.colSpan || 1} rowSpan={c.rowSpan || 1} style={FO.th}>{c.t}</th>
+              : <th key={j} style={{ ...FO.th, width: j === 0 ? anchoPrimera : undefined }}>{c}</th>)}</tr>
+          ))}
+        </thead>
+      )}
+      <tbody>
+        {filas.map((f, i) => (
+          <tr key={i}>{f.map((c, j) => {
+            if (c && typeof c === "object" && c.gris) return <td key={j} style={FO.gris}></td>;
+            if (c && typeof c === "object") return <td key={j} colSpan={c.colSpan || 1} rowSpan={c.rowSpan || 1} style={{ ...(c.izq ? FO.tdl : FO.td), fontWeight: c.b ? 700 : 400 }}>{c.t}</td>;
+            return <td key={j} style={j === 0 ? { ...FO.tdl, fontWeight: 600 } : FO.td}>{c}</td>;
+          })}</tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+function IdentificacionFO({ titulo }) {
+  const d = IDENT_911_OFICIAL;
+  const fila = (a, b, c, e) => [{ t: a, izq: true, b: true }, { t: b, izq: true }, { t: c || "", izq: true, b: true }, { t: e || "", izq: true }];
+  return (
+    <div style={FO.hoja}>
+      <EncabezadoFO izquierda="Sistema Escolarizado" centro={titulo} derecha="Ciclo 2026-2027" codigo="" />
+      <div style={{ ...FO.tit, textAlign: "center" }}>DATOS DE IDENTIFICACIÓN</div>
+      <TablaFO filas={[
+        fila("Clave de Centro de Trabajo:", d.cct, "Turno:", `${d.turno}   ${d.turnoNombre}`),
+        fila("Nombre de la escuela:", d.nombre),
+        fila("Vialidad principal:", d.vialidadPrincipal, "Vialidad posterior:", d.vialidadPosterior),
+        fila("Vialidad derecha:", d.vialidadDerecha, "Vialidad izquierda:", d.vialidadIzquierda),
+        fila("Número exterior:", d.numExt, "Número interior:", d.numInt),
+        fila("Asentamiento humano:", d.asentamiento, "Código postal:", d.cp),
+        fila("Entidad federativa:", d.entidad, "Municipio o alcaldía:", d.municipio),
+        fila("Localidad:", d.localidad),
+        fila("Teléfono:", d.telefono, "Celular:", d.celular),
+        fila("Sostenimiento:", d.sostenimiento),
+        fila("Tipo / nivel / subnivel:", d.tipoNivel),
+        fila("Característica:", d.caracteristica),
+        fila("Dependencia normativa:", d.dependencia),
+        fila("Correo institucional:", d.correo),
+        fila("Nombre del director:", `${d.dirAp1} ${d.dirAp2} ${d.dirNombre}`, "Tipo:", d.tipoDirector),
+        fila("CURP:", d.curp, "RFC:", d.rfc),
+        fila("Jefatura de sector:", d.jefatura, "Zona escolar:", d.zona),
+        fila("Servicio regional:", d.servicioRegional),
+      ]} />
+      <p style={{ fontSize: "7.5px", marginTop: "6px" }}><b>IMPORTANTE:</b> La información estadística es una herramienta fundamental para la planeación y la toma acertada de decisiones. Los cuestionarios 911 son los medios para recopilar la información de inicio de cursos. El cuestionario impreso sirve de apoyo para contestar el cuestionario vía Internet.</p>
+    </div>
+  );
+}
+function OficializacionFO({ titulo, codigo }) {
+  return (
+    <div style={{ ...FO.hoja, pageBreakAfter: "auto", breakAfter: "auto" }}>
+      <EncabezadoFO izquierda="" centro={titulo} derecha="INICIO DE CURSOS 2026-2027" codigo={codigo} />
+      <p style={{ fontWeight: 700, margin: "8px 0" }}>IMPORTANTE: Firme y selle esta hoja de oficialización.</p>
+      <div style={{ border: "1px solid #999", minHeight: "60px", padding: "4px", marginBottom: "10px" }}>Observaciones:</div>
+      <div style={{ display: "flex", justifyContent: "space-around", marginTop: "40px", textAlign: "center" }}>
+        <div><div style={{ borderTop: "1px solid #000", width: "200px", paddingTop: "3px" }}>Nombre y firma del responsable del llenado</div></div>
+        <div><div style={{ borderTop: "1px solid #000", width: "200px", paddingTop: "3px" }}>Nombre y firma del supervisor</div></div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "30px" }}>
+        <div style={{ border: "1px dashed #999", width: "150px", height: "90px", display: "flex", alignItems: "flex-end", justifyContent: "center", fontSize: "7.5px" }}>Sello del Centro de Trabajo</div>
+        <div>Fecha de llenado: <b>{hoyISO().replace(/-/g, "/")}</b> <span style={{ fontSize: "7px" }}>(AAAA/MM/DD)</span></div>
+      </div>
+    </div>
+  );
+}
+
+function Formato911OficialImprimible({ e911, seccion1, infra, comp }) {
+  const c = (k) => valorComplemento911(comp, k, "numeros");
+  const fin = (sub) => <EncabezadoFO izquierda="" centro="EDUCACIÓN SECUNDARIA" derecha={sub || "FIN DE CURSOS 2025-2026"} codigo="911.5" />;
+  const ini = () => <EncabezadoFO izquierda="" centro="EDUCACIÓN SECUNDARIA · Ciclo escolar 2026-2027 (ciclo actual)" derecha="INICIO DE CURSOS 2026-2027" codigo="911.5" />;
+  const cols1 = ["hombres", "mujeres"];
+  const filaS1 = (bloque, g, conGrupos) => {
+    const f = seccion1[bloque][g] || {};
+    const base = [`${g}°`, n0(f.hombres), n0(f.mujeres), n0(f.hombres) + n0(f.mujeres)];
+    if (conGrupos) base.push(n0(f.grupos));
+    return [...base, n0(f.hablantes), n0(f.nacidosFuera), n0(f.afro), n0(f.discapacidad), n0(f.trastorno), n0(f.aptitudes), n0(f.otras)];
+  };
+  const totalS1 = (bloque, conGrupos) => {
+    const filas = ["1", "2", "3"].map((g) => filaS1(bloque, g, conGrupos));
+    return [{ t: "Total", b: true }, ...filas[0].slice(1).map((_, i) => ({ t: filas.reduce((s, f) => s + f[i + 1], 0), b: true }))];
+  };
+  const cabS1 = (conGrupos) => ["Grado", "Hombres", "Mujeres", "Total", ...(conGrupos ? ["Grupos"] : []), "Hablantes de lenguas indígenas", "Nacidos fuera de México", "Afro (mexicanos/ descendientes)", "Con discapacidad", "Con trastorno", "Aptitudes sobresalientes", "Otras condiciones"];
+  const fila3 = (h, m) => [h, m, h + m];
+  // V.1 alumnado por edad
+  const buckets = BUCKETS_EDAD_911;
+  const filasV1 = [];
+  const tot = { H: { ni: {}, rep: {} }, M: { ni: {}, rep: {} } };
+  e911.porGrado.forEach((g) => {
+    const sub = {};
+    g.filas.forEach((f) => {
+      [["ni", "Nuevo ingreso", f.nuevoIngreso], ["rep", "Repetidores", f.repetidor]].forEach(([k, et, d], idx) => {
+        const celdas = buckets.map((b, bi) => {
+          const sombreada = (g.grado === 2 && bi === 0) || (g.grado === 3 && bi <= 1) || (k === "rep" && bi === 0);
+          const v = (d.porBucket && d.porBucket[b]) || 0;
+          tot[f.sexo][k][b] = (tot[f.sexo][k][b] || 0) + v; sub[b] = (sub[b] || 0) + v;
+          return sombreada ? { gris: true } : v;
+        });
+        filasV1.push([idx === 0 && f.sexo === "H" ? { t: `${g.grado}°`, rowSpan: 5, b: true } : null, idx === 0 ? { t: f.sexo === "H" ? "Hombres" : "Mujeres", rowSpan: 2 } : null, et, ...celdas, d.total, idx === 0 && f.sexo === "H" ? { t: "", rowSpan: 4 } : null].filter((x) => x !== null));
+      });
+    });
+    filasV1.push([{ t: "Subtotal", colSpan: 2, b: true }, ...buckets.map((b, bi) => ((g.grado === 2 && bi === 0) || (g.grado === 3 && bi <= 1)) ? { gris: true } : { t: sub[b] || 0, b: true }), { t: g.total, b: true }, { t: g.grupos, b: true }]);
+  });
+  const p911 = e911.personal911;
+  const gridFila = (fila, funciones) => [fila.nivel, ...funciones.flatMap((fn) => [fila.porFuncion[fn].hombres, fila.porFuncion[fn].mujeres])];
+  const subtot = (grid, funciones) => [{ t: "Subtotales", b: true }, ...funciones.flatMap((fn) => ["hombres", "mujeres"].map((s) => ({ t: grid.reduce((a, f) => a + f.porFuncion[fn][s], 0), b: true })))];
+  const tiempo = (t) => (p911.tiempoDedicacion.find((x) => x.tiempo === t) || { total: 0 }).total;
+  const aulasUso = ["1", "2", "3", "masDeUnGrado"].map((k) => n0(infra.aulasEnUso && infra.aulasEnUso[k]));
+  const aulasAd = ["1", "2", "3", "masDeUnGrado"].map((k) => n0(infra.aulasAdaptadas && infra.aulasAdaptadas[k]));
+  const regiones = E911_REGIONES_PAIS.map((r) => {
+    const del = e911.nacidosFuera.filter((nf) => E911_PAIS_A_REGION[normalizarTextoE911(nf.pais)] === r);
+    const h = del.reduce((s, x) => s + x.hombres, 0), m = del.reduce((s, x) => s + x.mujeres, 0);
+    return [r, h, m, h + m];
+  });
+  const resid = (ent) => { const r = e911.residencia.find((x) => normalizarTextoE911(x.entidad) === normalizarTextoE911(ent)); return r ? [r.hombres, r.mujeres] : [0, 0]; };
+  const motivosFilas = MOTIVOS_NO_CONCLUSION_911.map((m) => [m, n0(c(`motivos|${m}|Hombres`)), n0(c(`motivos|${m}|Mujeres`)), n0(c(`motivos|${m}|Hombres`)) + n0(c(`motivos|${m}|Mujeres`))]);
+  const egresadosFilas = ["13 años o menos", "14 años", "15 años", "16 años", "17 años", "18 años y más"].map((e) => [e, ...COLS_CONDICIONES_EGRESO.map((col) => n0(c(`egresados|${e}|${col}`)))]);
+  const condFilas = e911.condicionDetalle.map((cd) => [cd.categoria, ...[1, 2, 3].flatMap((g) => { const x = cd.porGrado[g] || { hombres: 0, mujeres: 0 }; return [x.hombres, x.mujeres, x.hombres + x.mujeres]; }), cd.hombres, cd.mujeres, cd.total]);
+  const dd = p911.directivosDocentesPorGrado;
+  const prim = (tipo) => e911.procedePrimariaDetalle.find((t) => t.tipo === tipo);
+  return (
+    <div>
+      <IdentificacionFO titulo="EDUCACIÓN SECUNDARIA · 911.5" />
+      <div style={FO.hoja}>
+        {fin()}
+        <div style={FO.tit}>I. EXISTENCIA Y PROMOVIDOS</div>
+        <div style={FO.preg}>1. Alumnas y alumnos existentes al final del ciclo 2025-2026 (al último día del ciclo).</div>
+        <TablaFO cabeceras={cabS1(true)} filas={[...["1", "2", "3"].map((g) => filaS1("existencia", g, true)), totalS1("existencia", true)]} />
+        <div style={FO.preg}>2. Alumnas y alumnos promovidos del ciclo 2025-2026.</div>
+        <TablaFO cabeceras={cabS1(false)} filas={[...["1", "2", "3"].map((g) => filaS1("promovidos", g, false)), totalS1("promovidos", false)]} />
+        <div style={FO.tit}>II. ALUMNADO QUE PROVIENE DE OTRA ESCUELA</div>
+        <TablaFO cabeceras={[[{ t: "Grado", rowSpan: 2 }, { t: "", rowSpan: 2 }, { t: "Misma entidad federativa", colSpan: 2 }, { t: "Otra entidad federativa", colSpan: 2 }, { t: "Otro país", colSpan: 2 }, { t: "Total", colSpan: 2 }], ["H", "M", "H", "M", "H", "M", "H", "M"]]}
+          filas={e911.procedenciaPorGrado.flatMap((g) => (g.grado === 1 ? [["1o.", "Nvo. ingreso", g.nuevoIngreso], ["", "Repetidor", g.repetidor]] : [[`${g.grado}o.`, "", g.total]]).map(([a, b, d]) => [a, b, d.mismaEntidad.hombres, d.mismaEntidad.mujeres, d.otraEntidad.hombres, d.otraEntidad.mujeres, d.otroPais.hombres, d.otroPais.mujeres, d.totalHombres, d.totalMujeres]))} />
+        <TablaFO cabeceras={["País o lugar", "Hombres", "Mujeres", "Total"]} filas={e911.procedenciaPorRegion.map((r) => [r.region, r.hombres, r.mujeres, r.hombres + r.mujeres])} />
+        <div style={FO.tit}>III. BECAS</div>
+        <TablaFO cabeceras={["", "Hombres", "Mujeres", "Total", "Con discapacidad", "Hablantes de lenguas indígenas", "Nacidos fuera de México"]}
+          filas={["Con beca", "Sin beca"].map((f) => [f === "Con beca" ? "Con Beca" : "Sin Beca", ...["Hombres", "Mujeres", "Total", "Con discapacidad", "Hablantes de lenguas indígenas", "Nacidos fuera de México"].map((col) => n0(c(`becas|${f}|${col}`)))])} />
+        <TablaFO cabeceras={["Origen de la beca", "Hombres", "Mujeres", "Total"]}
+          filas={["Beca Rita Cetina", "Otra beca federal", "Beca estatal", "Beca de fundaciones y asociaciones civiles", "Beca de la propia escuela", "Beca particular", "Beca municipal", "Otras"].map((o) => [o, n0(c(`becasOrigen|${o}|Hombres`)), n0(c(`becasOrigen|${o}|Mujeres`)), n0(c(`becasOrigen|${o}|Hombres`)) + n0(c(`becasOrigen|${o}|Mujeres`))])} />
+      </div>
+      <div style={FO.hoja}>
+        {ini()}
+        <div style={FO.tit}>IV. ABANDONO ESCOLAR Y SUS CAUSAS</div>
+        <div style={FO.preg}>1. Alumnos que no concluyeron el ciclo escolar 2025-2026 en esta escuela: H {n0(c("noConcluyeron|Total|Hombres"))} · M {n0(c("noConcluyeron|Total|Mujeres"))} · Total {n0(c("noConcluyeron|Total|Hombres")) + n0(c("noConcluyeron|Total|Mujeres"))}</div>
+        <TablaFO cabeceras={["Motivo por el que no concluyó el ciclo escolar", "Hombres", "Mujeres", "Total"]} filas={motivosFilas} />
+      </div>
+      <div style={FO.hoja}>
+        {ini()}
+        <div style={FO.tit}>V. ALUMNADO Y GRUPOS</div>
+        <div style={FO.preg}>1. Alumnas y alumnos inscritos hasta el 30 de septiembre, por grado, sexo, nuevo ingreso, repetidores y edad (al 1° de septiembre), y grupos.</div>
+        <TablaFO cabeceras={["Grado", "Sexo", "", "Menos de 12 años", "12 años", "13 años", "14 años", "15 años", "16 años", "17 años", "18 años y más", "Total", "Grupos"]} filas={filasV1} />
+        <div style={FO.preg}>2. Alumnas y alumnos indígenas o hablantes de lengua indígena: H {e911.lenguaIndigena.hombres} · M {e911.lenguaIndigena.mujeres} · Total {e911.lenguaIndigena.total}</div>
+        <div style={FO.preg}>3. Alumnas y alumnos que proceden de escuela primaria general, indígena y/o comunitaria.</div>
+        <TablaFO cabeceras={[[{ t: "", rowSpan: 2 }, { t: "", rowSpan: 2 }, { t: "Primero", colSpan: 2 }, { t: "Segundo", rowSpan: 2 }, { t: "Tercero", rowSpan: 2 }, { t: "Total", rowSpan: 2 }], ["Nvo. ingreso", "Repetidor"]]}
+          filas={E911_TIPOS_PRIMARIA.flatMap((tipo) => ["H", "M"].map((s, i) => { const x = (prim(tipo) || { porSexo: {} }).porSexo[s] || { nuevo1: 0, rep1: 0, seg: 0, ter: 0, total: 0 }; return [i === 0 ? { t: tipo.replace("Primaria ", "Primaria "), rowSpan: 2, b: true } : null, s === "H" ? "Hombres" : "Mujeres", x.nuevo1, x.rep1, x.seg, x.ter, x.total].filter((v) => v !== null); }))} />
+        <div style={FO.preg}>5. Atendidos por la USAER: H {e911.atendidosUSAER.hombres} · M {e911.atendidosUSAER.mujeres} · Total {e911.atendidosUSAER.total}</div>
+      </div>
+      <div style={FO.hoja}>
+        {ini()}
+        <div style={FO.preg}>6. Alumnas y alumnos con discapacidades, neurodivergencia u otras condiciones, por grado y sexo.</div>
+        <TablaFO cabeceras={[[{ t: "Condición del alumnado", rowSpan: 2 }, { t: "Primero", colSpan: 3 }, { t: "Segundo", colSpan: 3 }, { t: "Tercero", colSpan: 3 }, { t: "Total", colSpan: 3 }], ["Hom", "Muj", "Total", "Hom", "Muj", "Total", "Hom", "Muj", "Total", "Hom", "Muj", "Total"]]} filas={condFilas} />
+        <div style={FO.preg}>7. Alumnas y alumnos nacidos fuera de México.</div>
+        <TablaFO cabeceras={["País o lugar", "Hombres", "Mujeres", "Total"]} filas={regiones} />
+        <div style={FO.preg}>8. Egresados de 3er. grado durante el ciclo escolar 2025-2026 (incluya regularizados al 30 de septiembre).</div>
+        <TablaFO cabeceras={["Edad", ...COLS_CONDICIONES_EGRESO]} filas={[...egresadosFilas, [{ t: "Total", b: true }, ...COLS_CONDICIONES_EGRESO.map((_, i) => ({ t: egresadosFilas.reduce((s, f) => s + f[i + 1], 0), b: true }))]]} />
+      </div>
+      <div style={FO.hoja}>
+        {ini()}
+        {[["reprobados", "9. Alumnas y alumnos que reprobaron una o más asignaturas durante el ciclo escolar 2025-2026."], ["regularizados", "10. De ellos, cuántos se regularizaron al 30 de septiembre."]].map(([k, t]) => (
+          <div key={k}><div style={FO.preg}>{t}</div>
+            <TablaFO cabeceras={["Grado", "Hombres", "Mujeres", "Total"]} filas={GRADOS_HM.map((g) => [g, n0(c(`${k}|${g}|Hombres`)), n0(c(`${k}|${g}|Mujeres`)), n0(c(`${k}|${g}|Hombres`)) + n0(c(`${k}|${g}|Mujeres`))])} /></div>
+        ))}
+        <div style={FO.preg}>11. Inscritos este ciclo que continúan como irregulares: Segundo H {n0(c("irregulares|Segundo|Hombres"))} M {n0(c("irregulares|Segundo|Mujeres"))} · Tercero H {n0(c("irregulares|Tercero|Hombres"))} M {n0(c("irregulares|Tercero|Mujeres"))}</div>
+        <div style={FO.preg}>12. Directivos con grupo y docentes por grado (solo telesecundarias).</div>
+        <TablaFO cabeceras={["Primero", "Segundo", "Tercero", "Más de un grado", "Total"]} filas={[[{ t: dd.primero }, dd.segundo, dd.tercero, dd.masDeUnGrado, dd.total]]} />
+        <div style={FO.preg}>13. Afromexicanos o afrodescendientes: H {e911.afromexicanos.hombres} · M {e911.afromexicanos.mujeres} · Total {e911.afromexicanos.total}</div>
+        <div style={FO.preg}>14. Alumnas y alumnos según su lugar de residencia.</div>
+        <TablaFO cabeceras={["Entidad", "Hombres", "Mujeres", "Entidad", "Hombres", "Mujeres"]}
+          filas={(() => { const l = [...ESTADOS_MEXICO.filter((e) => e !== "Puebla"), "Puebla"].sort((a, b) => a.localeCompare(b)); const mitad = Math.ceil(l.length / 2); const izq = l.slice(0, mitad), der = [...l.slice(mitad), "Fuera de México"]; return izq.map((e, i) => [e, ...resid(e), der[i] || "", ...(der[i] ? resid(der[i]) : ["", ""])]); })()} />
+      </div>
+      <div style={FO.hoja}>
+        {ini()}
+        <div style={FO.tit}>VI. PERSONAL POR FUNCIÓN</div>
+        <TablaFO cabeceras={[[{ t: "Nivel educativo", rowSpan: 2 }, { t: "Directivo con grupo", colSpan: 2 }, { t: "Directivo sin grupo", colSpan: 2 }, { t: "Subdirector de gestión escolar", colSpan: 2 }, { t: "Personal docente", colSpan: 2 }, { t: "Tutores", colSpan: 2 }], ["H", "M", "H", "M", "H", "M", "H", "M", "H", "M"]]}
+          filas={[...p911.gridPrincipal.map((f) => gridFila(f, p911.funcionesPrincipales)), subtot(p911.gridPrincipal, p911.funcionesPrincipales)]} />
+      </div>
+      <div style={FO.hoja}>
+        {ini()}
+        <div style={FO.tit}>VI. PERSONAL POR FUNCIÓN (continuación)</div>
+        <TablaFO cabeceras={[[{ t: "Nivel educativo", rowSpan: 2 }, { t: "Educación física", colSpan: 2 }, { t: "Act. artísticas", colSpan: 2 }, { t: "Act. tecnológicas", colSpan: 2 }, { t: "Idiomas", colSpan: 2 }, { t: "Administrativo, auxiliar y de servicios", colSpan: 2 }], ["H", "M", "H", "M", "H", "M", "H", "M", "H", "M"]]}
+          filas={[...p911.gridEspecial.map((f) => gridFila(f, p911.funcionesEspeciales)), subtot(p911.gridEspecial, p911.funcionesEspeciales)]} />
+        <div style={{ ...FO.preg, textAlign: "right", fontWeight: 700 }}>Total de personal (suma de subtotales): {p911.totalPersonal}</div>
+        <div style={FO.preg}>3. Docentes con discapacidad: H {p911.docentesConDiscapacidad.hombres} · M {p911.docentesConDiscapacidad.mujeres} · Total {p911.docentesConDiscapacidad.total}</div>
+        <div style={FO.preg}>5. Personal directivo con grupo, docente y docente especial según tiempo dedicado a la función académica.</div>
+        <TablaFO cabeceras={["Tiempo completo", "Tres cuartos de tiempo", "Medio tiempo", "Por horas", "Total"]} filas={[[{ t: tiempo("Tiempo completo") }, tiempo("Tres cuartos de tiempo"), tiempo("Medio tiempo"), tiempo("Por horas"), E911_TIEMPOS_DEDICACION.reduce((s, t) => s + tiempo(t), 0)]]} />
+        <div style={FO.tit}>VII. AULAS</div>
+        <TablaFO cabeceras={["Aulas", "Primero", "Segundo", "Tercero", "Más de un grado", "Total"]} filas={[
+          ["Existentes", { gris: true }, { gris: true }, { gris: true }, { gris: true }, n0(infra.aulasExistentes)],
+          ["En uso", ...aulasUso, aulasUso.reduce((a, b) => a + b, 0)],
+          ["Adaptadas", ...aulasAd, aulasAd.reduce((a, b) => a + b, 0)],
+        ]} />
+        <div style={FO.tit}>VIII. IDIOMAS · IX. LIBROS DE TEXTO · X. LENGUA DE SEÑAS MEXICANA</div>
+        <TablaFO cabeceras={["Inglés", "Francés", "Alemán", "Japonés", "Italiano", "Otro"]} filas={[[{ t: infra.idiomas && infra.idiomas.ingles ? 1 : 0 }, ...["frances", "aleman", "japones", "italiano", "otro"].map((k) => (infra.idiomas && infra.idiomas[k] ? 1 : 0))]]} />
+        <div style={FO.preg}>IX.1 Al inicio del ciclo 2026-2027, ¿la escuela ya contaba con los libros de texto completos? <b>{infra.librosCompletos || "—"}</b>{infra.librosCompletos === "No" ? ` · Semana: ${infra.librosSemana || "—"}` : ""}</div>
+        <div style={FO.preg}>X.1 Alumnas y alumnos que utilizan la Lengua de Señas Mexicana: H {n0(c("lsm|Total|Hombres"))} · M {n0(c("lsm|Total|Mujeres"))} · Total {n0(c("lsm|Total|Hombres")) + n0(c("lsm|Total|Mujeres"))}</div>
+      </div>
+      <OficializacionFO titulo="EDUCACIÓN SECUNDARIA" codigo="911.5" />
+    </div>
+  );
+}
+
+function AnexoOficialImprimible({ apartadoId, titulo, codigo, comp, conIdentificacion }) {
+  const ap = APARTADOS_911_COMPLEMENTOS.find((a) => a.id === apartadoId);
+  return (
+    <div>
+      {conIdentificacion && <IdentificacionFO titulo={titulo} />}
+      <div style={{ ...FO.hoja, pageBreakAfter: "auto", breakAfter: "auto" }}>
+        <EncabezadoFO izquierda="" centro={titulo} derecha="INICIO DE CURSOS 2026-2027" codigo={codigo} />
+        {ap.preguntas.map((p) => (
+          <div key={p.id} style={{ marginBottom: "5px", breakInside: "avoid" }}>
+            <div style={FO.preg}>{p.texto}</div>
+            <PreguntaComplemento911 p={p} valores={comp} soloLectura />
+          </div>
+        ))}
+      </div>
+      {codigo && <OficializacionFO titulo={titulo} codigo={codigo} />}
+    </div>
+  );
+}
+
+function ComprobanteOficialImprimible({ e911, seccion1 }) {
+  const p = e911.personal911;
+  const tf = (fn) => (p.totalesPorFuncion.find((x) => x.funcion === fn) || { total: 0 }).total;
+  const tiempo = (t) => (p.tiempoDedicacion.find((x) => x.tiempo === t) || { total: 0 }).total;
+  const s1 = (g) => n0(seccion1.existencia[g].hombres) + n0(seccion1.existencia[g].mujeres);
+  const d = IDENT_911_OFICIAL;
+  return (
+    <div style={{ ...FO.hoja, pageBreakAfter: "auto", breakAfter: "auto", fontSize: "9px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "10px" }}>
+        <div style={{ fontSize: "8.5px" }}>
+          <div style={{ fontWeight: 800, color: "#1f4e3d" }}>EDUCACIÓN SECUNDARIA</div><div style={{ margin: "6px 0", fontWeight: 700 }}>OFICIALIZADO</div>
+          {[["CLAVE DEL CCT", d.cct], ["TURNO", d.turno], ["NOMBRE DEL CCT", d.nombre], ["NOMBRE DEL DIRECTOR", `${d.dirAp1} ${d.dirAp2} ${d.dirNombre}`], ["ZONA", d.zona], ["REGIÓN", d.servicioRegional]].map(([a, b]) => (
+            <div key={a} style={{ marginBottom: "6px" }}><div style={{ fontSize: "7.5px", opacity: 0.7 }}>{a}</div><div style={{ fontWeight: 700 }}>{b}</div></div>
+          ))}
+        </div>
+        <div>
+          <div style={FO.tit}>INICIO DE CURSOS 2026-2027</div>
+          <TablaFO cabeceras={["", "1°", "2°", "3°", "TOTAL"]} filas={[
+            ["ALUMNOS", ...e911.porGrado.map((g) => g.total), e911.porGrado.reduce((s, g) => s + g.total, 0)],
+            ["GRUPOS", ...e911.porGrado.map((g) => g.grupos), e911.porGrado.reduce((s, g) => s + g.grupos, 0)],
+          ]} />
+          <TablaFO cabeceras={["PERSONAL POR FUNCIÓN", ""]} filas={[
+            ["Personal directivo con grupo", tf("Personal directivo con grupo")], ["Personal directivo sin grupo", tf("Personal directivo sin grupo")],
+            ["Subdirector de gestión", tf("Subdirector de gestión escolar")], ["Personal docente", tf("Personal docente")], ["Tutores", tf("Tutor")],
+            ["Profesores de educación física", tf("Profesor de educación física")], ["Profesores de actividades artísticas", tf("Profesor de actividades artísticas")],
+            ["Profesores de actividades tecnológicas", tf("Profesor de actividades tecnológicas")], ["Profesores de idiomas", tf("Profesor de idiomas")],
+            ["Personal administrativo aux. y de servicios", tf("Personal administrativo, auxiliar y de servicios")], [{ t: "TOTAL DE PERSONAL", b: true, izq: true }, { t: p.totalPersonal, b: true }],
+            ["Tiempo completo", tiempo("Tiempo completo")], ["Tres cuartos de tiempo", tiempo("Tres cuartos de tiempo")], ["Medio tiempo", tiempo("Medio tiempo")], ["Por horas", tiempo("Por horas")],
+            [{ t: "TOTAL DE PERSONAL DOCENTE", b: true, izq: true }, { t: E911_TIEMPOS_DEDICACION.reduce((s, t) => s + tiempo(t), 0), b: true }],
+          ]} />
+          <div style={FO.tit}>FIN DE CURSOS 2025-2026</div>
+          <TablaFO cabeceras={["", "1°", "2°", "3°", "TOTAL"]} filas={[
+            ["ALUMNOS", s1("1"), s1("2"), s1("3"), s1("1") + s1("2") + s1("3")],
+            ["GRUPOS", ...["1", "2", "3"].map((g) => n0(seccion1.existencia[g].grupos)), ["1", "2", "3"].reduce((s, g) => s + n0(seccion1.existencia[g].grupos), 0)],
+          ]} />
+          <div style={{ display: "flex", justifyContent: "space-around", marginTop: "40px", textAlign: "center" }}>
+            <div style={{ borderTop: "1px solid #000", width: "180px", paddingTop: "3px" }}>FIRMA DEL DIRECTOR</div>
+            <div style={{ border: "1px dashed #999", width: "150px", height: "80px", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>SELLO DE LA ESCUELA</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelImprimirFormatosOficiales({ e911 }) {
+  const [imprimiendo, setImprimiendo] = useState(null);
+  const [datos, setDatos] = useState(null);
+  const imprimir = async (cual) => {
+    const [{ seccion1, infraestructura }, comp] = await Promise.all([cargarSeccion1EInfraestructuraE911(), cargarComplementos911()]);
+    setDatos({ seccion1, infra: infraestructura, comp });
+    setImprimiendo(cual);
+    document.body.classList.add("solo-portal");
+    window.onafterprint = () => { document.body.classList.remove("solo-portal"); setImprimiendo(null); window.onafterprint = null; };
+    setTimeout(() => window.print(), 250);
+  };
+  const BOTONES = [
+    ["cuestionario", "Cuestionario 911.5 (completo)"], ["computo", "Anexo de cómputo y audiovisuales"],
+    ["infra", "Anexo de infraestructura (911.I)"], ["ods", "Objetivos de Desarrollo Sostenible"], ["comprobante", "Comprobante (resumen oficializado)"],
+  ];
+  return (
+    <div className="card flex flex-col gap-2" style={{ borderColor: "var(--azul)" }}>
+      {imprimiendo && datos && ReactDOM.createPortal(
+        <div className="solo-impresion portal-impresion">
+          {imprimiendo === "cuestionario" && <Formato911OficialImprimible e911={e911} seccion1={datos.seccion1} infra={datos.infra} comp={datos.comp} />}
+          {imprimiendo === "computo" && <AnexoOficialImprimible apartadoId="computo" titulo="ANEXO DE RECURSOS COMPUTACIONALES Y AUDIOVISUALES" codigo="" comp={datos.comp} conIdentificacion />}
+          {imprimiendo === "infra" && <AnexoOficialImprimible apartadoId="infra" titulo="ANEXO DE INFRAESTRUCTURA · MÓDULO DE INFRAESTRUCTURA" codigo="911.I" comp={datos.comp} />}
+          {imprimiendo === "ods" && <AnexoOficialImprimible apartadoId="ods" titulo="ATENCIÓN A LOS OBJETIVOS DE DESARROLLO SOSTENIBLE" codigo="" comp={datos.comp} />}
+          {imprimiendo === "comprobante" && <ComprobanteOficialImprimible e911={e911} seccion1={datos.seccion1} />}
+        </div>,
+        document.body
+      )}
+      <div className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Imprimir en el formato oficial 2026-2027 (con los datos actuales de la app)</div>
+      <p className="text-sm" style={{ opacity: 0.7 }}>
+        Arma cada documento con la misma estructura que los oficiales del 911 y lo llena con lo que hoy tiene tu app. Si modificas algo (una ficha, las aulas, los anexos), vuelve a imprimir y sale actualizado. En la ventana de impresión puedes elegir <b>"Guardar como PDF"</b>.
+      </p>
+      <div className="flex gap-2 flex-wrap">
+        {BOTONES.map(([id, et]) => <button key={id} className="btn-secundario" style={{ fontSize: "0.75rem" }} onClick={() => imprimir(id)}><Printer size={13} /> {et}</button>)}
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Estadística 911.5 — ahora en su propia pestaña (ya no dentro de
    Alumnos → Estadística), igual que Programa Analítico y PIC. ---------- */
 function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
@@ -21423,10 +21780,11 @@ function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
       {modoImpresion && <Estadistica911Imprimible e911={e911} seccion1={datosImpresion.seccion1} infraestructura={datosImpresion.infraestructura} />}
 
       <PanelDocumentosOficiales titulo="911 · 2026-2027 — documentos oficiales finalizados (21 oct 2026)" documentos={DOCS_OFICIALES_911_2026}
-        nota="Sube aquí los PDF que te dio la plataforma oficial ya oficializados. Quedan guardados en tu Hoja (privada) para consultarlos o imprimirlos cuando los pidan." />
+        nota="Cada documento tiene su formato oficial en blanco y rellenable (para volver a llenarlo si algo cambia; ábrelo con Adobe Acrobat Reader o Chrome, escribe en las casillas y guarda). Además puedes subir aquí el PDF oficializado que te dio la plataforma: queda en tu Hoja (privada)." />
       <BotonAplicarOficial titulo="Dejar la app igual que el 911 oficial 2026-2027"
         descripcion="Copia a tu app las cifras que quedaron en los documentos oficiales: Sección I (fin de cursos), becas, egresados, abandono escolar, aulas (3 existentes; en uso 1° y más de un grado), idiomas y libros, ODS, anexos de cómputo e infraestructura, y en el personal: función, licenciatura titulado y tiempo completo. A los alumnos sin tipo de primaria les pone Primaria general, y quita la lengua indígena de las fichas (el 911 oficial reporta 0 hablantes; el dato anterior queda respaldado en la ficha)."
         aplicar={aplicarCifrasOficiales911_2026} />
+      <PanelImprimirFormatosOficiales e911={e911} />
 
       <div className="card">
         <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Estadística 911.5 — apoyo de captura</div>
