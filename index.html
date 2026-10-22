@@ -21238,12 +21238,13 @@ async function aplicarCifrasOficiales911_2026() {
   return resultados;
 }
 
-function BotonAplicarOficial({ titulo, descripcion, aplicar }) {
+function BotonAplicarOficial({ titulo, descripcion, aplicar, opciones = [] }) {
   const [paso, setPaso] = useState("inicio"); // inicio | confirmar | aplicando | listo
   const [resultados, setResultados] = useState([]);
+  const [elegidas, setElegidas] = useState({});
   const correr = async () => {
     setPaso("aplicando");
-    try { setResultados(await aplicar()); } catch (e) { setResultados([[e.message || "Error", false]]); }
+    try { setResultados(await aplicar(elegidas)); } catch (e) { setResultados([[e.message || "Error", false]]); }
     setPaso("listo");
   };
   return (
@@ -21251,6 +21252,11 @@ function BotonAplicarOficial({ titulo, descripcion, aplicar }) {
       <div className="font-display" style={{ fontWeight: 700, fontSize: "0.88rem" }}>{titulo}</div>
       <p className="text-sm" style={{ opacity: 0.7 }}>{descripcion}</p>
       {paso === "inicio" && <button className="btn-secundario" onClick={() => setPaso("confirmar")}>Aplicar a mi app…</button>}
+      {paso === "confirmar" && opciones.map((o) => (
+        <label key={o.id} className="flex items-center gap-2 text-sm" style={{ cursor: "pointer" }}>
+          <input type="checkbox" checked={!!elegidas[o.id]} onChange={(e) => setElegidas((x) => ({ ...x, [o.id]: e.target.checked }))} /> {o.etiqueta}
+        </label>
+      ))}
       {paso === "confirmar" && (
         <div className="flex gap-2 flex-wrap items-center">
           <span className="text-sm" style={{ fontWeight: 600 }}>¿Seguro? Se reemplazan esos datos en tu Hoja.</span>
@@ -21292,7 +21298,9 @@ const COMITES_REPASE_OFICIAL_2026 = {
   lectura: { integrantes: ["NEFTALID BLADIMIR ORTAN AGUILAR", "SALVADOR OLVERA BARRERA"], actividades: ["Círculos de lectura, lectura en voz alta.", "Promover actividades como Olimpiadas de Matemáticas, Torneo de Ajedrez, Competencias Deportivas, Coro Escolar, Concursos de lecto-escritura, entre otras.", "Atención a los niños de acuerdo con sus necesidades de aprendizaje."] },
   convivencia: { integrantes: ["SANTIAGO CASTRO IBARRA", "ALEJANDRA VARGAS ORTIZ"], actividades: [] },
   contraloria: { integrantes: ["ADOLFO ARELLANO VARGAS", "ALEJANDRA CHOLULA ROJAS"], actividades: ["Acompañar en la administración de recursos a la Asociación de Padres de Familia", "Participación en la rendición de cuentas ante padres de familia y la comunidad"] },
-  mujeres: { integrantes: ["JUANA VARGAS TLACOCALA", "JUDITH PEREZ CERON"], actividades: ["Actividades con madres de familia (asesorías, charlas y capacitaciones)", "Elaboración de estrategias para fomentar la igualdad entre hombres y mujeres"] },
+  // El director cambió en REPASE "X. Mujeres constructoras de paz" por
+  // "IV. Alimentación saludable" (22 oct 2026); quedan las mismas integrantes.
+  alimentacion: { integrantes: ["JUANA VARGAS TLACOCALA", "JUDITH PEREZ CERON"], actividades: [] },
 };
 const PROGRAMAS_REPASE_OFICIAL_2026 = [
   ["Federal", "La Escuela es Nuestra", ""],
@@ -21307,7 +21315,7 @@ const ASUNTOS_REPASE_OFICIAL_2026 = [
   ["FOMENTAR LA LECTURA ENTRE PADRES Y ALUMNOS EN COORDINACION.", "1.- DE MANERA ORGANIZADA SE REALIZAN ACUERDOS CON EL DOCENTE Y TUTOR PARA FOMENTAR LA LECTURA. EN ENERO DE 2027.\n2.- LOS MIEMBROS DEL COMITÉ NOS COMPROMETEMOS A REALIZAR LOS OFICIOS PERTINENTES. EN ABRIL DE 2027.\n3.- IMPLEMENTAR LO NECESARIO PARA QUE LOS TALLERES A REALIZAR CUENTEN CON EL EQUIPO Y MATERIAL ADECUADO DURANTE EL CICLO ESCOLAR. EN JUNIO DE 2027."],
 ];
 
-async function aplicarActaOficialREPASE2026() {
+async function aplicarActaOficialREPASE2026(opciones = {}) {
   const resultados = [];
   // Respaldo de lo que había antes, por si se necesita consultar.
   const [datosPrev, intsPrev, comsPrev, progsPrev, asunPrev] = await Promise.all([
@@ -21316,12 +21324,14 @@ async function aplicarActaOficialREPASE2026() {
   ]);
   const okR = await setStorage("consejo-respaldo-antes-repase-oficial", { fecha: hoyISO(), datos: datosPrev, integrantes: intsPrev, comites: comsPrev, programas: progsPrev, asuntos: asunPrev });
   resultados.push(["Respaldo de los datos anteriores", okR]);
-  const okD = await setStorage("consejo-datos", {
-    ...(datosPrev || {}), correoEscuela: CORREO_ESCUELA_REPASE, lugarPublicacion: "Cancha de la escuela",
-    fechaPublicacion: "2026-08-31", fechaSesion: "2026-09-04", horaInicio: "11:00", horaFinal: "13:00",
-    numAsistentes: "10", numIntegrantesConsejo: "13",
-  });
-  resultados.push(["Datos generales: sesión del 4 sept 2026, 11:00–13:00, 10 asistentes, 13 integrantes", okD]);
+  // Las fechas son opcionales: el director decide si deja las suyas (las del
+  // calendario del periodo) o usa las que quedaron en el acta.
+  const fechasActa = opciones.fechas ? {
+    lugarPublicacion: "Cancha de la escuela", fechaPublicacion: "2026-08-31", fechaSesion: "2026-09-04",
+    horaInicio: "11:00", horaFinal: "13:00", numAsistentes: "10",
+  } : {};
+  const okD = await setStorage("consejo-datos", { ...(datosPrev || {}), correoEscuela: CORREO_ESCUELA_REPASE, numIntegrantesConsejo: "13", ...fechasActa });
+  resultados.push([opciones.fechas ? "Datos generales con las fechas del acta (4 sept 2026, 11:00–13:00, 10 asistentes)" : "Datos generales (se conservaron tus fechas y horario)", okD]);
   for (const x of intsPrev) if (x && x.id) await borrarStorage(`consejo-integrante:${x.id}`);
   let okI = true;
   for (let i = 0; i < INTEGRANTES_REPASE_OFICIAL_2026.length; i++) {
@@ -21342,7 +21352,7 @@ async function aplicarActaOficialREPASE2026() {
     };
     if (!(await setStorage(`consejo-comite:${c.id}`, reg))) okC = false;
   }
-  resultados.push(["Comités: I Salud, II Protección civil, III Lectura, V Convivencia, IX Contraloría, X Mujeres constructoras de paz", okC]);
+  resultados.push(["Comités: I Salud, II Protección civil, III Lectura, IV Alimentación saludable, V Convivencia, IX Contraloría", okC]);
   for (const x of progsPrev) if (x && x.id) await borrarStorage(`consejo-programa:${x.id}`);
   let okPr = true;
   for (let i = 0; i < PROGRAMAS_REPASE_OFICIAL_2026.length; i++) {
@@ -22546,8 +22556,9 @@ function ConsejoEscolar({ onStamp, alumnos, gradosPermitidos, personal }) {
       <PanelDocumentosOficiales titulo="REPASE 2026-2027 — documentos oficiales" documentos={DOCS_OFICIALES_REPASE_2026}
         nota="Sube el acta que generó REPASE y, cuando lo termines, el PDF de evidencias con fotos. Quedan guardados en tu Hoja (privada)." />
       <BotonAplicarOficial titulo="Dejar el Consejo igual que el acta oficial del REPASE"
-        descripcion="Copia a la app lo que quedó en el acta oficial (7 oct 2026): sesión del 4 de septiembre de 2026 de 11:00 a 13:00 en la cancha, 10 asistentes, los 13 integrantes, los 6 comités (incluye Mujeres constructoras de paz; quita Alimentación), 5 programas, 3 asuntos con sus acuerdos y las preguntas. Antes guarda un respaldo de lo que había."
-        aplicar={aplicarActaOficialREPASE2026} />
+        descripcion="Copia a la app lo que quedó en el acta oficial: los 13 integrantes, los 6 comités (I Salud, II Protección civil, III Lectura, IV Alimentación saludable, V Convivencia, IX Contraloría), 5 programas, 3 asuntos con sus acuerdos (fechas 2026-2027) y las preguntas. Tus fechas y horario de la sesión se conservan, salvo que marques la casilla. Antes guarda un respaldo de lo que había."
+        aplicar={aplicarActaOficialREPASE2026}
+        opciones={[{ id: "fechas", etiqueta: "También usar las fechas del acta: convocatoria 31 ago, sesión 4 sept 2026 de 11:00 a 13:00, cancha de la escuela, 10 asistentes" }]} />
 
       <div className="flex gap-2 flex-wrap">
         {SUBTABS.map((t) => (
