@@ -20750,21 +20750,16 @@ const SI_NO = ["Sí", "No"];
 const GRADOS_HM = ["1°", "2°", "3°"];
 const COLS_HMT = ["Hombres", "Mujeres", "Total"];
 const COLS_CONDICIONES_EGRESO = ["Hombres", "Mujeres", "Total", "Hablantes de lenguas indígenas", "Nacidos fuera de México", "Con discapacidad", "Con trastorno", "Aptitudes sobresalientes", "Otras condiciones"];
-const MOTIVOS_NO_CONCLUSION_911 = [
-  "Acoso escolar (Bullying)", "Baja administrativa (disciplina)", "Baja temporal", "Cambio de escuela",
-  "Cambio de residencia", "Consumo y/o abuso de sustancias", "Desinterés/falta de motivación",
-  "Desplazamiento forzado o crisis humanitaria", "Desvinculación de la familia con la escuela",
-  "Distancia o dificultad para llegar a la escuela", "Embarazo o unión conyugal temprana",
-  "Enfermedad o incapacidad sin apoyo suficiente", "Falta de recursos (transporte, uniforme, etc.)",
-  "Falta de tiempo para brindar atención diferenciada", "Malas condiciones (otras)", "Otro motivo",
-];
+const MOTIVOS_NO_CONCLUSION_911 = ["Acoso escolar (Bullying)", "Baja administrativa (disciplina)", "Baja temporal", "Cambio de escuela", "Cambio de residencia", "Consumo y/o abuso de sustancias", "Desinterés/falta de motivación", "Desplazamiento forzado o crisis humanitaria", "Desvinculación de la familia con la escuela", "Distancia o dificultad para llegar a la escuela", "Embarazo o unión conyugal temprana", "Enfermedad o incapacidad sin apoyo suficiente", "Falta de recursos para transporte, uniforme, materiales o alimentación", "Falta de tiempo para brindar atención diferenciada", "Malas condiciones de las instalaciones escolares", "Migración del alumno o de la familia", "Necesidad de trabajar para apoyar la economía familiar", "Problemas con el bienestar emocional o autoestima", "Problemas familiares/violencia intrafamiliar", "Rezago en los aprendizajes", "Violencia/inseguridad del entorno", "Se desconoce el motivo", "Otros"];
+const PREGUNTAS_INFRA_911 = [{"id": "ctsInmueble", "tipo": "numeros", "texto": "I.1 Número de centros de trabajo que utilizan las instalaciones del inmueble.", "filas": ["Cantidad"], "columnas": ["Número"]}, {"id": "nivelesInmueble", "tipo": "varias", "texto": "I.2 Niveles o servicios educativos que se imparten en el inmueble.", "opciones": ["Inicial", "Preescolar", "Primaria", "Secundaria", "Capacitación para el Trabajo", "Bachillerato General", "Bachillerato Tecnológico o Equivalente", "Técnico Profesional", "Licenciatura", "Posgrado"]}, {"id": "construidoEducativo", "tipo": "opcion", "texto": "I.3 ¿El inmueble se construyó para uso educativo? (Si es sí, pase a la 5)", "opciones": SI_NO}, {"id": "finConstruccion", "tipo": "opcion", "texto": "I.4 Fin para el cual fue construido el inmueble.", "opciones": ["Anexo de oficina pública", "Casa de la cultura", "Casa habitación", "Edificios de departamentos", "Local comercial", "Otros"]}, {"id": "usoTemporal", "tipo": "opcion", "texto": "I.5 ¿Utiliza temporalmente esta construcción para impartir educación básica?", "opciones": SI_NO}, {"id": "sinConstruccionPropia", "tipo": "varias", "texto": "I.6 Razón por la que no cuenta con una construcción propia.", "opciones": ["a) Están construyendo las instalaciones", "b) Van a comenzar a construir las instalaciones", "c) En espera de recursos para la construcción", "d) En espera de ocupar las instalaciones nuevas", "e) Sin documentación que dé certeza legal del predio", "f) Reubicación de las instalaciones", "g) En proceso de demolición/acondicionamiento", "h) Otra situación"]}, {"id": "antiguedad", "tipo": "opcion", "texto": "I.7 Antigüedad del inmueble.", "opciones": ["a) Cinco años o menos", "c) De 6 a 12 años", "b) De 13 a 22 años", "d) De 23 años o más"]}, {"id": "espacios", "tipo": "numeros", "texto": "I.8 Número de espacios que existen en la escuela, según su condición.", "filas": ["Dirección", "Orientación vocacional", "Servicio médico", "Bibliotecas", "Canchas deportivas", "Áreas verdes o jardines", "Gimnasio", "Alberca", "Cafetería o comedor", "Almacén o bodega", "Parcela escolar o terreno de cultivo", "Área de juegos infantiles", "Talleres", "Aula de cómputo", "Aula de actividades artísticas", "Área de usos múltiples (audiovisual)", "Aulas móviles", "Cocina", "Cubículo o sala de maestros", "Laboratorio", "Patio cívico", "Sala de usos múltiples (auditorio)", "Cajones de estacionamiento"], "columnas": ["En uso / funcional", "En desuso / no funcional"]}, {"id": "terreno", "tipo": "opcion", "texto": "I.9 Medida aproximada del terreno.", "opciones": ["a) Menos de 50 m²", "b) De 50 a 499 m²", "c) De 500 a 999 m²", "d) De 1000 a 9999 m²", "e) De 10,000 o más m²"]}, {"id": "edificios", "tipo": "numeros", "texto": "I.10 ¿Cuántos edificios son utilizados para educación básica?", "filas": ["Cantidad"], "columnas": ["Número"]}, {"id": "edificiosDetalle", "tipo": "numeros", "texto": "I.11 Identificación de cada edificio, niveles y espacios.", "filas": ["Edificio 1", "Edificio 2", "Edificio 3"], "columnas": ["Nombre o clave", "Niveles", "Espacios"], "textoLibre": true}, {"id": "muros", "tipo": "opcion", "texto": "I.12 Material predominante de paredes o muros.", "opciones": ["Adobe", "Materiales precarios", "Lámina metálica, asbesto o cartón", "Madera", "Módulos prefabricados", "Tabique, ladrillo, block, piedra, cantera, cemento o concreto", "Otro"]}, {"id": "techos", "tipo": "opcion", "texto": "I.13 Material predominante de los techos.", "opciones": ["Lámina metálica, asbesto o cartón", "Losa de concreto o viguetas con bovedilla", "Materiales precarios", "Multitecho", "Teja", "Terrado con viguería", "Otro"]}, {"id": "pisos", "tipo": "opcion", "texto": "I.14 Material predominante de los pisos.", "opciones": ["Cemento o firme", "Loseta o algún recubrimiento", "Madera", "Tierra o materiales removibles", "Otro"]}, {"id": "problemasEdificio", "tipo": "varias", "texto": "I.15 Problemas que presenta el edificio.", "opciones": ["Desprendimiento de acabados en techo o columnas", "Exposición de varillas en losas o columnas", "Desperfectos en cancelería de puertas", "Desperfectos en cancelería de ventanas", "Filtraciones en techo", "Flexiones en techo", "Fisuras en columnas", "Fisuras en techos o muros", "Falla la instalación eléctrica", "Falla la instalación hidráulica-sanitaria", "Falla la red de voz y datos", "Humedad en muros", "Hundimiento o inclinación de pisos", "Luminarias en mal estado", "Movimiento en muros", "El edificio se inunda", "Problemas en el aire acondicionado", "Pisos fisurados", "Vibración excesiva en circulaciones, escaleras o techos"]}, {"id": "suministroAgua", "tipo": "numeros", "texto": "I.16 Suministro de agua en el inmueble (escriba Sí o No; en Red pública indique si el servicio es regular).", "filas": ["Red pública", "Pozo", "Cuerpos de agua", "Pipas", "Otro"], "columnas": ["¿Existe?", "Servicio regular"], "textoLibre": true}, {"id": "almacenamientoAgua", "tipo": "numeros", "texto": "I.17 Medio de almacenamiento de agua (Sí o No).", "filas": ["Cisterna", "Tinacos", "Tanque", "Otro"], "columnas": ["¿Existe?"], "textoLibre": true}, {"id": "aguaPotableRegular", "tipo": "opcion", "texto": "I.18 ¿Cuenta con suministro regular de agua potable (para beber) al menos tres veces por semana?", "opciones": SI_NO}, {"id": "energia", "tipo": "opcion", "texto": "I.19 Tipo de suministro de energía eléctrica.", "opciones": ["Red pública con contrato", "Red pública sin contrato", "Planta generadora de luz", "Paneles solares con batería (PSB)", "No se cuenta con suministro de energía"]}, {"id": "respaldoElectrico", "tipo": "opcion", "texto": "I.20 ¿Cuenta con fuente eléctrica secundaria o de respaldo?", "opciones": SI_NO}, {"id": "interrupciones", "tipo": "opcion", "texto": "I.21 Interrupciones del suministro eléctrico en horario escolar (últimos 30 días de clases).", "opciones": ["Ninguna", "De una a dos", "De tres a cinco", "Seis o más", "No sabe"]}, {"id": "gas", "tipo": "opcion", "texto": "I.22 Tipo de suministro de gas.", "opciones": ["Gas natural", "Gas estacionario", "Cilindros", "No cuenta con instalación de gas"]}, {"id": "descarga", "tipo": "opcion", "texto": "I.23 Tipo de descarga del inmueble.", "opciones": ["Drenaje o colector público", "Fosa séptica", "Planta de tratamiento", "Otro"]}, {"id": "separacionAguas", "tipo": "opcion", "texto": "I.24 ¿Existe separación de aguas negras y pluviales?", "opciones": SI_NO}, {"id": "banos", "tipo": "numeros", "texto": "I.25 Cuartos de baño de la escuela.", "filas": ["Cantidad"], "columnas": ["Hombres", "Mujeres", "Mixtos"]}, {"id": "muebles", "tipo": "numeros", "texto": "I.26 Tazas sanitarias, mingitorios y letrinas.", "filas": ["Tazas sanitarias", "Mingitorios", "Letrinas"], "columnas": ["En uso", "Fuera de servicio", "Total"]}, {"id": "mueblesSexo", "tipo": "numeros", "texto": "I.27 Tazas, mingitorios o letrinas para hombres, mujeres y mixtos.", "filas": ["Cantidad"], "columnas": ["Hombres", "Mujeres", "Mixtos"]}, {"id": "mueblesUso", "tipo": "numeros", "texto": "I.28 Disponibles para uso de estudiantes, docentes/administrativos o ambos.", "filas": ["Tazas sanitarias", "Mingitorios", "Letrinas"], "columnas": ["Estudiantes", "Docentes y administrativos", "Ambos"]}, {"id": "lavamanos", "tipo": "numeros", "texto": "I.29 Lavamanos.", "filas": ["Hombres", "Mujeres", "Mixtos"], "columnas": ["En uso", "Fuera de servicio", "Total"]}, {"id": "bebederos", "tipo": "numeros", "texto": "I.30 Tomas de agua de bebederos.", "filas": ["Cantidad"], "columnas": ["En uso", "Fuera de servicio", "Total"]}, {"id": "areaMantenimiento", "tipo": "opcion", "texto": "I.31 ¿Cuenta con área de mantenimiento?", "opciones": SI_NO}, {"id": "rehabilitacion", "tipo": "opcion", "texto": "I.32 ¿Durante el último ciclo se realizaron obras de rehabilitación o mantenimiento mayor?", "opciones": SI_NO}, {"id": "obrasRehabilitacion", "tipo": "varias", "texto": "I.33 Obras de rehabilitación realizadas.", "opciones": ["Impermeabilización", "Albañilería", "Pintura general", "Restitución de la red hidráulica", "Restitución de la red sanitaria", "Reforzamiento estructural", "Restitución de la red eléctrica"]}, {"id": "construccionesNuevas", "tipo": "opcion", "texto": "I.34 ¿Durante el último ciclo se realizaron construcciones nuevas?", "opciones": SI_NO}, {"id": "tipoConstruccion", "tipo": "varias", "texto": "I.35 Tipo de construcción realizada.", "opciones": ["Aulas", "Espacios deportivos o recreativos", "Sanitarios", "Cubierta / Techumbre / Arcotecho", "Barda / Cerca perimetral", "Otros"]}, {"id": "programaPC", "tipo": "opcion", "texto": "I.36 ¿El inmueble tiene programa de protección civil?", "opciones": SI_NO}, {"id": "pautasSeguridad", "tipo": "numeros", "texto": "I.37 Pautas de seguridad para la prevención de riesgos.", "filas": ["Alarmas", "Botiquín de primeros auxilios", "Extintores", "Señalamientos para rutas de evacuación", "Salidas de emergencia", "Zonas de seguridad"], "columnas": ["Existentes", "En buenas condiciones"]}, {"id": "construccionesInmueble", "tipo": "varias", "texto": "I.38 Construcciones con las que cuenta el inmueble.", "opciones": ["Barda o cerca perimetral completa", "Barda o cerca perimetral incompleta", "Caseta de vigilancia", "Portón de acceso", "Cubierta / Techumbre / Arcotecho", "Otros"]}, {"id": "internado", "tipo": "opcion", "texto": "I.39 ¿El inmueble cuenta con internado?", "opciones": SI_NO}, {"id": "cajones", "tipo": "numeros", "texto": "I.40 Cajones de estacionamiento por destino.", "filas": ["Cantidad"], "columnas": ["Docentes", "Administrativos", "Persona con discapacidad", "Otros", "Total"]}, {"id": "discInfra", "tipo": "opcion", "texto": "II.1 ¿Cuenta con infraestructura adecuada para personas con discapacidad? (Si es no, no conteste las siguientes)", "opciones": SI_NO}, {"id": "discAreas", "tipo": "varias", "texto": "II.2 Áreas de servicio acondicionadas para personas con discapacidad.", "opciones": ["Aulas", "Biblioteca", "Laboratorios", "Talleres", "Cafetería", "Sanitarios", "Bebederos", "Otros"]}, {"id": "discBanos", "tipo": "numeros", "texto": "II.3 Cuartos de baño accesibles para personas con discapacidad.", "filas": ["En uso", "Fuera de servicio"], "columnas": ["Hombres", "Mujeres", "Mixtos", "Total"]}, {"id": "discSenal", "tipo": "numeros", "texto": "II.4 Señalamientos con el Símbolo Internacional de Accesibilidad.", "filas": ["Cantidad"], "columnas": ["Señalamientos"]}, {"id": "discAdecuaciones", "tipo": "varias", "texto": "II.5 Adecuaciones para personas con discapacidad.", "opciones": ["Rampas", "Pavimento táctil", "Barandales y pasamanos", "Área de detención del bastón", "Elevadores o plataformas", "Tira antiderrapante en escalera"]}, {"id": "discAula", "tipo": "opcion", "texto": "II.6 ¿Cuenta con aula especializada para atender estudiantes con discapacidad?", "opciones": SI_NO}, {"id": "discSenalDetalle", "tipo": "numeros", "texto": "II.7 Señalamientos para personas con discapacidad, por tipo.", "filas": ["Croquis con simbología braille", "Símbolo Mundial de Sordos", "Símbolo Mundial de Ciegos", "Símbolo de Accesibilidad para Perros Guía", "Símbolo de Teléfono de Texto para Sordos"], "columnas": ["Cantidad"]}, {"id": "discSoftware", "tipo": "numeros", "texto": "II.8 Software especializado para estudiantes con discapacidad.", "filas": ["Cantidad"], "columnas": ["Programas"]}, {"id": "discEquipo", "tipo": "numeros", "texto": "II.9 Equipo y mobiliario para personas con discapacidad.", "filas": ["Impresoras braille", "Pantallas de toque", "Atriles", "Teléfonos para personas sordas", "Computadoras con pantalla táctil", "Teclados alternativos", "Ratones (mouse) alternativos", "Magnificadores o lupas", "Comunicadores", "Otros"], "columnas": ["En operación", "En reparación", "Guardadas o en reserva", "Total"]}, {"id": "ctsComparte", "tipo": "texto", "texto": "II.10 Claves de los centros de trabajo con los que comparte el inmueble (separadas por comas; si no comparte, repita la misma clave)."}];
+const VALORES_INFRA_OFICIALES_911_2026 = {"ctsInmueble|Cantidad|Número": "3", "nivelesInmueble|Secundaria": true, "construidoEducativo": "Sí", "usoTemporal": "No", "antiguedad": "d) De 23 años o más", "espacios|Dirección|En uso / funcional": "1", "espacios|Áreas verdes o jardines|En uso / funcional": "1", "espacios|Patio cívico|En uso / funcional": "1", "terreno": "e) De 10,000 o más m²", "edificios|Cantidad|Número": "3", "edificiosDetalle|Edificio 1|Nombre o clave": "EDIFICIO 1", "edificiosDetalle|Edificio 1|Niveles": "1", "edificiosDetalle|Edificio 1|Espacios": "AULAS, DIRECCION, SALA DE COMPUTO", "edificiosDetalle|Edificio 2|Nombre o clave": "EDIFICIO 2", "edificiosDetalle|Edificio 2|Niveles": "1", "edificiosDetalle|Edificio 2|Espacios": "AULA", "edificiosDetalle|Edificio 3|Nombre o clave": "EDIFICIO 3", "edificiosDetalle|Edificio 3|Niveles": "1", "edificiosDetalle|Edificio 3|Espacios": "BAÑOS", "muros": "Tabique, ladrillo, block, piedra, cantera, cemento o concreto", "techos": "Losa de concreto o viguetas con bovedilla", "pisos": "Loseta o algún recubrimiento", "problemasEdificio|Filtraciones en techo": true, "suministroAgua|Red pública|¿Existe?": "Sí", "suministroAgua|Red pública|Servicio regular": "Sí", "suministroAgua|Pozo|¿Existe?": "No", "suministroAgua|Cuerpos de agua|¿Existe?": "No", "suministroAgua|Pipas|¿Existe?": "No", "suministroAgua|Otro|¿Existe?": "No", "almacenamientoAgua|Cisterna|¿Existe?": "No", "almacenamientoAgua|Tinacos|¿Existe?": "No", "almacenamientoAgua|Tanque|¿Existe?": "No", "almacenamientoAgua|Otro|¿Existe?": "No", "aguaPotableRegular": "No", "energia": "Paneles solares con batería (PSB)", "respaldoElectrico": "Sí", "interrupciones": "De una a dos", "gas": "No cuenta con instalación de gas", "descarga": "Drenaje o colector público", "separacionAguas": "No", "banos|Cantidad|Hombres": "1", "banos|Cantidad|Mujeres": "1", "muebles|Tazas sanitarias|En uso": "7", "muebles|Tazas sanitarias|Total": "7", "muebles|Mingitorios|En uso": "3", "muebles|Mingitorios|Total": "3", "mueblesSexo|Cantidad|Hombres": "6", "mueblesSexo|Cantidad|Mujeres": "4", "mueblesUso|Tazas sanitarias|Ambos": "7", "mueblesUso|Mingitorios|Ambos": "3", "lavamanos|Hombres|En uso": "2", "lavamanos|Hombres|Total": "2", "lavamanos|Mujeres|En uso": "2", "lavamanos|Mujeres|Total": "2", "areaMantenimiento": "No", "rehabilitacion": "No", "construccionesNuevas": "No", "programaPC": "Sí", "pautasSeguridad|Alarmas|Existentes": "1", "pautasSeguridad|Alarmas|En buenas condiciones": "1", "pautasSeguridad|Botiquín de primeros auxilios|Existentes": "1", "pautasSeguridad|Botiquín de primeros auxilios|En buenas condiciones": "1", "pautasSeguridad|Extintores|Existentes": "1", "pautasSeguridad|Extintores|En buenas condiciones": "1", "pautasSeguridad|Señalamientos para rutas de evacuación|Existentes": "2", "pautasSeguridad|Señalamientos para rutas de evacuación|En buenas condiciones": "2", "pautasSeguridad|Salidas de emergencia|Existentes": "1", "pautasSeguridad|Salidas de emergencia|En buenas condiciones": "1", "pautasSeguridad|Zonas de seguridad|Existentes": "2", "pautasSeguridad|Zonas de seguridad|En buenas condiciones": "2", "construccionesInmueble|Barda o cerca perimetral incompleta": true, "construccionesInmueble|Portón de acceso": true, "internado": "No", "discInfra": "No", "ctsComparte": "21ETV0473W"};
 
 const APARTADOS_911_COMPLEMENTOS = [
   {
-    id: "fin", titulo: "Fin de cursos 2025-2026 (ciclo anterior) — lo que no sale del padrón actual",
+    id: "fin", titulo: "Fin de cursos 2025-2026 (III. Becas, IV. Abandono escolar, V.8–V.11) — lo que no sale del padrón actual",
     preguntas: [
-      { id: "noConcluyeron", tipo: "numeros", texto: "Alumnas y alumnos que no concluyeron el ciclo escolar 2025-2026 (ES_05, pregunta 1).", filas: ["Total"], columnas: COLS_HMT },
-      { id: "motivos", tipo: "numeros", texto: "2. Motivo por el que no concluyeron el ciclo escolar.", filas: MOTIVOS_NO_CONCLUSION_911, columnas: COLS_HMT },
+      { id: "noConcluyeron", tipo: "numeros", texto: "IV.1 Alumnas y alumnos que no concluyeron el ciclo escolar 2025-2026 en esta escuela.", filas: ["Total"], columnas: COLS_HMT },
+      { id: "motivos", tipo: "numeros", texto: "IV.2 Motivo principal por el que no concluyeron el ciclo escolar (cada alumno en un solo motivo).", filas: MOTIVOS_NO_CONCLUSION_911, columnas: COLS_HMT },
       { id: "becas", tipo: "numeros", texto: "III.1 Alumnas y alumnos con beca y sin beca del ciclo 2025-2026 (solo becas monetarias).", filas: ["Con beca", "Sin beca"], columnas: ["Hombres", "Mujeres", "Total", "Con discapacidad", "Hablantes de lenguas indígenas", "Nacidos fuera de México"] },
       { id: "becasOrigen", tipo: "numeros", texto: "III.2 Origen de la beca.", filas: ["Beca Rita Cetina", "Otra beca federal", "Beca estatal", "Beca de fundaciones y asociaciones civiles", "Beca de la propia escuela", "Beca particular", "Beca municipal", "Otras"], columnas: COLS_HMT },
       { id: "egresados", tipo: "numeros", texto: "IV.8 Egresados de 3er. grado durante el ciclo 2025-2026 (incluya regularizados al 30 de septiembre), por edad.", filas: ["13 años o menos", "14 años", "15 años", "16 años", "17 años", "18 años y más"], columnas: COLS_CONDICIONES_EGRESO },
@@ -20832,17 +20827,13 @@ const APARTADOS_911_COMPLEMENTOS = [
     ],
   },
   {
-    id: "infra", titulo: "Anexo de infraestructura (911.I) — características del inmueble",
-    nota: "La plataforma sigue con más pestañas de este anexo (servicios, espacios, mobiliario, etc.); aquí quedan las primeras preguntas. Lo demás se captura directo en la plataforma.",
-    preguntas: [
-      { id: "ctsInmueble", tipo: "numeros", texto: "1. Número de centros de trabajo que utilizan las instalaciones del inmueble.", filas: ["Cantidad"], columnas: ["Número"] },
-      { id: "nivelesInmueble", tipo: "varias", texto: "2. Niveles o servicios educativos que se imparten en el inmueble.", opciones: ["Inicial", "Preescolar", "Primaria", "Secundaria", "Capacitación para el Trabajo", "Bachillerato General", "Bachillerato Tecnológico o Equivalente", "Técnico Profesional", "Licenciatura", "Posgrado"] },
-      { id: "construidoEducativo", tipo: "opcion", texto: "3. ¿El inmueble se construyó para uso educativo?", opciones: SI_NO },
-    ],
+    id: "infra", titulo: "Anexo de infraestructura (911.I)",
+    preguntas: PREGUNTAS_INFRA_911,
   },
 ];
 
-// Lo que estaba capturado en la plataforma oficial al 21 de octubre de 2026.
+// Lo que quedó en los documentos OFICIALES finalizados del 911 (comprobante de captura
+// del 21 de octubre de 2026): 911.5, Anexo de cómputo, Anexo de infraestructura y ODS.
 // Celdas: "<pregunta>|<fila>|<columna>". Lo que no aparece aquí vale 0 / vacío.
 const VALORES_PLATAFORMA_911_2026 = {
   "becas|Con beca|Hombres": "12", "becas|Con beca|Mujeres": "21", "becas|Con beca|Total": "33",
@@ -20868,8 +20859,8 @@ const VALORES_PLATAFORMA_911_2026 = {
   "accesoWifi|Docentes": true, "accesoWifi|Directivos / Administrativos": true,
   redEscolar: "No", edusat: "Sí", "edusatForma|Antena": true, servidores: "No",
   "automatizacion|Inscripción y control de alumnos|Letra": "a", "automatizacion|Gestión del personal docente|Letra": "a", "automatizacion|Registro de calificaciones|Letra": "a",
-  audiovisuales: "Sí", "audiovisualesNum|En operación|Proyectores": "3", "audiovisualesNum|En operación|Pantalla plana": "3", videoteca: "No",
-  "ctsInmueble|Cantidad|Número": "1", "nivelesInmueble|Secundaria": true, construidoEducativo: "Sí",
+  audiovisuales: "Sí", "audiovisualesNum|En operación|Proyectores": "4", "audiovisualesNum|En operación|Pantalla plana": "3", videoteca: "No",
+  ...VALORES_INFRA_OFICIALES_911_2026,
 };
 
 // Sección I tal como la tiene la plataforma oficial (fin de cursos 2025-2026).
@@ -20910,12 +20901,12 @@ function PreguntaComplemento911({ p, valores, onCambia, soloLectura }) {
                 <td style={{ ...estiloCelda, textAlign: "left" }}>{f}</td>
                 {p.columnas.map((c) => {
                   const clave = `${p.id}|${f}|${c}`;
-                  const v = valorComplemento911(valores, clave, "numeros");
+                  const v = valorComplemento911(valores, clave, p.textoLibre ? "texto" : "numeros");
                   return (
                     <td key={c} style={estiloCelda}>
-                      {soloLectura ? <span style={{ fontWeight: v && v !== "0" ? 700 : 400 }}>{v === "" ? "—" : v}</span> : (
-                        <input className="campo" style={{ width: p.letras ? "3rem" : "3.6rem", textAlign: "center" }}
-                          type={p.letras ? "text" : "number"} min="0" maxLength={p.letras ? 1 : undefined}
+                      {soloLectura ? <span style={{ fontWeight: v && v !== "0" ? 700 : 400 }}>{v === "" ? (p.textoLibre ? "" : "—") : v}</span> : (
+                        <input className="campo" style={{ width: p.textoLibre ? "100%" : p.letras ? "3rem" : "3.6rem", minWidth: p.textoLibre ? "5rem" : undefined, textAlign: "center" }}
+                          type={p.letras || p.textoLibre ? "text" : "number"} min="0" maxLength={p.letras ? 1 : undefined}
                           value={v} onChange={(e) => onCambia(clave, p.letras ? e.target.value.toLowerCase() : e.target.value)} />
                       )}
                     </td>
@@ -21030,7 +21021,7 @@ function PanelComplementos911({ onStamp }) {
       )}
       <p className="text-sm" style={{ opacity: 0.65 }}>
         Apartados que pide la plataforma 911 de 2026-2027 y que no salen del padrón actual (datos del ciclo anterior, Lengua de Señas, Objetivos de Desarrollo Sostenible y los anexos de cómputo e infraestructura).
-        {yaGuardado ? " Lo que ves es lo que está guardado en tu Hoja." : <> Vienen <b>precargados con lo que ya estaba capturado en la plataforma oficial el 21 de octubre de 2026</b>; revísalos y da <b>Guardar</b> para dejarlos en tu Hoja.</>}
+        {yaGuardado ? " Lo que ves es lo que está guardado en tu Hoja." : <> Vienen <b>precargados con lo que quedó en los documentos oficiales finalizados del 911 (21 de octubre de 2026)</b>; revísalos y da <b>Guardar</b> para dejarlos en tu Hoja.</>}
       </p>
       <div className="flex gap-2 flex-wrap">
         {APARTADOS_911_COMPLEMENTOS.map((a) => (
@@ -21052,7 +21043,7 @@ function PanelComplementos911({ onStamp }) {
       <div className="flex gap-2 flex-wrap">
         <button onClick={guardar} disabled={guardando} className="btn-primario">{guardando ? "Guardando…" : guardadoOk ? "✓ Guardado" : "Guardar"}</button>
         <button onClick={imprimir} className="btn-secundario"><Printer size={14} /> Imprimir borrador de estos apartados</button>
-        <button onClick={usarPlataforma} className="btn-secundario" style={{ fontSize: "0.75rem" }}>Volver a los datos de la plataforma (21 oct 2026)</button>
+        <button onClick={usarPlataforma} className="btn-secundario" style={{ fontSize: "0.75rem" }}>Volver a los datos oficiales (21 oct 2026)</button>
       </div>
     </div>
   );
@@ -21098,6 +21089,281 @@ function agregarSeccionIV8PDF(campos, c) {
   totales.forEach((v, j) => celdaE911(campos, 7, E911_PDF_IV8_COLUMNAS[j], E911_PDF_IV8_BOTTOMS[6], v));
 }
 
+/* ---------- Documentos oficiales finalizados (911 y REPASE) — 22 oct 2026 ----------
+   Los PDF que entrega la plataforma oficial (comprobante del 911, cuestionario
+   911.5 y sus anexos, acta del REPASE) llevan CURP, RFC y teléfonos, así que NO se
+   guardan en el repositorio (es público): el director los sube aquí y quedan en su
+   Hoja privada, partidos en renglones (mismo método que los PDF del Mapeador). */
+const DOCS_OFICIALES_911_2026 = [
+  { id: "911-comprobante-2026", titulo: "Comprobante de captura 911 (oficializado)", archivo: "C911_ComprobanteCaptura_20261021.pdf" },
+  { id: "911-cuestionario-2026", titulo: "Cuestionario 911.5 Secundaria 2026-2027", archivo: "C911_ES_2026_21ETV0473W.pdf" },
+  { id: "911-computo-2026", titulo: "Anexo de recursos computacionales y audiovisuales", archivo: "C911_ES_AnexoComputo_2026_21ETV0473W.pdf" },
+  { id: "911-infraestructura-2026", titulo: "Anexo de infraestructura (911.I)", archivo: "C911_ES_AnexoInfraestructura_2026_21ETV0473W.pdf" },
+  { id: "911-ods-2026", titulo: "Atención a los Objetivos de Desarrollo Sostenible", archivo: "C911_ES_ObjetivosDesarrolloSostenible_2026_21ETV0473W.pdf" },
+];
+const DOCS_OFICIALES_REPASE_2026 = [
+  { id: "repase-acta-2026", titulo: "Acta de instalación y primera sesión (REPASE, 7 oct 2026)", archivo: "473W_REPASE_2026.pdf" },
+  { id: "repase-evidencias-2026", titulo: "Evidencias del Consejo (PDF final con fotos)", archivo: "Evidencias_Consejo_2026-2027.pdf" },
+];
+
+async function guardarDocOficial(id, base64, nombre) {
+  const prefijo = `oficialdoc:parte:${id}:`;
+  const anteriores = await listarStorageObjeto(prefijo);
+  for (const i of Object.keys(anteriores)) await borrarStorage(`${prefijo}${i}`);
+  const total = Math.max(1, Math.ceil(base64.length / TAMANO_PARTE_PDF));
+  for (let i = 0; i < total; i++) {
+    const ok = await setStorage(`${prefijo}${String(i).padStart(4, "0")}`, base64.slice(i * TAMANO_PARTE_PDF, (i + 1) * TAMANO_PARTE_PDF));
+    if (!ok) throw new Error("No se pudo guardar el archivo en la Hoja.");
+  }
+  await setStorage(`oficialdoc:meta:${id}`, { nombre, partes: total, tamano: Math.round(base64.length * 0.75), fecha: hoyISO() });
+}
+async function cargarDocOficial(id) {
+  const partes = await listarStorageObjeto(`oficialdoc:parte:${id}:`);
+  return Object.keys(partes).sort().map((i) => partes[i]).join("");
+}
+
+function PanelDocumentosOficiales({ titulo, documentos, nota }) {
+  const [metas, setMetas] = useState({});
+  const [ocupado, setOcupado] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let vivo = true;
+    Promise.all(documentos.map((d) => getStorage(`oficialdoc:meta:${d.id}`, null))).then((rs) => {
+      if (!vivo) return;
+      const m = {}; documentos.forEach((d, i) => { if (rs[i]) m[d.id] = rs[i]; }); setMetas(m);
+    });
+    return () => { vivo = false; };
+  }, []);
+  const subir = async (doc, archivo) => {
+    if (!archivo) return;
+    setError("");
+    if (archivo.type && archivo.type !== "application/pdf") { setError("Elige un archivo PDF."); return; }
+    setOcupado(doc.id);
+    try {
+      const base64 = await new Promise((ok, mal) => {
+        const lector = new FileReader();
+        lector.onload = () => ok(String(lector.result).split(",")[1] || "");
+        lector.onerror = () => mal(new Error("No se pudo leer el archivo."));
+        lector.readAsDataURL(archivo);
+      });
+      await guardarDocOficial(doc.id, base64, archivo.name);
+      setMetas((m) => ({ ...m, [doc.id]: { nombre: archivo.name, tamano: archivo.size, fecha: hoyISO() } }));
+    } catch (e) { setError(e.message || "No se pudo subir."); }
+    setOcupado("");
+  };
+  const descargar = async (doc) => {
+    setOcupado(doc.id); setError("");
+    try {
+      const base64 = await cargarDocOficial(doc.id);
+      if (!base64) throw new Error("No se encontró el archivo en la Hoja.");
+      const blob = new Blob([base64ABytes(base64)], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = (metas[doc.id] && metas[doc.id].nombre) || doc.archivo;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch (e) { setError(e.message || "No se pudo descargar."); }
+    setOcupado("");
+  };
+  return (
+    <div className="card flex flex-col gap-2" style={{ borderColor: "var(--verde)" }}>
+      <div className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>{titulo}</div>
+      {nota && <p className="text-sm" style={{ opacity: 0.65 }}>{nota}</p>}
+      {documentos.map((d) => {
+        const m = metas[d.id];
+        return (
+          <div key={d.id} className="flex items-center justify-between gap-2 flex-wrap" style={{ borderTop: "1px solid var(--linea)", paddingTop: "0.4rem" }}>
+            <div style={{ fontSize: "0.8rem" }}>
+              <div style={{ fontWeight: 600 }}>{m ? "✓ " : ""}{d.titulo}</div>
+              <div style={{ fontSize: "0.7rem", opacity: 0.6 }}>{m ? `${m.nombre} · subido el ${fechaBonita(m.fecha)}` : `Pendiente de subir (${d.archivo})`}</div>
+            </div>
+            <div className="flex gap-2">
+              {m && <button className="btn-secundario" style={{ fontSize: "0.72rem" }} disabled={ocupado === d.id} onClick={() => descargar(d)}><Download size={13} /> Descargar</button>}
+              <label className="btn-secundario" style={{ fontSize: "0.72rem", cursor: "pointer" }}>
+                {ocupado === d.id ? "Subiendo…" : m ? "Reemplazar" : "Subir PDF"}
+                <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={(e) => { subir(d, e.target.files && e.target.files[0]); e.target.value = ""; }} />
+              </label>
+            </div>
+          </div>
+        );
+      })}
+      {error && <p className="text-sm" style={{ color: "var(--rojo)" }}>{error}</p>}
+    </div>
+  );
+}
+
+/* ---------- Aplicar las cifras oficiales del 911 2026-2027 a la app ----------
+   Deja la app igual que los documentos finalizados: Sección I (fin de cursos),
+   aulas/idiomas/libros, apartados nuevos y anexos, campos 911.5 del personal y
+   el tipo de primaria de cada alumno (solo si estaba vacío). */
+const INFRA_OFICIAL_911_2026 = {
+  aulasExistentes: "3",
+  aulasEnUso: { "1": "1", "2": "0", "3": "0", masDeUnGrado: "1" },
+  aulasAdaptadas: { "1": "0", "2": "0", "3": "0", masDeUnGrado: "0" },
+  idiomas: { ingles: true, frances: false, aleman: false, japones: false, italiano: false, otro: false, otroEspecifique: "" },
+  librosCompletos: "Sí",
+  librosSemana: "",
+};
+async function aplicarCifrasOficiales911_2026() {
+  const resultados = [];
+  const ok1 = await setStorage("e911-seccion1", JSON.parse(JSON.stringify(SECCION1_PLATAFORMA_911_2026)));
+  resultados.push(["Sección I (fin de cursos 2025-2026)", ok1]);
+  const ok2 = await setStorage("infraestructura911", INFRA_OFICIAL_911_2026);
+  resultados.push(["Aulas, idiomas y libros", ok2]);
+  const ok3 = await setStorage(CLAVE_COMPLEMENTOS_911, { valores: { ...VALORES_PLATAFORMA_911_2026 }, actualizado: hoyISO() });
+  resultados.push(["Apartados nuevos y anexos", ok3]);
+  const personal = await listarStorage("personal:");
+  let okP = true;
+  for (const p of personal) {
+    if (!p || !p.id) continue;
+    const esDirector = /director/i.test(p.PERSONAL_PUESTO || "");
+    const nuevo = {
+      ...p,
+      PERSONAL_E911_FUNCION: esDirector ? "Personal directivo con grupo" : "Personal docente",
+      PERSONAL_E911_NIVEL_ESTUDIOS: "Licenciatura titulado",
+      PERSONAL_E911_TIEMPO_DEDICACION: "Tiempo completo",
+      PERSONAL_E911_DISCAPACIDAD: p.PERSONAL_E911_DISCAPACIDAD || "No",
+      PERSONAL_GENERO: p.PERSONAL_GENERO || "H",
+    };
+    if (!(await setStorage(`personal:${p.id}`, nuevo))) okP = false;
+  }
+  resultados.push([`Personal (${personal.length}): función, nivel y tiempo completo`, okP]);
+  const alumnos = await listarStorage("alumno:");
+  let cambiados = 0, okA = true;
+  for (const a of alumnos) {
+    if (!a || !a.id || !a.ALUMNO_CURP || a.E911_PRIMARIA_TIPO) continue;
+    if (await setStorage(`alumno:${a.id}`, { ...a, E911_PRIMARIA_TIPO: "Primaria general" })) cambiados++; else okA = false;
+  }
+  resultados.push([`Tipo de primaria "Primaria general" en ${cambiados} alumno(s) que no lo tenían`, okA]);
+  return resultados;
+}
+
+function BotonAplicarOficial({ titulo, descripcion, aplicar }) {
+  const [paso, setPaso] = useState("inicio"); // inicio | confirmar | aplicando | listo
+  const [resultados, setResultados] = useState([]);
+  const correr = async () => {
+    setPaso("aplicando");
+    try { setResultados(await aplicar()); } catch (e) { setResultados([[e.message || "Error", false]]); }
+    setPaso("listo");
+  };
+  return (
+    <div className="card flex flex-col gap-2" style={{ borderColor: "var(--ambar)" }}>
+      <div className="font-display" style={{ fontWeight: 700, fontSize: "0.88rem" }}>{titulo}</div>
+      <p className="text-sm" style={{ opacity: 0.7 }}>{descripcion}</p>
+      {paso === "inicio" && <button className="btn-secundario" onClick={() => setPaso("confirmar")}>Aplicar a mi app…</button>}
+      {paso === "confirmar" && (
+        <div className="flex gap-2 flex-wrap items-center">
+          <span className="text-sm" style={{ fontWeight: 600 }}>¿Seguro? Se reemplazan esos datos en tu Hoja.</span>
+          <button className="btn-primario" onClick={correr}>Sí, aplicar</button>
+          <button className="btn-secundario" onClick={() => setPaso("inicio")}>Cancelar</button>
+        </div>
+      )}
+      {paso === "aplicando" && <p className="text-sm">Aplicando… no cierres la página.</p>}
+      {paso === "listo" && (
+        <div className="text-sm flex flex-col gap-1">
+          {resultados.map(([t, ok], i) => <div key={i} style={{ color: ok ? "var(--verde)" : "var(--rojo)" }}>{ok ? "✓" : "✗"} {t}</div>)}
+          <button className="btn-secundario" style={{ alignSelf: "flex-start" }} onClick={() => window.location.reload()}>Recargar la página para ver los cambios</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Acta oficial del REPASE 2026-2027 (7 oct 2026) ---------- */
+const CORREO_ESCUELA_REPASE = "tseamadonervo@gmail.com";
+const INTEGRANTES_REPASE_OFICIAL_2026 = [
+  ["VEIR880223MPLLBY05", "VELAZQUEZ", "IBARRA", "REYNA", "Representante de asociación de padres de familia", "Presidente(a)", "Mujer", "2°"],
+  ["OAAN840711HPLRGF02", "ORTAN", "AGUILAR", "NEFTALID BLADIMIR", "Directivo", "Secretario(a) Técnico(a)", "Hombre", ""],
+  ["OEBS700103HPLLRL01", "OLVERA", "BARRERA", "SALVADOR", "Docente", "Representante de Docentes", "Hombre", ""],
+  ["CAIS850725HPLSVN00", "CASTRO", "IBARRA", "SANTIAGO", "Representante de asociación de padres de familia", "Consejero(a)", "Hombre", "3°"],
+  ["", "CHOLULA", "ROJAS", "ALEJANDRA", "Representante de asociación de padres de familia", "Consejero(a)", "Mujer", "3°"],
+  ["VAOA780707MPLRRL03", "VARGAS", "ORTIZ", "ALEJANDRA", "Representante de asociación de padres de familia", "Consejero(a)", "Mujer", "3°"],
+  ["", "SANCHEZ", "MAGNO", "LIZBETH", "Representante de asociación de padres de familia", "Consejero(a)", "Mujer", "2°"],
+  ["TVAJ840711MPLLRN03", "VARGAS", "TLACOCALA", "JUANA", "Representante de asociación de padres de familia", "Consejero(a)", "Mujer", "2°"],
+  ["MAVA750815HPLTRS03", "MATILDE", "VARGAS", "ASUNCION", "Representante de asociación de padres de familia", "Consejero(a)", "Hombre", "3°"],
+  ["MAVM931230MPLTRR03", "MATILDE", "VARGAS", "MARGARITA", "Representante de asociación de padres de familia", "Consejero(a)", "Mujer", "3°"],
+  ["", "PEREZ", "CERON", "JUDITH", "Representante de asociación de padres de familia", "Consejero(a)", "Mujer", "3°"],
+  ["LEOA980726MPLNLN01", "LEONOR", "OLIVOS", "ANA DEISI", "Representante de asociación de padres de familia", "Consejero(a)", "Mujer", "3°"],
+  ["AEVA770927HPLRRD04", "ARELLANO", "VARGAS", "ADOLFO", "Representante de asociación de padres de familia", "Consejero(a)", "Hombre", "3°"],
+];
+const COMITES_REPASE_OFICIAL_2026 = {
+  salud: { integrantes: ["MARGARITA MATILDE VARGAS", "JUANA VARGAS TLACOCALA"], actividades: ["Campañas de vacunación y prevención de enfermedades.", "Gestionar talleres, conferencias y pláticas sobre el desarrollo de habilidades de autocuidado y toma de decisiones en las y los estudiantes para preservar su salud física y mental.", "Compartir guías y materiales de la Estrategia en el Aula: Prevención de Adicciones."] },
+  proteccion: { integrantes: ["SANTIAGO CASTRO IBARRA", "NEFTALID BLADIMIR ORTAN AGUILAR"], actividades: [] },
+  lectura: { integrantes: ["NEFTALID BLADIMIR ORTAN AGUILAR", "SALVADOR OLVERA BARRERA"], actividades: ["Círculos de lectura, lectura en voz alta.", "Promover actividades como Olimpiadas de Matemáticas, Torneo de Ajedrez, Competencias Deportivas, Coro Escolar, Concursos de lecto-escritura, entre otras.", "Atención a los niños de acuerdo con sus necesidades de aprendizaje."] },
+  convivencia: { integrantes: ["SANTIAGO CASTRO IBARRA", "ALEJANDRA VARGAS ORTIZ"], actividades: [] },
+  contraloria: { integrantes: ["ADOLFO ARELLANO VARGAS", "ALEJANDRA CHOLULA ROJAS"], actividades: ["Acompañar en la administración de recursos a la Asociación de Padres de Familia", "Participación en la rendición de cuentas ante padres de familia y la comunidad"] },
+  mujeres: { integrantes: ["JUANA VARGAS TLACOCALA", "JUDITH PEREZ CERON"], actividades: ["Actividades con madres de familia (asesorías, charlas y capacitaciones)", "Elaboración de estrategias para fomentar la igualdad entre hombres y mujeres"] },
+};
+const PROGRAMAS_REPASE_OFICIAL_2026 = [
+  ["Federal", "La Escuela es Nuestra", ""],
+  ["Federal", "Otro", "BECA UNIVERSAL DE EDUCACIÓN BÁSICA “RITA CETINA”"],
+  ["Estatal", "Otro", "PROTECCIÓN CIVIL Y SEGURIDAD ESCOLAR."],
+  ["Estatal", "Otro", "UNIFORMES ESCOLARES"],
+  ["Municipal", "Otro", "PROGRAMA BIENESTAR BAÑOS DIGNOS"],
+];
+const ASUNTOS_REPASE_OFICIAL_2026 = [
+  ["REALIZAR LIMPIEZA DIARIO AL INTERIOR Y EXTERIOR.", "1.- LOS INTEGRANTES DEL COMITÉ NOS COMPROMETEMOS A REALIZAR LA LIMPIEZA INTERIOR Y EXTERIOR DE LA ESCUELA, EN EL MES DE NOVIEMBRE DE 2026.\n2.- APLICAR LOS PROTOCOLOS DE SALUD PARA PREVENIR ENFERMEDADES, EN EL MES DE ABRIL DE 2027.\n3.- COMO COMITÉ NOS COMPROMETEMOS A SUMINISTRAR Y FACILITAR LO NECESARIO PARA LA LIMPIEZA DIARIA Y CUIDAR LA SALUD DE LOS ALUMNOS, EN EL MES DE JUNIO DE 2027."],
+  ["VIGILAR QUE LOS INGRESOS POR COOPERACIÓN VOLUNTARIA SE APLIQUEN CONFORME AL PROYECTO DE NECESIDADES PRESENTADO EN LA ASAMBLEA A LOS PADRES DE FAMILIA.", "1.- EL COMITÉ NOS COMPROMETEMOS A SESIONAR MENSUALMENTE PARA TENER CONOCIMIENTO DE LA APLICACIÓN DE LOS RECURSOS DE PADRES DE FAMILIA. MENSUAL DURANTE EL AÑO ESCOLAR 2026-2027.\n2.- DE MANERA ORGANIZADA LOS MIEMBROS DEL COMITÉ ESTAREMOS AL PENDIENTE DE TODOS LOS RECURSOS ECONÓMICOS Y EN ESPECIE QUE SE NOS PROPORCIONEN. EN MAYO DE 2027.\n3.- LOS RECURSOS ECONÓMICOS O EN ESPECIE QUE SE RECIBAN SE DESTINARÁN AL CUMPLIMIENTO DE SU OBJETIVO. DURANTE EL CICLO ESCOLAR. JUNIO DE 2027."],
+  ["FOMENTAR LA LECTURA ENTRE PADRES Y ALUMNOS EN COORDINACION.", "1.- DE MANERA ORGANIZADA SE REALIZAN ACUERDOS CON EL DOCENTE Y TUTOR PARA FOMENTAR LA LECTURA. EN ENERO DE 2027.\n2.- LOS MIEMBROS DEL COMITÉ NOS COMPROMETEMOS A REALIZAR LOS OFICIOS PERTINENTES. EN ABRIL DE 2027.\n3.- IMPLEMENTAR LO NECESARIO PARA QUE LOS TALLERES A REALIZAR CUENTEN CON EL EQUIPO Y MATERIAL ADECUADO DURANTE EL CICLO ESCOLAR. EN JUNIO DE 2027."],
+];
+
+async function aplicarActaOficialREPASE2026() {
+  const resultados = [];
+  // Respaldo de lo que había antes, por si se necesita consultar.
+  const [datosPrev, intsPrev, comsPrev, progsPrev, asunPrev] = await Promise.all([
+    getStorage("consejo-datos", {}), listarStorage("consejo-integrante:"), listarStorage("consejo-comite:"),
+    listarStorage("consejo-programa:"), listarStorage("consejo-asunto:"),
+  ]);
+  const okR = await setStorage("consejo-respaldo-antes-repase-oficial", { fecha: hoyISO(), datos: datosPrev, integrantes: intsPrev, comites: comsPrev, programas: progsPrev, asuntos: asunPrev });
+  resultados.push(["Respaldo de los datos anteriores", okR]);
+  const okD = await setStorage("consejo-datos", {
+    ...(datosPrev || {}), correoEscuela: CORREO_ESCUELA_REPASE, lugarPublicacion: "Cancha de la escuela",
+    fechaPublicacion: "2026-08-31", fechaSesion: "2026-09-04", horaInicio: "11:00", horaFinal: "13:00",
+    numAsistentes: "10", numIntegrantesConsejo: "13",
+  });
+  resultados.push(["Datos generales: sesión del 4 sept 2026, 11:00–13:00, 10 asistentes, 13 integrantes", okD]);
+  for (const x of intsPrev) if (x && x.id) await borrarStorage(`consejo-integrante:${x.id}`);
+  let okI = true;
+  for (let i = 0; i < INTEGRANTES_REPASE_OFICIAL_2026.length; i++) {
+    const [curp, ap, am, nom, calidad, cargo, sexo, grado] = INTEGRANTES_REPASE_OFICIAL_2026[i];
+    const id = `repase2026-${String(i + 1).padStart(2, "0")}`;
+    const reg = { id, nombre: nom, apellidoPaterno: ap, apellidoMaterno: am, curp, cargo, calidad, correo: CORREO_ESCUELA_REPASE, telefono: "2444419381", sexo, gradoHijo: grado };
+    if (!(await setStorage(`consejo-integrante:${id}`, reg))) okI = false;
+  }
+  resultados.push(["13 integrantes del Consejo (como en el acta)", okI]);
+  let okC = true;
+  for (const c of COMITES_CATALOGO) {
+    const oficial = COMITES_REPASE_OFICIAL_2026[c.id];
+    if (!oficial) { await borrarStorage(`consejo-comite:${c.id}`); continue; }
+    const reg = {
+      id: c.id, nombre: c.nombre, numero: c.numero, instalado: true, presentaronPlanTrabajo: "Sí",
+      integrantesTexto: oficial.integrantes.map((n) => `${n} — ${CORREO_ESCUELA_REPASE}`).join("\n"),
+      actividadesTexto: oficial.actividades.join("\n\n"),
+    };
+    if (!(await setStorage(`consejo-comite:${c.id}`, reg))) okC = false;
+  }
+  resultados.push(["Comités: I Salud, II Protección civil, III Lectura, V Convivencia, IX Contraloría, X Mujeres constructoras de paz", okC]);
+  for (const x of progsPrev) if (x && x.id) await borrarStorage(`consejo-programa:${x.id}`);
+  let okPr = true;
+  for (let i = 0; i < PROGRAMAS_REPASE_OFICIAL_2026.length; i++) {
+    const [tipoPrograma, programa, otroPrograma] = PROGRAMAS_REPASE_OFICIAL_2026[i];
+    const id = `repase2026-prog-${i + 1}`;
+    if (!(await setStorage(`consejo-programa:${id}`, { id, tipoPrograma, programa, otroPrograma }))) okPr = false;
+  }
+  resultados.push(["5 programas (federales, estatales y municipal)", okPr]);
+  for (const x of asunPrev) if (x && x.id) await borrarStorage(`consejo-asunto:${x.id}`);
+  let okA = true;
+  for (let i = 0; i < ASUNTOS_REPASE_OFICIAL_2026.length; i++) {
+    const [asuntoGeneral, acuerdoAprobado] = ASUNTOS_REPASE_OFICIAL_2026[i];
+    const id = `repase2026-asunto-${i + 1}`;
+    if (!(await setStorage(`consejo-asunto:${id}`, { id, asuntoGeneral, acuerdoAprobado }))) okA = false;
+  }
+  resultados.push(["3 asuntos generales con sus acuerdos (fechas 2026-2027)", okA]);
+  const okQ = await setStorage("consejo-pregunta", { planTrabajo: "Sí", comiteSalud: "Sí", cooperativa: "No", osc: "Sí", cte: "Sí", comiteAdm: "Sí", vinculacion: "Sí", plantilla: "Sí", calendario: "Sí" });
+  resultados.push(["Preguntas del acta (Sí/No)", okQ]);
+  return resultados;
+}
+
 /* ---------- Estadística 911.5 — ahora en su propia pestaña (ya no dentro de
    Alumnos → Estadística), igual que Programa Analítico y PIC. ---------- */
 function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
@@ -21132,6 +21398,12 @@ function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
   return (
     <div className="flex flex-col gap-4">
       {modoImpresion && <Estadistica911Imprimible e911={e911} seccion1={datosImpresion.seccion1} infraestructura={datosImpresion.infraestructura} />}
+
+      <PanelDocumentosOficiales titulo="911 · 2026-2027 — documentos oficiales finalizados (21 oct 2026)" documentos={DOCS_OFICIALES_911_2026}
+        nota="Sube aquí los PDF que te dio la plataforma oficial ya oficializados. Quedan guardados en tu Hoja (privada) para consultarlos o imprimirlos cuando los pidan." />
+      <BotonAplicarOficial titulo="Dejar la app igual que el 911 oficial 2026-2027"
+        descripcion="Copia a tu app las cifras que quedaron en los documentos oficiales: Sección I (fin de cursos), becas, egresados, abandono escolar, aulas (3 existentes; en uso 1° y más de un grado), idiomas y libros, ODS, anexos de cómputo e infraestructura, y en el personal: función, licenciatura titulado y tiempo completo. A los alumnos sin tipo de primaria les pone Primaria general."
+        aplicar={aplicarCifrasOficiales911_2026} />
 
       <div className="card">
         <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Estadística 911.5 — apoyo de captura</div>
@@ -21474,7 +21746,7 @@ const COMITES_CATALOGO = [
   { id: "mujeres", numero: "X", nombre: "Mujeres constructoras de paz", prioritario: false },
   { id: "reinsercion", numero: "XI", nombre: "Reinserción y permanencia de alumnos(as)", prioritario: false },
 ];
-const CARGOS_CONSEJO = ["Presidente(a)", "Secretario(a) Técnico(a)", "Consejero(a)"];
+const CARGOS_CONSEJO = ["Presidente(a)", "Secretario(a) Técnico(a)", "Representante de Docentes", "Consejero(a)"];
 const CALIDADES_CONSEJERO = [
   "Representante de asociación de padres de familia",
   "Madre/Padre de familia o tutor(a)",
@@ -22270,6 +22542,12 @@ function ConsejoEscolar({ onStamp, alumnos, gradosPermitidos, personal }) {
           {" "}Circular 010/2026: constitución o reestructuración del <b>10 al 24 de septiembre</b> · Registro de instalación en REPASE: 28 sept–30 oct · Revisión por supervisión: 3–17 nov · Revisión/validación por CORDE: 18–30 nov · Registro de actas/evidencias: 1–18 dic.
         </p>
       </div>
+
+      <PanelDocumentosOficiales titulo="REPASE 2026-2027 — documentos oficiales" documentos={DOCS_OFICIALES_REPASE_2026}
+        nota="Sube el acta que generó REPASE y, cuando lo termines, el PDF de evidencias con fotos. Quedan guardados en tu Hoja (privada)." />
+      <BotonAplicarOficial titulo="Dejar el Consejo igual que el acta oficial del REPASE"
+        descripcion="Copia a la app lo que quedó en el acta oficial (7 oct 2026): sesión del 4 de septiembre de 2026 de 11:00 a 13:00 en la cancha, 10 asistentes, los 13 integrantes, los 6 comités (incluye Mujeres constructoras de paz; quita Alimentación), 5 programas, 3 asuntos con sus acuerdos y las preguntas. Antes guarda un respaldo de lo que había."
+        aplicar={aplicarActaOficialREPASE2026} />
 
       <div className="flex gap-2 flex-wrap">
         {SUBTABS.map((t) => (
