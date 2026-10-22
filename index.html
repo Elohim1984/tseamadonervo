@@ -21235,6 +21235,19 @@ async function aplicarCifrasOficiales911_2026() {
     if (await setStorage(`alumno:${a.id}`, { ...a, E911_PRIMARIA_TIPO: "Primaria general" })) cambiados++; else okA = false;
   }
   resultados.push([`Tipo de primaria "Primaria general" en ${cambiados} alumno(s) que no lo tenían`, okA]);
+  // El 911 oficial reporta 0 hablantes de lengua indígena: por indicación del
+  // director (22 oct 2026) se quita la lengua indígena de la ficha. El valor
+  // anterior se guarda en ALUMNO_LENGUA_MATERNA_ANTERIOR por si se necesita.
+  const actuales = await listarStorage("alumno:");
+  let quitadas = 0, okL = true;
+  for (const a of actuales) {
+    const lengua = (a && a.ALUMNO_LENGUA_MATERNA || "").trim().toLowerCase();
+    const indigena = Boolean(lengua) && !["español", "espanol", "castellano", "ninguna", "ninguno", "n/a", "no aplica"].includes(lengua);
+    if (!a || !a.id || !a.ALUMNO_CURP || !indigena) continue;
+    const nuevo = { ...a, ALUMNO_LENGUA_MATERNA_ANTERIOR: a.ALUMNO_LENGUA_MATERNA, ALUMNO_LENGUA_MATERNA: "" };
+    if (await setStorage(`alumno:${a.id}`, nuevo)) quitadas++; else okL = false;
+  }
+  resultados.push([`Lengua indígena quitada de la ficha de ${quitadas} alumno(s) (911 oficial: 0 hablantes)`, okL]);
   return resultados;
 }
 
@@ -21412,7 +21425,7 @@ function Estadistica911Tab({ alumnos, gradosPermitidos, personal, onStamp }) {
       <PanelDocumentosOficiales titulo="911 · 2026-2027 — documentos oficiales finalizados (21 oct 2026)" documentos={DOCS_OFICIALES_911_2026}
         nota="Sube aquí los PDF que te dio la plataforma oficial ya oficializados. Quedan guardados en tu Hoja (privada) para consultarlos o imprimirlos cuando los pidan." />
       <BotonAplicarOficial titulo="Dejar la app igual que el 911 oficial 2026-2027"
-        descripcion="Copia a tu app las cifras que quedaron en los documentos oficiales: Sección I (fin de cursos), becas, egresados, abandono escolar, aulas (3 existentes; en uso 1° y más de un grado), idiomas y libros, ODS, anexos de cómputo e infraestructura, y en el personal: función, licenciatura titulado y tiempo completo. A los alumnos sin tipo de primaria les pone Primaria general."
+        descripcion="Copia a tu app las cifras que quedaron en los documentos oficiales: Sección I (fin de cursos), becas, egresados, abandono escolar, aulas (3 existentes; en uso 1° y más de un grado), idiomas y libros, ODS, anexos de cómputo e infraestructura, y en el personal: función, licenciatura titulado y tiempo completo. A los alumnos sin tipo de primaria les pone Primaria general, y quita la lengua indígena de las fichas (el 911 oficial reporta 0 hablantes; el dato anterior queda respaldado en la ficha)."
         aplicar={aplicarCifrasOficiales911_2026} />
 
       <div className="card">
