@@ -537,7 +537,7 @@ this.workerSrc)).WorkerMessageHandler})())}}class WorkerTransport{downloadInfoCa
 <div id="ir-control"><a href="#" id="ir-control-link">Entrar a Control Escolar &rarr;</a></div>
 
 <script type="text/plain" id="codigo-fuente-app">
-const { useState, useEffect, useCallback, useMemo } = React;
+const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
 /* ---------- íconos propios (sin depender de ninguna librería externa) ---------- */
 function crearIcono(contenidoSVG) {
@@ -3339,11 +3339,41 @@ async function setStorage(key, value) {
       body: new URLSearchParams({ action: "set", key, value: JSON.stringify(value) }),
     });
     const datos = await resp.json();
+    if (datos.ok) avisarDatoVivo(key, value);
     return !!datos.ok;
   } catch (e) {
     console.error("No se pudo guardar en la Hoja:", key, e);
     return false;
   }
+}
+
+/* ---------- datos "en vivo" (22 oct 2026) ----------
+   Cada vez que un formulario cambia o se guarda, avisa aquí. Los documentos
+   finales (PIC, Programa Analítico) escuchan estos avisos y se vuelven a
+   armar al instante con lo nuevo, sin recargar la página. También se avisa
+   a las otras pestañas abiertas del mismo navegador (BroadcastChannel). */
+const OYENTES_DATOS_VIVOS = new Set();
+const CACHE_DATOS_VIVOS = {}; // clave → { value, t } — lo último escrito en esta sesión
+let CANAL_DATOS_VIVOS = null;
+try {
+  if (typeof BroadcastChannel !== "undefined") {
+    CANAL_DATOS_VIVOS = new BroadcastChannel("amado-nervo-datos-vivos");
+    CANAL_DATOS_VIVOS.onmessage = (ev) => {
+      const d = ev.data || {};
+      if (!d.key) return;
+      CACHE_DATOS_VIVOS[d.key] = { value: d.value, t: Date.now() };
+      OYENTES_DATOS_VIVOS.forEach((f) => { try { f(d.key, d.value); } catch (e) {} });
+    };
+  }
+} catch (e) { CANAL_DATOS_VIVOS = null; }
+function avisarDatoVivo(key, value) {
+  CACHE_DATOS_VIVOS[key] = { value, t: Date.now() };
+  OYENTES_DATOS_VIVOS.forEach((f) => { try { f(key, value); } catch (e) {} });
+  try { CANAL_DATOS_VIVOS && CANAL_DATOS_VIVOS.postMessage({ key, value }); } catch (e) {}
+}
+function escucharDatosVivos(f) {
+  OYENTES_DATOS_VIVOS.add(f);
+  return () => OYENTES_DATOS_VIVOS.delete(f);
 }
 
 // Trae todos los renglones cuya clave empieza con el prefijo dado (ej. "alumno:")
@@ -3405,6 +3435,7 @@ async function borrarStorage(clave) {
       body: new URLSearchParams({ action: "borrar", key: clave }),
     });
     const datos = await resp.json();
+    if (datos.ok) avisarDatoVivo(clave, null);
     return !!datos.ok;
   } catch (e) {
     return false;
@@ -7204,16 +7235,43 @@ function FormularioAutoguardado({ claveStorage, titulo, ayuda, campos, onStamp, 
     return () => { vivo = false; };
   }, [claveStorage]);
 
-  const cambiar = (key, val) => setValores((prev) => ({ ...prev, [key]: val }));
+  // 22 oct 2026: guardado automático. Cada cambio se avisa al instante a los
+  // documentos finales (se ven en vivo) y, 1.5 s después de dejar de
+  // escribir, se guarda solo en la Hoja. El botón "Guardar" sigue igual.
+  const [pendiente, setPendiente] = useState(false);
+  const valoresRef = useRef(valores);
+  valoresRef.current = valores;
+  const temporizador = useRef(null);
 
   const guardar = async () => {
+    if (temporizador.current) { clearTimeout(temporizador.current); temporizador.current = null; }
     setGuardando(true);
-    const ok = await setStorage(claveStorage, valores);
+    const ok = await setStorage(claveStorage, valoresRef.current);
     setGuardando(false);
+    setPendiente(false);
     setGuardadoOk(ok);
     if (ok && onStamp) onStamp("Guardado");
     setTimeout(() => setGuardadoOk(false), 2500);
   };
+
+  const cambiar = (key, val) => {
+    const nuevos = { ...valoresRef.current, [key]: val };
+    valoresRef.current = nuevos;
+    setValores(nuevos);
+    avisarDatoVivo(claveStorage, nuevos);
+    setPendiente(true);
+    if (temporizador.current) clearTimeout(temporizador.current);
+    temporizador.current = setTimeout(() => { temporizador.current = null; guardar(); }, 1500);
+  };
+
+  // Si se sale de la pestaña antes de que pase el 1.5 s, se guarda de una vez.
+  useEffect(() => () => {
+    if (temporizador.current) {
+      clearTimeout(temporizador.current);
+      temporizador.current = null;
+      setStorage(claveStorage, valoresRef.current);
+    }
+  }, [claveStorage]);
 
   return (
     <div className="card">
@@ -7244,7 +7302,8 @@ function FormularioAutoguardado({ claveStorage, titulo, ayuda, campos, onStamp, 
             <button onClick={guardar} disabled={guardando} className="btn-primario">
               {guardando ? "Guardando…" : <><Check size={16} /> Guardar</>}
             </button>
-            {guardadoOk && <span className="text-sm" style={{ color: "var(--verde)" }}>✓ Guardado en tu Hoja</span>}
+            {guardadoOk && !pendiente && <span className="text-sm" style={{ color: "var(--verde)" }}>✓ Guardado en tu Hoja</span>}
+            {pendiente && !guardando && <span className="text-sm" style={{ opacity: 0.55 }}>Se guarda solo al dejar de escribir…</span>}
           </div>
         </div>
       )}
@@ -8068,6 +8127,7 @@ opcional, que puede abordarse desde Saberes y Pensamiento Científico,
 Ética Naturaleza y Sociedades y De lo Humano y lo Comunitario; y (3) la
 convivencia sana como refuerzo constante del eje articulador
 correspondiente en los tres grados.</p>
+<!--VIVO:pa-plano2-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Tercer
 plano: Formulación del Programa Analítico</b></font></h1>
 <p style="line-height: 100%; margin-bottom: 0.08in"><font color="#555555"><i>Todas
@@ -12521,6 +12581,7 @@ De lo Humano y lo Comunitario</b></font></p>
 <br/>
 
 </p>
+<!--VIVO:pa-plano3-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Metodologías</b></font></h1>
 <p style="line-height: 100%; margin-bottom: 0.08in">Trabajo por
 proyectos (metodología propia de telesecundaria), articulando cada
@@ -14562,6 +14623,7 @@ Diagnóstico Integral aplicado en agosto-septiembre de 2026 recibió
 28-29 respuestas de los 32 alumnos inscritos — quedan pendientes de
 contestar entre 3 y 4 alumnos, a identificar y aplicar antes de
 cerrar el diagnóstico definitivo de este PIC.</i></font></p>
+<!--VIVO:pic-etapa1-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Problemática</b></font></h1>
 <p style="line-height: 100%; margin-bottom: 0.08in">Los resultados
 oficiales del EIA de Fase 6 (Ejercicios Integradores del
@@ -14698,6 +14760,7 @@ Pensamiento Científico, según el EIA de Fase 6) es el eje principal
 de cada grado; de manera secundaria y opcional, los alumnos pueden
 aplicar lo aprendido para documentar y comunicar, en su comunidad,
 el manejo de la basura y los servicios de salud.</i></p>
+<!--VIVO:pic-etapas23-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Propuesta
 para el bien común</b></font></h1>
 <p style="line-height: 100%; margin-bottom: 0.08in"><b>OBJETIVO
@@ -15121,6 +15184,7 @@ Xoyatla.</i></p>
 <p style="line-height: 100%; margin-bottom: 0in"><br/>
 
 </p>
+<!--VIVO:pic-etapas47-->
 <h1 class="western" style="margin-top: 0in; margin-bottom: 0.1in; page-break-before: always">
 <font color="#7a1f1f"><b>Validación colegiada</b></font></h1>
 <p style="line-height: 100%; margin-bottom: 0.08in">Este PIC fue
@@ -15185,6 +15249,260 @@ async function cargarResumenImpresionPIC() {
   return { obs, etapa1, porGrado, cronograma, evaluacionDifusion };
 }
 
+/* ---------- Documentos finales EN VIVO (22 oct 2026) ----------
+   El texto fijo de cada documento (DOCUMENTO_COMPLETO_*_HTML) trae marcas
+   <!--VIVO:...--> en el lugar donde va cada parte que el colectivo captura
+   en las pestañas (Etapas 1-7 del PIC, Programa Analítico, etc.). Al mostrar
+   o imprimir el documento, cada marca se sustituye por lo capturado, con los
+   mismos campos y etiquetas del formulario (CAMPOS_CAPTURA_PLANEACION). */
+const escHTMLVivo = (t) => String(t == null ? "" : t)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const hayValorVivo = (v) => v !== undefined && v !== null && String(v).trim() !== "";
+const parrafosVivo = (t) => String(t).split(/\n+/).map((x) => x.trim()).filter(Boolean)
+  .map((x) => `<p style="line-height: 115%; margin-bottom: 0.06in">${escHTMLVivo(x)}</p>`).join("");
+const h1Vivo = (t) => `<h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>${escHTMLVivo(t)}</b></font></h1>`;
+const h2Vivo = (t) => `<h2 class="western" style="margin-top: 0.18in; margin-bottom: 0.08in"><font color="#b8860b"><b>${escHTMLVivo(t)}</b></font></h2>`;
+const h3Vivo = (t) => `<p style="line-height: 100%; margin-top: 0.1in; margin-bottom: 0.05in"><b>${escHTMLVivo(t)}</b></p>`;
+const pendienteVivo = (t) => `<p style="line-height: 100%; margin-bottom: 0.08in"><font color="#888888"><i>${escHTMLVivo(t)}</i></font></p>`;
+const TD_VIVO = 'style="border: 1px solid #000000; padding: 0.04in 0.07in; vertical-align: top"';
+const TH_VIVO = 'style="background: #7a1f1f; color: #ffffff; border: 1px solid #000000; padding: 0.04in 0.07in; text-align: left"';
+function tablaVivo(encabezados, filas) {
+  if (!filas.length) return "";
+  const celda = (v) => (hayValorVivo(v) ? escHTMLVivo(v).replace(/\n/g, "<br/>") : "");
+  return `<table width="100%" cellpadding="4" cellspacing="0" style="border-collapse: collapse; margin-bottom: 0.1in; font-size: 10pt">`
+    + `<tr>${encabezados.map((h) => `<th ${TH_VIVO}>${escHTMLVivo(h)}</th>`).join("")}</tr>`
+    + filas.map((f) => `<tr>${f.map((v) => `<td ${TD_VIVO}>${celda(v)}</td>`).join("")}</tr>`).join("")
+    + `</table>`;
+}
+const limpiarEtiquetaVivo = (e) => String(e)
+  .replace(/\s*\((un solo párrafo|secundaria, opcional|pequeña|avance)[^)]*\)/gi, "")
+  .replace(/ para la problemática$/, "")
+  .replace(/ de lo que se busca obtener$/, "")
+  .trim();
+
+/* Arma el HTML de un formulario ya capturado:
+   - criterios Sí/Ajustar → tabla "Validación"
+   - campos con forma "Fila — Columna" (Aula — …, 1er grado — …) → tabla
+   - lo demás → etiqueta en negritas y el texto en párrafos.
+   Regresa "" si el formulario no tiene nada escrito. */
+function htmlCamposVivo(campos, valores) {
+  const v = valores || {};
+  const conValor = campos.filter((c) => hayValorVivo(v[c.key]));
+  if (!conValor.length) return "";
+  let html = "";
+  const selects = campos.filter((c) => c.tipo === "select");
+  const resto = campos.filter((c) => c.tipo !== "select");
+  const tabular = resto.length > 1 && resto.every((c) => c.etiqueta.includes(" — "));
+  if (tabular) {
+    const filasOrden = []; const columnas = []; const mapa = {};
+    resto.forEach((c) => {
+      const [fila, ...col] = c.etiqueta.split(" — ");
+      const colN = limpiarEtiquetaVivo(col.join(" — "));
+      if (!filasOrden.includes(fila)) filasOrden.push(fila);
+      if (!columnas.includes(colN)) columnas.push(colN);
+      mapa[fila + "|" + colN] = v[c.key];
+    });
+    const filas = filasOrden
+      .filter((f) => columnas.some((col) => hayValorVivo(mapa[f + "|" + col])))
+      .map((f) => [f, ...columnas.map((col) => mapa[f + "|" + col])]);
+    html += tablaVivo(["", ...columnas], filas);
+  } else {
+    resto.forEach((c) => {
+      if (!hayValorVivo(v[c.key])) return;
+      html += h3Vivo(limpiarEtiquetaVivo(c.etiqueta)) + parrafosVivo(v[c.key]);
+    });
+  }
+  const selectsConValor = selects.filter((c) => hayValorVivo(v[c.key]));
+  if (selectsConValor.length) {
+    html += h3Vivo("Validación de la problemática")
+      + tablaVivo(["Criterio", "Resultado"], selectsConValor.map((c) => [c.etiqueta.replace(/^Validación rápida — /, ""), v[c.key]]));
+  }
+  return html;
+}
+
+// Seguimiento (Etapa 6): las 4 acciones van en una sola tabla.
+function htmlSeguimientoVivo(v) {
+  v = v || {};
+  let html = "";
+  [["propuestaSolucion", "Propuesta de solución a la problemática"], ["actividadElaboracion", "Actividad: elaboración de las alternativas"]].forEach(([k, t]) => {
+    if (hayValorVivo(v[k])) html += h3Vivo(t) + parrafosVivo(v[k]);
+  });
+  const filas = [1, 2, 3, 4]
+    .filter((n) => ["accion", "avance", "contratiempo", "solucion"].some((k) => hayValorVivo(v[k + n])))
+    .map((n) => [v["accion" + n], v["avance" + n], v["contratiempo" + n], v["solucion" + n]]);
+  if (filas.length) html += h3Vivo("Acciones con la comunidad") + tablaVivo(["Acción", "Avance", "Contratiempo", "Solución"], filas);
+  if (hayValorVivo(v.asamblea)) html += h3Vivo("Asamblea — acuerdos y avance") + parrafosVivo(v.asamblea);
+  return html;
+}
+
+const GRADOS_VIVO = ["1", "2", "3"];
+const NOMBRE_GRADO_VIVO = { "1": "1er grado", "2": "2° grado", "3": "3er grado" };
+
+// Valor de una clave, con el prellenado que también muestra el formulario.
+function valorVivo(mapa, clave) {
+  const guardado = mapa[clave];
+  let base = null;
+  let m;
+  if (clave === "pic:etapa1") base = ETAPA1_CONDICIONES_PREFILL;
+  else if ((m = clave.match(/^pic:(\d):etapa2:principal$/))) base = ETAPA2_PLANTEAMIENTO_PRINCIPAL_PREFILL_POR_GRADO[m[1]];
+  else if ((m = clave.match(/^pic:(\d):etapa4:aportacion$/))) base = ETAPA4_APORTACION_PREFILL_POR_GRADO[m[1]];
+  else if ((m = clave.match(/^pic:(\d):etapa4:cadaunoletoca$/))) base = ETAPA4_CADAUNOLETOCA_PREFILL_POR_GRADO[m[1]];
+  return base ? { ...base, ...(guardado || {}) } : (guardado || {});
+}
+
+const envolverVivo = (id, html) => `<div id="vivo-${id}" class="bloque-vivo">${html}</div>`;
+
+const GENERADORES_VIVO = {
+  "pic-etapa1": (mapa) => {
+    const cuerpo = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa1, valorVivo(mapa, "pic:etapa1"));
+    return h1Vivo("Lectura de la realidad escolar (Etapa 1)")
+      + `<p style="line-height: 100%; margin-bottom: 0.08in">Problematización de la realidad escolar trabajada por todo el colectivo, organizada en tres tipos de condiciones (territorios: aula, escuela y comunidad).</p>`
+      + (cuerpo || pendienteVivo("Pendiente de capturar en la pestaña \"PIC — Etapas 1-3\"."));
+  },
+  "pic-etapas23": (mapa) => {
+    let html = h1Vivo("Situación problemática y propuesta de solución por grado (Etapas 2 y 3)");
+    GRADOS_VIVO.forEach((g) => {
+      const e2 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Principal, valorVivo(mapa, `pic:${g}:etapa2:principal`));
+      const e3 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa3Principal, valorVivo(mapa, `pic:${g}:etapa3:principal`));
+      const s2 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Secundaria, valorVivo(mapa, `pic:${g}:etapa2`));
+      const s3 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa3Secundaria, valorVivo(mapa, `pic:${g}:etapa3`));
+      html += h2Vivo(NOMBRE_GRADO_VIVO[g]);
+      html += h3Vivo("Etapa 2 — Situación problemática") + (e2 ? e2.replace(h3Vivo(limpiarEtiquetaVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Principal[0].etiqueta)), "") : pendienteVivo("Pendiente de capturar."));
+      html += h3Vivo("Etapa 3 — Posible acción con lo aprendido") + (e3 ? e3.replace(/^<p[^>]*><b>[^<]*<\/b><\/p>/, "") : pendienteVivo("Pendiente de capturar."));
+      if (s2 || s3) html += h3Vivo("Problemática secundaria (opcional)") + s2 + s3;
+    });
+    return html;
+  },
+  "pic-etapas47": (mapa) => {
+    let html = "";
+    GRADOS_VIVO.forEach((g) => {
+      const v = (k) => valorVivo(mapa, `pic:${g}:${k}`);
+      const partes = [
+        ["Etapa 4 — Aportación a la comunidad", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa4Aportacion, v("etapa4:aportacion"))],
+        ["Etapa 4 — Propuestas para el bien común", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa4Propuestas, v("etapa4:propuestas"))],
+        ["Etapa 4 — A cada uno lo que le toca hacer", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa4CadaUno, v("etapa4:cadaunoletoca"))],
+        ["Etapa 5 — Secuencia de actividades", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa5Secuencia, v("etapa5:secuencia"))],
+        ["Etapa 6 — Con la información en la mano", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa6InfoMano, v("etapa6:infomano"))],
+        ["Etapa 6 — Todos en la misma tarea (seguimiento)", htmlSeguimientoVivo(v("etapa6:seguimiento"))],
+        ["Etapa 7 — La hora de integrar las piezas", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa7Integrar, v("etapa7:integrar"))],
+        ["Fase 2 — Selección y planteamiento del problema", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picSeleccion, v("seleccion"))],
+        ["Fase 3 — Planeación de la propuesta", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picPlaneacion, v("planeacion"))],
+      ].filter(([, h]) => h);
+      html += h2Vivo(NOMBRE_GRADO_VIVO[g]);
+      html += partes.length
+        ? partes.map(([t, h]) => h3Vivo(t) + h).join("")
+        : pendienteVivo("Pendiente de capturar en la pestaña \"PIC — Etapas 4-7\".");
+    });
+    const crono = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa5Cronograma, valorVivo(mapa, "pic:etapa5:cronograma"));
+    if (crono) html += h2Vivo("Cronograma de actividades para cada presentación") + crono;
+    const fases = FASES_CRONOGRAMA_PIC
+      .map((f) => ({ ...f, ...valorVivo(mapa, `pic:cronograma:${f.slug}`) }))
+      .filter((f) => hayValorVivo(f.actividad) || hayValorVivo(f.periodo) || hayValorVivo(f.responsable));
+    if (fases.length) html += h2Vivo("Cronograma por fase") + tablaVivo(["Fase", "Actividad principal", "Periodo", "Responsable"], fases.map((f) => [f.nombre, f.actividad, f.periodo, f.responsable]));
+    const ev = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picEvaluacion, valorVivo(mapa, "pic:evaluacionDifusion"));
+    if (ev) html += h2Vivo("Evaluación y difusión") + ev;
+    return h1Vivo("Desarrollo del proyecto por Etapas (4 a 7)") + html;
+  },
+  "pa-plano2": (mapa, obs) => {
+    let html = h2Vivo("Contenidos contextualizados por grado y campo formativo");
+    let alguno = false;
+    GRADOS_VIVO.forEach((g) => {
+      const filas = CAMPOS_FORMATIVOS_NEM
+        .map((c) => ({ c, v: valorVivo(mapa, `progAnalitico:${g}:contextualizacion:${c.slug}`) }))
+        .filter(({ v }) => hayValorVivo(v.contenido) || hayValorVivo(v.eje) || hayValorVivo(v.vinculo))
+        .map(({ c, v }) => [c.nombre, v.contenido, v.eje, v.vinculo]);
+      if (!filas.length) return;
+      alguno = true;
+      html += h3Vivo(NOMBRE_GRADO_VIVO[g]) + tablaVivo(["Campo formativo", "Contenido(s) contextualizado(s)", "Eje(s) articulador(es)", "Vínculo con el diagnóstico"], filas);
+    });
+    if (!alguno) html += pendienteVivo("Pendiente de capturar en la pestaña \"Programa Analítico\" (Plano 2).");
+    const obsOrden = (obs || []).slice().sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
+    if (obsOrden.length) {
+      html += h3Vivo("Observaciones del colectivo")
+        + tablaVivo(["Fecha", "Observación", "Grado(s)", "Campo"], obsOrden.map((o) => [o.fecha, o.observacion, o.grados, o.campo]));
+    }
+    return html;
+  },
+  "pa-plano3": (mapa) => {
+    let html = h2Vivo("Codiseño — secuenciación por trimestre");
+    let alguno = false;
+    GRADOS_VIVO.forEach((g) => {
+      const filas = TRIMESTRES
+        .map((t) => ({ t, v: valorVivo(mapa, `progAnalitico:${g}:codiseno:${t.slug}`) }))
+        .filter(({ v }) => hayValorVivo(v.contenidosPDA) || hayValorVivo(v.metodologia) || hayValorVivo(v.fechaCierre))
+        .map(({ t, v }) => [t.nombre, v.contenidosPDA, v.metodologia, v.fechaCierre]);
+      if (!filas.length) return;
+      alguno = true;
+      html += h3Vivo(NOMBRE_GRADO_VIVO[g]) + tablaVivo(["Trimestre", "Contenidos y PDA", "Metodología / vinculación con PIC", "Fecha de cierre"], filas);
+    });
+    if (!alguno) html += pendienteVivo("Pendiente de capturar en la pestaña \"Programa Analítico\" (Plano 3).");
+    return html;
+  },
+};
+
+// Sustituye las marcas <!--VIVO:...--> del documento por lo capturado.
+function componerDocumentoVivo(htmlBase, mapa, obs) {
+  return htmlBase.replace(/<!--VIVO:([a-z0-9-]+)-->/g, (m, id) => {
+    const gen = GENERADORES_VIVO[id];
+    if (!gen) return "";
+    try { return envolverVivo(id, gen(mapa || {}, obs || [])); } catch (e) { console.error("Documento en vivo:", id, e); return ""; }
+  });
+}
+
+// Trae de la Hoja, en 3 consultas, todo lo que usan los documentos en vivo.
+async function cargarDatosVivosPlaneacion() {
+  const [pic, pa, obs] = await Promise.all([
+    listarStorageObjeto("pic:"),
+    listarStorageObjeto("progAnalitico:"),
+    listarStorage("progObs:"),
+  ]);
+  const mapa = {};
+  Object.entries(pic || {}).forEach(([k, v]) => { mapa["pic:" + k] = v; });
+  Object.entries(pa || {}).forEach(([k, v]) => { mapa["progAnalitico:" + k] = v; });
+  return { mapa, obs: obs || [] };
+}
+
+// Gancho: mapa de datos que se actualiza solo (avisos al instante + revisión
+// en la Hoja cada 45 s, por si alguien más captura desde otro equipo).
+function useDatosVivosPlaneacion() {
+  const [mapa, setMapa] = useState({});
+  const [obs, setObs] = useState([]);
+  const [actualizado, setActualizado] = useState(null);
+  const [cargando, setCargando] = useState(true);
+
+  const recargar = useCallback(async () => {
+    const inicio = Date.now();
+    const d = await cargarDatosVivosPlaneacion();
+    // Lo que se acaba de escribir en esta sesión (aunque la Hoja todavía no
+    // termine de guardarlo) manda sobre lo que se leyó.
+    Object.entries(CACHE_DATOS_VIVOS).forEach(([k, c]) => {
+      if ((k.startsWith("pic:") || k.startsWith("progAnalitico:")) && inicio - c.t < 5 * 60 * 1000) d.mapa[k] = c.value;
+    });
+    setMapa(d.mapa);
+    setObs(d.obs);
+    setActualizado(new Date());
+    setCargando(false);
+  }, []);
+
+  useEffect(() => {
+    recargar();
+    const quitar = escucharDatosVivos((key, value) => {
+      if (key.startsWith("pic:") || key.startsWith("progAnalitico:")) {
+        setMapa((prev) => ({ ...prev, [key]: value }));
+        setActualizado(new Date());
+      } else if (key.startsWith("progObs:")) {
+        recargar();
+      }
+    });
+    const intervalo = setInterval(() => {
+      if (typeof document === "undefined" || document.visibilityState === "visible") recargar();
+    }, 45000);
+    return () => { quitar(); clearInterval(intervalo); };
+  }, [recargar]);
+
+  return { mapa, obs, actualizado, cargando, recargar };
+}
+
 /* Muestra, DENTRO de la app (sin abrir otra página), el documento completo
    de Programa Analítico / PEMC / PIC — diagnóstico, gráficas de resultados,
    análisis e interpretación. Es la única copia de este contenido en todo
@@ -15193,13 +15511,32 @@ async function cargarResumenImpresionPIC() {
    DOCUMENTOS_PLANEACION_COMPLETOS). "cual" y "setCual" los controla el
    componente que llama a este (ProgramaAnaliticoPIC), para que las
    tarjetas de arriba puedan elegir qué documento mostrar aquí. */
-function AnalisisResultadosEmbebido({ cual, setCual }) {
+function AnalisisResultadosEmbebido({ cual, setCual, irA, setIrA }) {
   const [imprimiendoDoc, setImprimiendoDoc] = useState(false);
-  const DOCS = {
+  const { mapa, obs, actualizado, cargando, recargar } = useDatosVivosPlaneacion();
+  const BASE = {
     pa: { label: "Programa Analítico", html: DOCUMENTO_COMPLETO_PROGRAMA_ANALITICO_HTML },
     pemc: { label: "PEMC 2026-2027", html: DOCUMENTO_COMPLETO_PEMC_HTML },
     pic: { label: "PIC 2026-2027", html: DOCUMENTO_COMPLETO_PIC_HTML },
   };
+  const htmlVivo = useMemo(() => componerDocumentoVivo(BASE[cual].html, mapa, obs), [cual, mapa, obs]);
+  const DOCS = { ...BASE, [cual]: { ...BASE[cual], html: htmlVivo } };
+  const tieneVivo = /<!--VIVO:/.test(BASE[cual].html);
+  const contenedor = useRef(null);
+
+  // "Ver en el documento final" desde una pestaña de captura: baja hasta la
+  // sección correspondiente (ej. vivo-pic-etapa1).
+  useEffect(() => {
+    if (!irA || cargando || !contenedor.current) return;
+    const el = contenedor.current.querySelector(`#vivo-${irA}`);
+    if (el) {
+      contenedor.current.scrollIntoView({ block: "start" });
+      contenedor.current.scrollTop += el.getBoundingClientRect().top - contenedor.current.getBoundingClientRect().top - 10;
+      el.classList.add("bloque-vivo-resaltado");
+      setTimeout(() => el.classList.remove("bloque-vivo-resaltado"), 2500);
+    }
+    setIrA && setIrA(null);
+  }, [irA, cargando, htmlVivo]);
 
   useEffect(() => {
     window.onafterprint = () => setImprimiendoDoc(false);
@@ -15233,11 +15570,204 @@ function AnalisisResultadosEmbebido({ cual, setCual }) {
           <button key={id} onClick={() => setCual(id)} className={`chip-grado ${cual === id ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>{d.label}</button>
         ))}
       </div>
+      {tieneVivo && (
+        <div className="flex items-center gap-2 flex-wrap text-sm" style={{ fontSize: "0.75rem" }}>
+          <span style={{ color: "var(--verde)", fontWeight: 600 }}>● En vivo</span>
+          <span style={{ opacity: 0.6 }}>
+            {cargando ? "Cargando lo capturado…" : `Lo que se escribe en las pestañas de captura aparece aquí al instante (marcado con una línea verde a la izquierda; al imprimir no se ve).${actualizado ? " Última actualización: " + actualizado.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) + "." : ""}`}
+          </span>
+          <button onClick={recargar} className="btn-secundario" style={{ fontSize: "0.7rem", padding: "0.15rem 0.5rem" }}>Actualizar ahora</button>
+        </div>
+      )}
       <div
+        ref={contenedor}
         className="card"
         style={{ fontFamily: "Arial, Helvetica, sans-serif", overflowX: "auto", maxHeight: "80vh", overflowY: "auto" }}
         dangerouslySetInnerHTML={{ __html: DOCS[cual].html }}
       />
+    </div>
+  );
+}
+
+/* Campos de cada formulario de Programa Analítico / PIC. Se definen UNA sola
+   vez aquí para que el formulario (donde se captura) y el documento final
+   (donde se muestra en vivo) usen exactamente los mismos campos y etiquetas. */
+const CAMPOS_CAPTURA_PLANEACION = {
+  etapa1: [
+    { key: "condicionesAcademicas", etiqueta: "Condiciones académicas", tipo: "area", filas: 6 },
+    { key: "condicionesFamiliares", etiqueta: "Condiciones familiares", tipo: "area", filas: 4 },
+    { key: "condicionesPersonales", etiqueta: "Condiciones personales", tipo: "area", filas: 3 },
+  ],
+  etapa2Principal: [
+    { key: "planteamientoFinal", etiqueta: "Planteamiento final de la situación problemática (un solo párrafo, claro y contextualizado, sin anticipar una solución única)", tipo: "area", filas: 5, placeholder: "En (contexto) se observa que (situación problemática), lo cual afecta (impacto)." },
+    ...VALIDACION_RAPIDA_PROBLEMATICA_CRITERIOS.map((criterio, i) => ({
+      key: `criterio${i + 1}`, etiqueta: `Validación rápida — ${criterio}`, tipo: "select", opciones: ["Sí", "Ajustar"],
+    })),
+    { key: "reflexionFinal", etiqueta: "Reflexión final — ¿Qué diferencia encuentras entre identificar un problema y problematizar una situación para convertirla en una oportunidad de aprendizaje?", tipo: "area", filas: 3 },
+  ],
+  etapa3Principal: [
+    { key: "posibleAccion", etiqueta: "¿Qué podrían hacer las y los estudiantes con la información y los aprendizajes construidos?", tipo: "area", filas: 4 },
+  ],
+  etapa2Secundaria: [
+    { key: "planteamientoFinal", etiqueta: "Planteamiento final de la situación problemática (un solo párrafo, claro y contextualizado, sin anticipar una solución única)", tipo: "area", filas: 4, placeholder: "En (contexto) se observa que (situación problemática), lo cual afecta (impacto)." },
+    ...VALIDACION_RAPIDA_PROBLEMATICA_CRITERIOS.map((criterio, i) => ({
+      key: `criterio${i + 1}`, etiqueta: `Validación rápida — ${criterio}`, tipo: "select", opciones: ["Sí", "Ajustar"],
+    })),
+    { key: "reflexionFinal", etiqueta: "Reflexión final — ¿Qué diferencia encuentras entre identificar un problema y problematizar una situación para convertirla en una oportunidad de aprendizaje?", tipo: "area", filas: 3 },
+  ],
+  etapa3Secundaria: [
+    { key: "posibleAccion", etiqueta: "¿Qué podrían hacer las y los estudiantes con la información y los aprendizajes construidos?", tipo: "area", filas: 4 },
+  ],
+  etapa4Aportacion: [
+    { key: "aulaProblematica", etiqueta: "Aula — Problemática acordada", tipo: "area", filas: 2 },
+    { key: "aulaPorQue", etiqueta: "Aula — ¿Por qué se decidió la problemática?", tipo: "area", filas: 2 },
+    { key: "aulaSituaciones", etiqueta: "Aula — Situaciones que contribuyen a la problemática", tipo: "area", filas: 2 },
+    { key: "escuelaProblematica", etiqueta: "Escuela — Problemática acordada (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "escuelaPorQue", etiqueta: "Escuela — ¿Por qué se decidió la problemática?", tipo: "area", filas: 2 },
+    { key: "escuelaSituaciones", etiqueta: "Escuela — Situaciones que contribuyen a la problemática", tipo: "area", filas: 2 },
+    { key: "comunidadProblematica", etiqueta: "Comunidad — Problemática acordada (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "comunidadPorQue", etiqueta: "Comunidad — ¿Por qué se decidió la problemática?", tipo: "area", filas: 2 },
+    { key: "comunidadSituaciones", etiqueta: "Comunidad — Situaciones que contribuyen a la problemática", tipo: "area", filas: 2 },
+  ],
+  etapa4Propuestas: [
+    { key: "aulaHorizonte", etiqueta: "Aula — Horizonte de expectativas", tipo: "area", filas: 2 },
+    { key: "escuelaHorizonte", etiqueta: "Escuela — Horizonte de expectativas (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "comunidadHorizonte", etiqueta: "Comunidad — Horizonte de expectativas (secundaria, opcional)", tipo: "area", filas: 2 },
+  ],
+  etapa4CadaUno: [
+    { key: "aulaIdeas", etiqueta: "Territorio aula — Ideas generales de lo que se busca obtener", tipo: "area", filas: 3 },
+    { key: "escuelaIdeas", etiqueta: "Territorio escuela — Ideas generales (secundaria, opcional)", tipo: "area", filas: 3 },
+    { key: "comunidadIdeas", etiqueta: "Territorio comunidad — Ideas generales (secundaria, opcional)", tipo: "area", filas: 3 },
+  ],
+  etapa5Secuencia: [
+    { key: "queLocalizacion", etiqueta: "Actividad 1. Localización de la información — ¿Qué vamos a hacer?", tipo: "area", filas: 2 },
+    { key: "comoLocalizacion", etiqueta: "Actividad 1. Localización de la información — ¿Cómo lo vamos a hacer?", tipo: "area", filas: 2 },
+    { key: "cuandoLocalizacion", etiqueta: "Actividad 1. Localización de la información — ¿Cuándo lo vamos a hacer?", tipo: "texto" },
+    { key: "queElaboracion", etiqueta: "Actividad 2. Elaboración de las propuestas — ¿Qué vamos a hacer?", tipo: "area", filas: 2 },
+    { key: "comoElaboracion", etiqueta: "Actividad 2. Elaboración de las propuestas — ¿Cómo lo vamos a hacer?", tipo: "area", filas: 2 },
+    { key: "cuandoElaboracion", etiqueta: "Actividad 2. Elaboración de las propuestas — ¿Cuándo lo vamos a hacer?", tipo: "texto" },
+    { key: "quePresentacion", etiqueta: "Actividad 3. Presentación de las alternativas de solución — ¿Qué vamos a hacer?", tipo: "area", filas: 2 },
+    { key: "comoPresentacion", etiqueta: "Actividad 3. Presentación de las alternativas de solución — ¿Cómo lo vamos a hacer?", tipo: "area", filas: 2 },
+    { key: "cuandoPresentacion", etiqueta: "Actividad 3. Presentación de las alternativas de solución — ¿Cuándo lo vamos a hacer?", tipo: "texto" },
+  ],
+  etapa5Cronograma: [
+    { key: "primeroActividad", etiqueta: "1er grado — Actividad", tipo: "area", filas: 2 },
+    { key: "primeroCoordina", etiqueta: "1er grado — Coordina", tipo: "texto" },
+    { key: "primeroResponsables", etiqueta: "1er grado — Responsables", tipo: "texto" },
+    { key: "primeroProductos", etiqueta: "1er grado — Productos parciales", tipo: "area", filas: 2 },
+    { key: "primeroTiempos", etiqueta: "1er grado — Tiempos de entrega", tipo: "texto" },
+    { key: "primeroEntregaFinal", etiqueta: "1er grado — Entrega final", tipo: "area", filas: 2 },
+    { key: "segundoActividad", etiqueta: "2° grado — Actividad", tipo: "area", filas: 2 },
+    { key: "segundoCoordina", etiqueta: "2° grado — Coordina", tipo: "texto" },
+    { key: "segundoResponsables", etiqueta: "2° grado — Responsables", tipo: "texto" },
+    { key: "segundoProductos", etiqueta: "2° grado — Productos parciales", tipo: "area", filas: 2 },
+    { key: "segundoTiempos", etiqueta: "2° grado — Tiempos de entrega", tipo: "texto" },
+    { key: "segundoEntregaFinal", etiqueta: "2° grado — Entrega final", tipo: "area", filas: 2 },
+    { key: "terceroActividad", etiqueta: "3er grado — Actividad", tipo: "area", filas: 2 },
+    { key: "terceroCoordina", etiqueta: "3er grado — Coordina", tipo: "texto" },
+    { key: "terceroResponsables", etiqueta: "3er grado — Responsables", tipo: "texto" },
+    { key: "terceroProductos", etiqueta: "3er grado — Productos parciales", tipo: "area", filas: 2 },
+    { key: "terceroTiempos", etiqueta: "3er grado — Tiempos de entrega", tipo: "texto" },
+    { key: "terceroEntregaFinal", etiqueta: "3er grado — Entrega final", tipo: "area", filas: 2 },
+  ],
+  etapa6InfoMano: [
+    { key: "aulaFuentes", etiqueta: "Aula — Localización de fuentes de consulta", tipo: "area", filas: 2 },
+    { key: "aulaProyectos", etiqueta: "Aula — Nuestros proyectos", tipo: "area", filas: 2 },
+    { key: "aulaAcciones", etiqueta: "Aula — Acciones específicas", tipo: "area", filas: 2 },
+    { key: "escuelaFuentes", etiqueta: "Escuela — Localización de fuentes de consulta (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "escuelaProyectos", etiqueta: "Escuela — Nuestros proyectos (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "escuelaAcciones", etiqueta: "Escuela — Acciones específicas (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "comunidadFuentes", etiqueta: "Comunidad — Localización de fuentes de consulta (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "comunidadProyectos", etiqueta: "Comunidad — Nuestros proyectos (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "comunidadAcciones", etiqueta: "Comunidad — Acciones específicas (secundaria, opcional)", tipo: "area", filas: 2 },
+  ],
+  etapa6Seguimiento: [
+    { key: "propuestaSolucion", etiqueta: "Propuesta de solución a la problemática (avance)", tipo: "area", filas: 2 },
+    { key: "actividadElaboracion", etiqueta: "Actividad: elaboración de las alternativas (avance)", tipo: "area", filas: 2 },
+    { key: "accion1", etiqueta: "Comunidad — Acción 1 (pequeña)", tipo: "texto" },
+    { key: "avance1", etiqueta: "Avance", tipo: "texto" },
+    { key: "contratiempo1", etiqueta: "Contratiempo", tipo: "texto" },
+    { key: "solucion1", etiqueta: "Solución al contratiempo", tipo: "texto" },
+    { key: "accion2", etiqueta: "Comunidad — Acción 2 (pequeña)", tipo: "texto" },
+    { key: "avance2", etiqueta: "Avance", tipo: "texto" },
+    { key: "contratiempo2", etiqueta: "Contratiempo", tipo: "texto" },
+    { key: "solucion2", etiqueta: "Solución al contratiempo", tipo: "texto" },
+    { key: "accion3", etiqueta: "Comunidad — Acción 3 (pequeña)", tipo: "texto" },
+    { key: "avance3", etiqueta: "Avance", tipo: "texto" },
+    { key: "contratiempo3", etiqueta: "Contratiempo", tipo: "texto" },
+    { key: "solucion3", etiqueta: "Solución al contratiempo", tipo: "texto" },
+    { key: "accion4", etiqueta: "Comunidad — Acción 4 (pequeña)", tipo: "texto" },
+    { key: "avance4", etiqueta: "Avance", tipo: "texto" },
+    { key: "contratiempo4", etiqueta: "Contratiempo", tipo: "texto" },
+    { key: "solucion4", etiqueta: "Solución al contratiempo", tipo: "texto" },
+    { key: "asamblea", etiqueta: "Asamblea — acuerdos y avance", tipo: "area", filas: 2 },
+  ],
+  etapa7Integrar: [
+    { key: "aulaProyectos", etiqueta: "Aula — Nuestros proyectos", tipo: "area", filas: 2 },
+    { key: "aulaPropuesta", etiqueta: "Aula — Propuesta de solución para la problemática", tipo: "area", filas: 2 },
+    { key: "aulaAcciones", etiqueta: "Aula — Acciones específicas", tipo: "area", filas: 2 },
+    { key: "aulaAvance", etiqueta: "Aula — Avance", tipo: "area", filas: 2 },
+    { key: "escuelaProyectos", etiqueta: "Escuela — Nuestros proyectos (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "escuelaPropuesta", etiqueta: "Escuela — Propuesta de solución (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "escuelaAcciones", etiqueta: "Escuela — Acciones específicas (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "escuelaAvance", etiqueta: "Escuela — Avance (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "comunidadProyectos", etiqueta: "Comunidad — Nuestros proyectos (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "comunidadPropuesta", etiqueta: "Comunidad — Propuesta de solución (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "comunidadAcciones", etiqueta: "Comunidad — Acciones específicas (secundaria, opcional)", tipo: "area", filas: 2 },
+    { key: "comunidadAvance", etiqueta: "Comunidad — Avance (secundaria, opcional)", tipo: "area", filas: 2 },
+  ],
+  paContextualizacion: [
+      { key: "contenido", etiqueta: "Contenido(s) contextualizado(s)", tipo: "area", filas: 3 },
+      { key: "eje", etiqueta: "Eje(s) articulador(es)", tipo: "texto" },
+      { key: "vinculo", etiqueta: "Vínculo con el diagnóstico", tipo: "area", filas: 2 },
+    ],
+  paCodiseno: [
+      { key: "contenidosPDA", etiqueta: "Contenidos y PDA a trabajar", tipo: "area", filas: 3 },
+      { key: "metodologia", etiqueta: "Metodología / vinculación con PIC", tipo: "area", filas: 3 },
+      { key: "fechaCierre", etiqueta: "Fecha de cierre", tipo: "texto" },
+    ],
+  picSeleccion: [
+    { key: "problema", etiqueta: "Problema priorizado", tipo: "area", filas: 2 },
+    { key: "porQue", etiqueta: "¿Por qué este y no otro?", tipo: "area", filas: 2 },
+    { key: "aQuienAfecta", etiqueta: "¿A quién afecta en la comunidad?", tipo: "area", filas: 2 },
+    { key: "preguntaGuia", etiqueta: "Pregunta guía del proyecto", tipo: "area", filas: 2 },
+  ],
+  picPlaneacion: [
+    { key: "nombreProyecto", etiqueta: "Nombre del proyecto", tipo: "texto" },
+    { key: "objetivo", etiqueta: "Objetivo general", tipo: "area", filas: 2 },
+    { key: "camposFormativos", etiqueta: "Campo(s) formativo(s) vinculado(s)", tipo: "texto" },
+    { key: "ejesArticuladores", etiqueta: "Eje(s) articulador(es)", tipo: "texto" },
+    { key: "metodologia", etiqueta: "Metodología / actividades principales", tipo: "area", filas: 3 },
+    { key: "recursos", etiqueta: "Recursos necesarios (materiales, apoyo comunitario)", tipo: "area", filas: 2 },
+    { key: "productoFinal", etiqueta: "Producto final esperado", tipo: "area", filas: 2 },
+    { key: "aliados", etiqueta: "Aliados de la comunidad (padres, autoridades, otros)", tipo: "area", filas: 2 },
+  ],
+  picCronograma: [
+      { key: "actividad", etiqueta: "Actividad principal", tipo: "area", filas: 2 },
+      { key: "periodo", etiqueta: "Periodo (trimestre)", tipo: "texto" },
+      { key: "responsable", etiqueta: "Responsable", tipo: "texto" },
+    ],
+  picEvaluacion: [
+    { key: "comoPresentar", etiqueta: "¿Cómo se presentará el resultado a la comunidad?", tipo: "area", filas: 3 },
+    { key: "criterios", etiqueta: "Criterios de evaluación", tipo: "area", filas: 3 },
+  ],
+};
+
+// Aviso arriba de cada pestaña de captura: lo escrito se guarda solo y se
+// ve al instante en el documento final.
+function AvisoDocumentoVivo({ documento, botones }) {
+  return (
+    <div className="card" style={{ borderColor: "#2e7d32", background: "rgba(46,125,50,0.07)", padding: "0.7rem 0.9rem" }}>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-sm" style={{ margin: 0 }}>
+          <span style={{ color: "#2e7d32", fontWeight: 700 }}>● En vivo:</span> lo que escriban aquí se guarda solo (al dejar de escribir) y aparece al instante en el documento final <b>{documento}</b>.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          {botones.map(([t, f]) => (
+            <button key={t} onClick={f} className="btn-secundario" style={{ fontSize: "0.72rem" }}>{t} →</button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -15248,6 +15778,8 @@ function ProgramaAnaliticoPIC({ onStamp }) {
   const [imprimiendo, setImprimiendo] = useState(false);
   const [datosImpresion, setDatosImpresion] = useState(null);
   const [cualDocumento, setCualDocumento] = useState("pa");
+  const [irA, setIrA] = useState(null);
+  const verEnDocumento = (doc, seccion) => { setCualDocumento(doc); setSubTab("analisis"); setIrA(seccion); };
 
   const SUBTABS = [
     { id: "analisis", label: "Resultados y análisis" },
@@ -15299,10 +15831,14 @@ function ProgramaAnaliticoPIC({ onStamp }) {
         ))}
       </div>
 
-      {subTab === "analisis" && <AnalisisResultadosEmbebido cual={cualDocumento} setCual={setCualDocumento} />}
+      {subTab === "analisis" && <AnalisisResultadosEmbebido cual={cualDocumento} setCual={setCualDocumento} irA={irA} setIrA={setIrA} />}
 
       {subTab === "etapas123" && (
         <div className="flex flex-col gap-4">
+          <AvisoDocumentoVivo documento="PIC 2026-2027" botones={[
+            ["Ver Etapa 1 en el PIC", () => verEnDocumento("pic", "pic-etapa1")],
+            ["Ver Etapas 2 y 3 en el PIC", () => verEnDocumento("pic", "pic-etapas23")],
+          ]} />
           <div className="card" style={{ borderColor: "var(--amarillo)", background: "rgba(245,179,67,0.08)" }}>
             <p className="text-sm">
               Las 3 primeras Etapas del PIC (Semana de Inicio), según el esquema oficial "Proyecto de integración comunitaria" (Dirección General de Materiales Educativos, SEP) y la hoja "Construcción y validación de la problemática" (Academia Estatal de Fortalecimiento Pedagógico e Innovación Educativa). La <b>Etapa 1</b> es un solo trabajo de todo el colectivo (no varía por grado). El <b>proyecto principal de las Etapas 2 y 3</b> es académico, uno distinto por grado, basado en los resultados reales del EIA Fase 6 (ver tabla de resultados abajo) — más abajo queda, aparte y como opcional, el espacio por si algún grado quiere trabajar además una problemática comunitaria secundaria (basura/salud).
@@ -15364,11 +15900,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             ayuda="Resultado ya trabajado de la tabla oficial Características / Necesidades comunitarias / Propuestas de solución, organizado por el colectivo en 3 tipos de condiciones. Territorios: Aula → Escuela → Comunidad."
             onStamp={onStamp}
             valoresPorDefecto={ETAPA1_CONDICIONES_PREFILL}
-            campos={[
-              { key: "condicionesAcademicas", etiqueta: "Condiciones académicas", tipo: "area", filas: 6 },
-              { key: "condicionesFamiliares", etiqueta: "Condiciones familiares", tipo: "area", filas: 4 },
-              { key: "condicionesPersonales", etiqueta: "Condiciones personales", tipo: "area", filas: 3 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa1}
           />
 
           <TablaEIAFase6Ref />
@@ -15412,13 +15944,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             ayuda="Problemática académica basada en los resultados reales del EIA Fase 6 de este grado (ver tabla arriba)."
             onStamp={onStamp}
             valoresPorDefecto={ETAPA2_PLANTEAMIENTO_PRINCIPAL_PREFILL_POR_GRADO[grado]}
-            campos={[
-              { key: "planteamientoFinal", etiqueta: "Planteamiento final de la situación problemática (un solo párrafo, claro y contextualizado, sin anticipar una solución única)", tipo: "area", filas: 5, placeholder: "En (contexto) se observa que (situación problemática), lo cual afecta (impacto)." },
-              ...VALIDACION_RAPIDA_PROBLEMATICA_CRITERIOS.map((criterio, i) => ({
-                key: `criterio${i + 1}`, etiqueta: `Validación rápida — ${criterio}`, tipo: "select", opciones: ["Sí", "Ajustar"],
-              })),
-              { key: "reflexionFinal", etiqueta: "Reflexión final — ¿Qué diferencia encuentras entre identificar un problema y problematizar una situación para convertirla en una oportunidad de aprendizaje?", tipo: "area", filas: 3 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa2Principal}
           />
 
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
@@ -15435,9 +15961,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             claveStorage={`pic:${grado}:etapa3:principal`}
             titulo={`Etapa 3 — Posible acción con lo aprendido · ${grado}° grado`}
             onStamp={onStamp}
-            campos={[
-              { key: "posibleAccion", etiqueta: "¿Qué podrían hacer las y los estudiantes con la información y los aprendizajes construidos?", tipo: "area", filas: 4 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa3Principal}
           />
 
           <div className="card" style={{ borderColor: "var(--borde)", opacity: 0.85 }}>
@@ -15455,13 +15979,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             claveStorage={`pic:${grado}:etapa2`}
             titulo={`Problemática secundaria (opcional) · ${grado}° grado`}
             onStamp={onStamp}
-            campos={[
-              { key: "planteamientoFinal", etiqueta: "Planteamiento final de la situación problemática (un solo párrafo, claro y contextualizado, sin anticipar una solución única)", tipo: "area", filas: 4, placeholder: "En (contexto) se observa que (situación problemática), lo cual afecta (impacto)." },
-              ...VALIDACION_RAPIDA_PROBLEMATICA_CRITERIOS.map((criterio, i) => ({
-                key: `criterio${i + 1}`, etiqueta: `Validación rápida — ${criterio}`, tipo: "select", opciones: ["Sí", "Ajustar"],
-              })),
-              { key: "reflexionFinal", etiqueta: "Reflexión final — ¿Qué diferencia encuentras entre identificar un problema y problematizar una situación para convertirla en una oportunidad de aprendizaje?", tipo: "area", filas: 3 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa2Secundaria}
           />
 
           <FormularioAutoguardado
@@ -15469,15 +15987,16 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             claveStorage={`pic:${grado}:etapa3`}
             titulo={`Posible acción con lo aprendido (secundaria, opcional) · ${grado}° grado`}
             onStamp={onStamp}
-            campos={[
-              { key: "posibleAccion", etiqueta: "¿Qué podrían hacer las y los estudiantes con la información y los aprendizajes construidos?", tipo: "area", filas: 4 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa3Secundaria}
           />
         </div>
       )}
 
       {subTab === "etapas47" && (
         <div className="flex flex-col gap-4">
+          <AvisoDocumentoVivo documento="PIC 2026-2027" botones={[
+            ["Ver Etapas 4 a 7 en el PIC", () => verEnDocumento("pic", "pic-etapas47")],
+          ]} />
           <div className="card" style={{ borderColor: "var(--amarillo)", background: "rgba(245,179,67,0.08)" }}>
             <p className="text-sm">
               Etapas 4 a 7 del PIC (después de la Semana de Inicio), según las tablas oficiales "Tablas integradoras PIC". Para cada grado, el territorio <b>Aula</b> trabaja la problemática académica PRINCIPAL (ver Etapa 2-3 arriba, basada en el EIA de Fase 6); los territorios <b>Escuela</b> y <b>Comunidad</b> quedan para la problemática secundaria y opcional (basura/salud), solo si el grado decide trabajarla además.
@@ -15508,17 +16027,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             ayuda="Por territorio: la problemática acordada, por qué se decidió, y qué situaciones contribuyen a ella."
             onStamp={onStamp}
             valoresPorDefecto={ETAPA4_APORTACION_PREFILL_POR_GRADO[grado]}
-            campos={[
-              { key: "aulaProblematica", etiqueta: "Aula — Problemática acordada", tipo: "area", filas: 2 },
-              { key: "aulaPorQue", etiqueta: "Aula — ¿Por qué se decidió la problemática?", tipo: "area", filas: 2 },
-              { key: "aulaSituaciones", etiqueta: "Aula — Situaciones que contribuyen a la problemática", tipo: "area", filas: 2 },
-              { key: "escuelaProblematica", etiqueta: "Escuela — Problemática acordada (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "escuelaPorQue", etiqueta: "Escuela — ¿Por qué se decidió la problemática?", tipo: "area", filas: 2 },
-              { key: "escuelaSituaciones", etiqueta: "Escuela — Situaciones que contribuyen a la problemática", tipo: "area", filas: 2 },
-              { key: "comunidadProblematica", etiqueta: "Comunidad — Problemática acordada (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "comunidadPorQue", etiqueta: "Comunidad — ¿Por qué se decidió la problemática?", tipo: "area", filas: 2 },
-              { key: "comunidadSituaciones", etiqueta: "Comunidad — Situaciones que contribuyen a la problemática", tipo: "area", filas: 2 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa4Aportacion}
           />
 
           <FormularioAutoguardado
@@ -15527,11 +16036,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             titulo={`Propuestas para el bien común · ${grado}° grado`}
             ayuda="Igual que arriba, agregando el horizonte de expectativas por territorio."
             onStamp={onStamp}
-            campos={[
-              { key: "aulaHorizonte", etiqueta: "Aula — Horizonte de expectativas", tipo: "area", filas: 2 },
-              { key: "escuelaHorizonte", etiqueta: "Escuela — Horizonte de expectativas (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "comunidadHorizonte", etiqueta: "Comunidad — Horizonte de expectativas (secundaria, opcional)", tipo: "area", filas: 2 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa4Propuestas}
           />
 
           <FormularioAutoguardado
@@ -15541,11 +16046,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             ayuda="Por territorio: ideas generales de lo que se busca obtener."
             onStamp={onStamp}
             valoresPorDefecto={ETAPA4_CADAUNOLETOCA_PREFILL_POR_GRADO[grado]}
-            campos={[
-              { key: "aulaIdeas", etiqueta: "Territorio aula — Ideas generales de lo que se busca obtener", tipo: "area", filas: 3 },
-              { key: "escuelaIdeas", etiqueta: "Territorio escuela — Ideas generales (secundaria, opcional)", tipo: "area", filas: 3 },
-              { key: "comunidadIdeas", etiqueta: "Territorio comunidad — Ideas generales (secundaria, opcional)", tipo: "area", filas: 3 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa4CadaUno}
           />
 
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
@@ -15562,17 +16063,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             claveStorage={`pic:${grado}:etapa5:secuencia`}
             titulo={`Definir una secuencia de actividades · ${grado}° grado`}
             onStamp={onStamp}
-            campos={[
-              { key: "queLocalizacion", etiqueta: "Actividad 1. Localización de la información — ¿Qué vamos a hacer?", tipo: "area", filas: 2 },
-              { key: "comoLocalizacion", etiqueta: "Actividad 1. Localización de la información — ¿Cómo lo vamos a hacer?", tipo: "area", filas: 2 },
-              { key: "cuandoLocalizacion", etiqueta: "Actividad 1. Localización de la información — ¿Cuándo lo vamos a hacer?", tipo: "texto" },
-              { key: "queElaboracion", etiqueta: "Actividad 2. Elaboración de las propuestas — ¿Qué vamos a hacer?", tipo: "area", filas: 2 },
-              { key: "comoElaboracion", etiqueta: "Actividad 2. Elaboración de las propuestas — ¿Cómo lo vamos a hacer?", tipo: "area", filas: 2 },
-              { key: "cuandoElaboracion", etiqueta: "Actividad 2. Elaboración de las propuestas — ¿Cuándo lo vamos a hacer?", tipo: "texto" },
-              { key: "quePresentacion", etiqueta: "Actividad 3. Presentación de las alternativas de solución — ¿Qué vamos a hacer?", tipo: "area", filas: 2 },
-              { key: "comoPresentacion", etiqueta: "Actividad 3. Presentación de las alternativas de solución — ¿Cómo lo vamos a hacer?", tipo: "area", filas: 2 },
-              { key: "cuandoPresentacion", etiqueta: "Actividad 3. Presentación de las alternativas de solución — ¿Cuándo lo vamos a hacer?", tipo: "texto" },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa5Secuencia}
           />
 
           <FormularioAutoguardado
@@ -15580,26 +16071,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             titulo="Cronograma de actividades para cada presentación (compartido, los 3 grados a la vez)"
             ayuda="Por grado: Actividad, Coordina, Responsables, Productos parciales (estrategia detonadora seleccionada para la compilación de información), Tiempos de entrega, Entrega final (propuesta de solución, ref. NLPT3 p.256)."
             onStamp={onStamp}
-            campos={[
-              { key: "primeroActividad", etiqueta: "1er grado — Actividad", tipo: "area", filas: 2 },
-              { key: "primeroCoordina", etiqueta: "1er grado — Coordina", tipo: "texto" },
-              { key: "primeroResponsables", etiqueta: "1er grado — Responsables", tipo: "texto" },
-              { key: "primeroProductos", etiqueta: "1er grado — Productos parciales", tipo: "area", filas: 2 },
-              { key: "primeroTiempos", etiqueta: "1er grado — Tiempos de entrega", tipo: "texto" },
-              { key: "primeroEntregaFinal", etiqueta: "1er grado — Entrega final", tipo: "area", filas: 2 },
-              { key: "segundoActividad", etiqueta: "2° grado — Actividad", tipo: "area", filas: 2 },
-              { key: "segundoCoordina", etiqueta: "2° grado — Coordina", tipo: "texto" },
-              { key: "segundoResponsables", etiqueta: "2° grado — Responsables", tipo: "texto" },
-              { key: "segundoProductos", etiqueta: "2° grado — Productos parciales", tipo: "area", filas: 2 },
-              { key: "segundoTiempos", etiqueta: "2° grado — Tiempos de entrega", tipo: "texto" },
-              { key: "segundoEntregaFinal", etiqueta: "2° grado — Entrega final", tipo: "area", filas: 2 },
-              { key: "terceroActividad", etiqueta: "3er grado — Actividad", tipo: "area", filas: 2 },
-              { key: "terceroCoordina", etiqueta: "3er grado — Coordina", tipo: "texto" },
-              { key: "terceroResponsables", etiqueta: "3er grado — Responsables", tipo: "texto" },
-              { key: "terceroProductos", etiqueta: "3er grado — Productos parciales", tipo: "area", filas: 2 },
-              { key: "terceroTiempos", etiqueta: "3er grado — Tiempos de entrega", tipo: "texto" },
-              { key: "terceroEntregaFinal", etiqueta: "3er grado — Entrega final", tipo: "area", filas: 2 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa5Cronograma}
           />
 
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
@@ -15617,17 +16089,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             titulo={`Con la información en la mano · ${grado}° grado`}
             ayuda="Por territorio: nuestros proyectos, acciones específicas y localización de fuentes de consulta."
             onStamp={onStamp}
-            campos={[
-              { key: "aulaFuentes", etiqueta: "Aula — Localización de fuentes de consulta", tipo: "area", filas: 2 },
-              { key: "aulaProyectos", etiqueta: "Aula — Nuestros proyectos", tipo: "area", filas: 2 },
-              { key: "aulaAcciones", etiqueta: "Aula — Acciones específicas", tipo: "area", filas: 2 },
-              { key: "escuelaFuentes", etiqueta: "Escuela — Localización de fuentes de consulta (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "escuelaProyectos", etiqueta: "Escuela — Nuestros proyectos (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "escuelaAcciones", etiqueta: "Escuela — Acciones específicas (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "comunidadFuentes", etiqueta: "Comunidad — Localización de fuentes de consulta (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "comunidadProyectos", etiqueta: "Comunidad — Nuestros proyectos (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "comunidadAcciones", etiqueta: "Comunidad — Acciones específicas (secundaria, opcional)", tipo: "area", filas: 2 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa6InfoMano}
           />
 
           <FormularioAutoguardado
@@ -15636,27 +16098,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             titulo={`Todos en la misma tarea — seguimiento de avance · ${grado}° grado`}
             ayuda="Avance de la propuesta de solución y de las acciones con la comunidad, registrando contratiempos y su solución."
             onStamp={onStamp}
-            campos={[
-              { key: "propuestaSolucion", etiqueta: "Propuesta de solución a la problemática (avance)", tipo: "area", filas: 2 },
-              { key: "actividadElaboracion", etiqueta: "Actividad: elaboración de las alternativas (avance)", tipo: "area", filas: 2 },
-              { key: "accion1", etiqueta: "Comunidad — Acción 1 (pequeña)", tipo: "texto" },
-              { key: "avance1", etiqueta: "Avance", tipo: "texto" },
-              { key: "contratiempo1", etiqueta: "Contratiempo", tipo: "texto" },
-              { key: "solucion1", etiqueta: "Solución al contratiempo", tipo: "texto" },
-              { key: "accion2", etiqueta: "Comunidad — Acción 2 (pequeña)", tipo: "texto" },
-              { key: "avance2", etiqueta: "Avance", tipo: "texto" },
-              { key: "contratiempo2", etiqueta: "Contratiempo", tipo: "texto" },
-              { key: "solucion2", etiqueta: "Solución al contratiempo", tipo: "texto" },
-              { key: "accion3", etiqueta: "Comunidad — Acción 3 (pequeña)", tipo: "texto" },
-              { key: "avance3", etiqueta: "Avance", tipo: "texto" },
-              { key: "contratiempo3", etiqueta: "Contratiempo", tipo: "texto" },
-              { key: "solucion3", etiqueta: "Solución al contratiempo", tipo: "texto" },
-              { key: "accion4", etiqueta: "Comunidad — Acción 4 (pequeña)", tipo: "texto" },
-              { key: "avance4", etiqueta: "Avance", tipo: "texto" },
-              { key: "contratiempo4", etiqueta: "Contratiempo", tipo: "texto" },
-              { key: "solucion4", etiqueta: "Solución al contratiempo", tipo: "texto" },
-              { key: "asamblea", etiqueta: "Asamblea — acuerdos y avance", tipo: "area", filas: 2 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa6Seguimiento}
           />
 
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
@@ -15674,26 +16116,17 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             titulo={`La hora de integrar las piezas · ${grado}° grado`}
             ayuda="Por territorio: nuestros proyectos, propuesta de solución, acciones específicas y avance."
             onStamp={onStamp}
-            campos={[
-              { key: "aulaProyectos", etiqueta: "Aula — Nuestros proyectos", tipo: "area", filas: 2 },
-              { key: "aulaPropuesta", etiqueta: "Aula — Propuesta de solución para la problemática", tipo: "area", filas: 2 },
-              { key: "aulaAcciones", etiqueta: "Aula — Acciones específicas", tipo: "area", filas: 2 },
-              { key: "aulaAvance", etiqueta: "Aula — Avance", tipo: "area", filas: 2 },
-              { key: "escuelaProyectos", etiqueta: "Escuela — Nuestros proyectos (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "escuelaPropuesta", etiqueta: "Escuela — Propuesta de solución (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "escuelaAcciones", etiqueta: "Escuela — Acciones específicas (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "escuelaAvance", etiqueta: "Escuela — Avance (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "comunidadProyectos", etiqueta: "Comunidad — Nuestros proyectos (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "comunidadPropuesta", etiqueta: "Comunidad — Propuesta de solución (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "comunidadAcciones", etiqueta: "Comunidad — Acciones específicas (secundaria, opcional)", tipo: "area", filas: 2 },
-              { key: "comunidadAvance", etiqueta: "Comunidad — Avance (secundaria, opcional)", tipo: "area", filas: 2 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.etapa7Integrar}
           />
         </div>
       )}
 
       {subTab === "analitico" && (
         <div className="flex flex-col gap-4">
+          <AvisoDocumentoVivo documento="Programa Analítico" botones={[
+            ["Ver Plano 2 en el documento", () => verEnDocumento("pa", "pa-plano2")],
+            ["Ver Plano 3 en el documento", () => verEnDocumento("pa", "pa-plano3")],
+          ]} />
           <ObservacionesColectivo onStamp={onStamp} />
 
           <div className="flex gap-2 flex-wrap">
@@ -15717,11 +16150,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
               titulo={c.nombre}
               onStamp={onStamp}
               compacto
-              campos={[
-                { key: "contenido", etiqueta: "Contenido(s) contextualizado(s)", tipo: "area", filas: 3 },
-                { key: "eje", etiqueta: "Eje(s) articulador(es)", tipo: "texto" },
-                { key: "vinculo", etiqueta: "Vínculo con el diagnóstico", tipo: "area", filas: 2 },
-              ]}
+              campos={CAMPOS_CAPTURA_PLANEACION.paContextualizacion}
             />
           ))}
 
@@ -15735,11 +16164,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
               titulo={t.nombre}
               onStamp={onStamp}
               compacto
-              campos={[
-                { key: "contenidosPDA", etiqueta: "Contenidos y PDA a trabajar", tipo: "area", filas: 3 },
-                { key: "metodologia", etiqueta: "Metodología / vinculación con PIC", tipo: "area", filas: 3 },
-                { key: "fechaCierre", etiqueta: "Fecha de cierre", tipo: "texto" },
-              ]}
+              campos={CAMPOS_CAPTURA_PLANEACION.paCodiseno}
             />
           ))}
         </div>
@@ -15747,6 +16172,9 @@ function ProgramaAnaliticoPIC({ onStamp }) {
 
       {subTab === "pic" && (
         <div className="flex flex-col gap-4">
+          <AvisoDocumentoVivo documento="PIC 2026-2027" botones={[
+            ["Ver en el PIC", () => verEnDocumento("pic", "pic-etapas47")],
+          ]} />
           <TablaDiagnosticoRef />
 
           <div className="flex gap-2 flex-wrap">
@@ -15762,12 +16190,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             claveStorage={`pic:${grado}:seleccion`}
             titulo={`Fase 2 — Selección y planteamiento del problema · ${grado}° grado`}
             onStamp={onStamp}
-            campos={[
-              { key: "problema", etiqueta: "Problema priorizado", tipo: "area", filas: 2 },
-              { key: "porQue", etiqueta: "¿Por qué este y no otro?", tipo: "area", filas: 2 },
-              { key: "aQuienAfecta", etiqueta: "¿A quién afecta en la comunidad?", tipo: "area", filas: 2 },
-              { key: "preguntaGuia", etiqueta: "Pregunta guía del proyecto", tipo: "area", filas: 2 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.picSeleccion}
           />
 
           <FormularioAutoguardado
@@ -15775,16 +16198,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             claveStorage={`pic:${grado}:planeacion`}
             titulo={`Fase 3 — Planeación de la propuesta · ${grado}° grado`}
             onStamp={onStamp}
-            campos={[
-              { key: "nombreProyecto", etiqueta: "Nombre del proyecto", tipo: "texto" },
-              { key: "objetivo", etiqueta: "Objetivo general", tipo: "area", filas: 2 },
-              { key: "camposFormativos", etiqueta: "Campo(s) formativo(s) vinculado(s)", tipo: "texto" },
-              { key: "ejesArticuladores", etiqueta: "Eje(s) articulador(es)", tipo: "texto" },
-              { key: "metodologia", etiqueta: "Metodología / actividades principales", tipo: "area", filas: 3 },
-              { key: "recursos", etiqueta: "Recursos necesarios (materiales, apoyo comunitario)", tipo: "area", filas: 2 },
-              { key: "productoFinal", etiqueta: "Producto final esperado", tipo: "area", filas: 2 },
-              { key: "aliados", etiqueta: "Aliados de la comunidad (padres, autoridades, otros)", tipo: "area", filas: 2 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.picPlaneacion}
           />
 
           <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.25rem" }}>
@@ -15797,11 +16211,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
               titulo={f.nombre}
               onStamp={onStamp}
               compacto
-              campos={[
-                { key: "actividad", etiqueta: "Actividad principal", tipo: "area", filas: 2 },
-                { key: "periodo", etiqueta: "Periodo (trimestre)", tipo: "texto" },
-                { key: "responsable", etiqueta: "Responsable", tipo: "texto" },
-              ]}
+              campos={CAMPOS_CAPTURA_PLANEACION.picCronograma}
             />
           ))}
 
@@ -15809,10 +16219,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             claveStorage="pic:evaluacionDifusion"
             titulo="Fase 5 — Evaluación y difusión (compartido)"
             onStamp={onStamp}
-            campos={[
-              { key: "comoPresentar", etiqueta: "¿Cómo se presentará el resultado a la comunidad?", tipo: "area", filas: 3 },
-              { key: "criterios", etiqueta: "Criterios de evaluación", tipo: "area", filas: 3 },
-            ]}
+            campos={CAMPOS_CAPTURA_PLANEACION.picEvaluacion}
           />
         </div>
       )}
@@ -23215,6 +23622,11 @@ function App() {
        la dirección de la página ni el número de página que Chrome agrega
        arriba y abajo. Al declarar las cajas de margen de @page (aunque
        vacías), Chrome deja de imprimir sus encabezados y pies de página. */
+    /* Partes del documento final que vienen de lo capturado (en vivo). */
+    @media screen {
+      .bloque-vivo { border-left: 3px solid #2e7d32; padding-left: 0.6rem; margin-left: -0.6rem; transition: background 0.4s; }
+      .bloque-vivo-resaltado { background: rgba(46,125,50,0.12); }
+    }
     @page {
       margin: 12mm 12mm;
       @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; }
