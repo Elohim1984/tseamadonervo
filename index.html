@@ -5477,17 +5477,11 @@ function ResumenChip({ color, label, valor }) {
 }
 
 /* ---------- Calificaciones ---------- */
+// 4 nov 2026: Calificaciones usa solo el concentrado de la boleta oficial
+// (asignaturas reales por grado). La vista anterior tenía materias genéricas
+// (Ciencias Naturales, Historia y Cívica…) que no corresponden a la boleta.
 function Calificaciones(props) {
-  const [vista, setVista] = useState("boleta");
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-2 flex-wrap">
-        <button onClick={() => setVista("boleta")} className={`chip-grado ${vista === "boleta" ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>Concentrado para boleta oficial</button>
-        <button onClick={() => setVista("rapida")} className={`chip-grado ${vista === "rapida" ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>Captura rápida (anterior)</button>
-      </div>
-      {vista === "boleta" ? <ConcentradoBoleta alumnos={props.alumnos} gradosPermitidos={props.gradosPermitidos} onStamp={props.onStamp} /> : <CalificacionesRapidas {...props} />}
-    </div>
-  );
+  return <ConcentradoBoleta alumnos={props.alumnos} gradosPermitidos={props.gradosPermitidos} onStamp={props.onStamp} />;
 }
 
 function CalificacionesRapidas({ alumnos, calificaciones, setCalificaciones, gradosPermitidos, onStamp }) {
@@ -5719,6 +5713,8 @@ const DOCENTE_POR_GRADO_BOLETA = { "1": "NEFTALID BLADIMIR ORTAN AGUILAR", "2": 
 function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
   const [grado, setGrado] = useState(gradosPermitidos[0]);
   const [periodo, setPeriodo] = useState("1");
+  const [modo, setModo] = useState("tabla");
+  const [asig, setAsig] = useState("esp");
   const [regs, setRegs] = useState({});
   const [cargando, setCargando] = useState(true);
   const [estado, setEstado] = useState("");
@@ -5737,6 +5733,7 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
 
   const lista = alumnos.filter((a) => String(a.grado) === String(grado)).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
   const planas = asignaturasPlanas(grado);
+  const asigActual = planas.some(([k]) => k === asig) ? asig : planas[0][0];
 
   const guardarPendientes = async () => {
     const ids = Object.keys(pendientes.current);
@@ -5767,6 +5764,7 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
     if (valor !== "" && isNaN(Number(valor))) return;
     actualizar(id, (r) => ({ ...r, grado, cal: { ...(r.cal || {}), [k]: { ...((r.cal || {})[k] || {}), [periodo]: v } } }));
   };
+  const cambiarNotaAsig = (id, k, valor) => cambiarNota(id, k, valor);
   const cambiarDato = (id, campo, valor) => actualizar(id, (r) => ({ ...r, grado, [campo]: valor }));
 
   const imprimir = (cual) => {
@@ -5804,6 +5802,19 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
           <button key={p} onClick={() => setPeriodo(p)} className={`chip-grado ${periodo === p ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>{n}</button>
         ))}
         <span className="text-sm" style={{ opacity: 0.6 }}>{completos} de {lista.length} alumnos con el periodo completo</span>
+      </div>
+      <div className="flex gap-2 flex-wrap items-center">
+        <button onClick={() => setModo("tabla")} className={`chip-grado ${modo === "tabla" ? "activo" : ""}`} style={{ fontSize: "0.74rem" }}>Todas las asignaturas (tabla)</button>
+        <button onClick={() => setModo("asignatura")} className={`chip-grado ${modo === "asignatura" ? "activo" : ""}`} style={{ fontSize: "0.74rem" }}>Una asignatura a la vez</button>
+        {modo === "asignatura" && (
+          <select className="campo" style={{ maxWidth: "22rem" }} value={asigActual} onChange={(e) => setAsig(e.target.value)}>
+            {ASIGNATURAS_BOLETA[grado].map(([campo, l]) => (
+              <optgroup key={campo} label={campo}>
+                {l.map(([k, n]) => <option key={k} value={k}>{n}</option>)}
+              </optgroup>
+            ))}
+          </select>
+        )}
         {estado && <span className="text-sm" style={{ color: estado.startsWith("✓") ? "var(--verde)" : undefined, opacity: estado.startsWith("✓") ? 1 : 0.6 }}>{estado}</span>}
       </div>
 
@@ -5811,6 +5822,26 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
         <p className="text-sm text-center py-6" style={{ opacity: 0.55 }}>No hay alumnos inscritos en {grado}° grado.</p>
       ) : (
         <>
+          {modo === "asignatura" ? (
+            <div className="flex flex-col gap-2">
+              {lista.map((a) => {
+                const c = ((regs[a.id] || {}).cal || {})[asigActual] || {};
+                const pf = promedioAsignaturaBoleta(c);
+                return (
+                  <div key={a.id} className="card flex items-center justify-between gap-2">
+                    <div>
+                      <span className="text-sm font-medium">{nombreAlumno(a)}</span>
+                      <div style={{ fontSize: "0.68rem", opacity: 0.55 }}>
+                        {PERIODOS_BOLETA.map(([p, n]) => `${n}: ${fmtBoleta(numBoleta(c[p])) || "—"}`).join(" · ")}{pf !== null ? ` · Promedio final: ${fmtBoleta(pf)}` : ""}
+                      </div>
+                    </div>
+                    <input className="campo font-mono text-center" style={{ maxWidth: "4.5rem" }} type="number" min="5" max="10" step="1"
+                      value={c[periodo] ?? ""} onChange={(e) => { const v = e.target.value; const k = asigActual; cambiarNotaAsig(a.id, k, v); }} />
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
           <div className="card" style={{ overflowX: "auto", padding: "0.5rem" }}>
             <table style={{ borderCollapse: "collapse", fontSize: "0.78rem", minWidth: "100%" }}>
               <thead>
@@ -5842,6 +5873,7 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
               </tbody>
             </table>
           </div>
+          )}
 
           <div className="card" style={{ overflowX: "auto", padding: "0.5rem" }}>
             <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Datos de la parte de abajo de la boleta</div>
