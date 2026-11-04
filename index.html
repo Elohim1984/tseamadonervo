@@ -5477,7 +5477,20 @@ function ResumenChip({ color, label, valor }) {
 }
 
 /* ---------- Calificaciones ---------- */
-function Calificaciones({ alumnos, calificaciones, setCalificaciones, gradosPermitidos, onStamp }) {
+function Calificaciones(props) {
+  const [vista, setVista] = useState("boleta");
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2 flex-wrap">
+        <button onClick={() => setVista("boleta")} className={`chip-grado ${vista === "boleta" ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>Concentrado para boleta oficial</button>
+        <button onClick={() => setVista("rapida")} className={`chip-grado ${vista === "rapida" ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>Captura rápida (anterior)</button>
+      </div>
+      {vista === "boleta" ? <ConcentradoBoleta alumnos={props.alumnos} gradosPermitidos={props.gradosPermitidos} onStamp={props.onStamp} /> : <CalificacionesRapidas {...props} />}
+    </div>
+  );
+}
+
+function CalificacionesRapidas({ alumnos, calificaciones, setCalificaciones, gradosPermitidos, onStamp }) {
   const [grado, setGrado] = useState(gradosPermitidos[0]);
   const [materia, setMateria] = useState(MATERIAS[0]);
   const [periodo, setPeriodo] = useState(PERIODOS[0]);
@@ -5526,6 +5539,340 @@ function Calificaciones({ alumnos, calificaciones, setCalificaciones, gradosPerm
 
       {listaGrado.length > 0 && (
         <button onClick={guardar} className="btn-primario"><Check size={16} /> Guardar calificaciones</button>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Concentrado de calificaciones para la boleta (4 nov 2026) ----------
+   Mismas asignaturas, periodos y datos que pide la Boleta de Evaluación oficial
+   de secundaria (SEP Puebla) de cada grado. Sirve para asentar las
+   calificaciones y luego pasarlas a la boleta oficial (que sale con folio,
+   QR y sello del sistema estatal). Un renglón por alumno y ciclo:
+   boleta:<ciclo>:<alumnoId> = { grado, cal: { asig: { "1": n, "2": n, "3": n } },
+   artes, tecnologia, asistencias, folio, lengua }. */
+const CICLO_BOLETA = "2026-2027";
+const ASIGNATURAS_BOLETA = {
+  "1": [
+    ["Lenguajes", [["esp", "Español"], ["ing", "Inglés"], ["art", "Artes"]]],
+    ["Saberes y Pensamiento Científico", [["mat", "Matemáticas"], ["bio", "Biología"]]],
+    ["Ética, Naturaleza y Sociedades", [["geo", "Geografía"], ["his", "Historia"], ["fce", "Formación Cívica y Ética"]]],
+    ["De lo Humano y lo Comunitario", [["tec", "Tecnología"], ["edf", "Educación Física"]]],
+  ],
+  "2": [
+    ["Lenguajes", [["esp", "Español"], ["ing", "Inglés"], ["art", "Artes"]]],
+    ["Saberes y Pensamiento Científico", [["mat", "Matemáticas"], ["fis", "Física"]]],
+    ["Ética, Naturaleza y Sociedades", [["his", "Historia"], ["fce", "Formación Cívica y Ética"]]],
+    ["De lo Humano y lo Comunitario", [["tec", "Tecnología"], ["edf", "Educación Física"]]],
+  ],
+  "3": [
+    ["Lenguajes", [["esp", "Español"], ["ing", "Inglés"], ["art", "Artes"]]],
+    ["Saberes y Pensamiento Científico", [["mat", "Matemáticas"], ["qui", "Química"]]],
+    ["Ética, Naturaleza y Sociedades", [["his", "Historia"], ["fce", "Formación Cívica y Ética"]]],
+    ["De lo Humano y lo Comunitario", [["tec", "Tecnología"], ["edf", "Educación Física"]]],
+  ],
+};
+const PERIODOS_BOLETA = [["1", "1er periodo"], ["2", "2do periodo"], ["3", "3er periodo"]];
+const asignaturasPlanas = (g) => (ASIGNATURAS_BOLETA[g] || []).flatMap(([, l]) => l);
+const numBoleta = (v) => (v === "" || v === undefined || v === null || isNaN(Number(v)) ? null : Number(v));
+// Promedio final de la asignatura: solo cuando están los 3 periodos (1 decimal).
+function promedioAsignaturaBoleta(c) {
+  const ns = ["1", "2", "3"].map((p) => numBoleta(c && c[p]));
+  if (ns.some((n) => n === null)) return null;
+  return Math.round((ns.reduce((s, n) => s + n, 0) / 3) * 10) / 10;
+}
+function promedioFinalGradoBoleta(reg, grado) {
+  const ps = asignaturasPlanas(grado).map(([k]) => promedioAsignaturaBoleta((reg.cal || {})[k]));
+  if (!ps.length || ps.some((p) => p === null)) return null;
+  return Math.round((ps.reduce((s, n) => s + n, 0) / ps.length) * 10) / 10;
+}
+// Promedio de un periodo (todas las asignaturas capturadas de ese periodo).
+function promedioPeriodoBoleta(reg, grado, p) {
+  const ns = asignaturasPlanas(grado).map(([k]) => numBoleta(((reg.cal || {})[k] || {})[p]));
+  if (ns.some((n) => n === null)) return null;
+  return Math.round((ns.reduce((s, n) => s + n, 0) / ns.length) * 10) / 10;
+}
+const fmtBoleta = (n) => (n === null || n === undefined ? "" : (Number.isInteger(n) ? String(n) : n.toFixed(1)));
+
+const TH_B = { border: "1px solid #555", background: "#e6dcc3", padding: "3px 4px", fontSize: "9pt", textAlign: "center", fontWeight: 700 };
+const TD_B = { border: "1px solid #555", padding: "3px 4px", fontSize: "9.5pt", textAlign: "center" };
+
+function EncabezadoConcentradoBoleta({ subtitulo }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+      <img src={ESCUDO_ESCUELA} alt="" style={{ width: "52px", height: "52px", objectFit: "contain" }} />
+      <div style={{ flex: 1, textAlign: "center" }}>
+        <div style={{ fontWeight: 700, fontSize: "11pt" }}>TELESECUNDARIA "AMADO NERVO" · CCT {DATOS_PLANTEL.cct} · TURNO MATUTINO</div>
+        <div style={{ fontSize: "9.5pt" }}>{DATOS_PLANTEL.localidad}, {DATOS_PLANTEL.municipio}, Puebla · {DATOS_PLANTEL.zona} · Ciclo escolar {CICLO_BOLETA}</div>
+        <div style={{ fontWeight: 700, fontSize: "10.5pt", marginTop: "2px" }}>{subtitulo}</div>
+      </div>
+      <div style={{ width: "52px" }} />
+    </div>
+  );
+}
+
+// Hoja de concentrado por grado: todas las asignaturas × 3 periodos + promedio final.
+function ConcentradoBoletaImprimible({ grado, lista, regs, docente, director }) {
+  const grupos = ASIGNATURAS_BOLETA[grado];
+  const planas = asignaturasPlanas(grado);
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#000" }}>
+      <style>{"@page { size: letter landscape; margin: 8mm; }"}</style>
+      <EncabezadoConcentradoBoleta subtitulo={`CONCENTRADO DE CALIFICACIONES PARA BOLETA · ${grado}° GRADO, GRUPO A`} />
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th style={TH_B} rowSpan={3}>No.</th>
+            <th style={{ ...TH_B, textAlign: "left" }} rowSpan={3}>Alumna / alumno (NIA)</th>
+            {grupos.map(([campo, l]) => <th key={campo} style={TH_B} colSpan={l.length * 4}>{campo}</th>)}
+            <th style={TH_B} rowSpan={3}>Prom. final de grado</th>
+            <th style={TH_B} rowSpan={3}>Asist.</th>
+          </tr>
+          <tr>{planas.map(([k, n]) => <th key={k} style={TH_B} colSpan={4}>{n}</th>)}</tr>
+          <tr>{planas.map(([k]) => ["1", "2", "3", "PF"].map((p) => <th key={k + p} style={{ ...TH_B, fontSize: "7.5pt", fontWeight: 600 }}>{p}</th>))}</tr>
+        </thead>
+        <tbody>
+          {lista.map((a, i) => {
+            const r = regs[a.id] || {};
+            return (
+              <tr key={a.id}>
+                <td style={TD_B}>{i + 1}</td>
+                <td style={{ ...TD_B, textAlign: "left", whiteSpace: "nowrap", fontSize: "8.5pt" }}>{nombreAlumno(a)}<br /><span style={{ fontSize: "7.5pt", color: "#444" }}>{a.NIA || ""}</span></td>
+                {planas.map(([k]) => {
+                  const c = (r.cal || {})[k] || {};
+                  return ["1", "2", "3"].map((p) => <td key={k + p} style={{ ...TD_B, fontSize: "8.5pt" }}>{fmtBoleta(numBoleta(c[p]))}</td>)
+                    .concat(<td key={k + "pf"} style={{ ...TD_B, fontSize: "8.5pt", fontWeight: 700, background: "#f4efe2" }}>{fmtBoleta(promedioAsignaturaBoleta(c))}</td>);
+                })}
+                <td style={{ ...TD_B, fontWeight: 700 }}>{fmtBoleta(promedioFinalGradoBoleta(r, grado))}</td>
+                <td style={TD_B}>{r.asistencias || ""}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p style={{ fontSize: "8pt", marginTop: "4px" }}>1, 2, 3 = periodo de evaluación · PF = promedio final de la asignatura (promedio de los 3 periodos, 1 decimal).</p>
+      <div style={{ display: "flex", justifyContent: "space-around", marginTop: "36px", fontSize: "9pt", textAlign: "center" }}>
+        <div style={{ borderTop: "1px solid #000", width: "40%", paddingTop: "3px" }}>{docente || "Nombre y firma de la docente o del docente"}</div>
+        <div style={{ borderTop: "1px solid #000", width: "40%", paddingTop: "3px" }}>{director || "Nombre y firma de la directora o del director"}</div>
+      </div>
+    </div>
+  );
+}
+
+// Una hoja por alumno con el mismo acomodo de la boleta oficial (para revisar
+// y pasar los datos). No sustituye a la boleta oficial.
+function HojaBoletaAlumnoImprimible({ alumno, grado, reg, director }) {
+  const grupos = ASIGNATURAS_BOLETA[grado];
+  const planas = asignaturasPlanas(grado);
+  const r = reg || {};
+  const caja = (titulo, valor) => (
+    <div style={{ display: "flex", border: "1px solid #888", marginBottom: "6px" }}>
+      <div style={{ background: "#e6dcc3", padding: "6px 10px", minWidth: "130px", fontSize: "9.5pt", fontWeight: 700 }}>{titulo}</div>
+      <div style={{ padding: "6px 10px", fontSize: "10pt", flex: 1 }}>{valor || ""}</div>
+    </div>
+  );
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#000", pageBreakAfter: "always", breakAfter: "page", maxWidth: "190mm", margin: "0 auto", boxSizing: "border-box" }}>
+      <EncabezadoConcentradoBoleta subtitulo={`HOJA DE CALIFICACIONES PARA BOLETA · ${grado}° GRADO DE EDUCACIÓN SECUNDARIA`} />
+      <table style={{ width: "100%", fontSize: "9.5pt", margin: "8px 0" }}>
+        <tbody>
+          <tr><td><b>NOMBRE(S) Y APELLIDOS DE LA ALUMNA O DEL ALUMNO:</b> {nombreAlumno(alumno)}</td><td><b>CURP:</b> {alumno.ALUMNO_CURP || ""}</td><td><b>NIA:</b> {alumno.NIA || ""}</td></tr>
+          <tr><td><b>DATOS DE LA ESCUELA:</b> AMADO NERVO</td><td><b>CCT:</b> {DATOS_PLANTEL.cct} &nbsp; <b>TURNO:</b> MATUTINO</td><td><b>GRUPO:</b> {alumno.ESCUELA_GRUPO || "A"}</td></tr>
+        </tbody>
+      </table>
+      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+        <thead>
+          <tr><th style={{ ...TH_B, width: "15%", fontSize: "7.5pt" }}>CAMPOS FORMATIVOS</th>{grupos.map(([campo, l]) => <th key={campo} style={{ ...TH_B, fontSize: "7.5pt" }} colSpan={l.length}>{campo.toUpperCase()}</th>)}</tr>
+          <tr><th style={{ ...TH_B, fontSize: "7.5pt" }}>PERIODO DE EVALUACIÓN</th>{planas.map(([k, n]) => <th key={k} style={{ ...TH_B, fontSize: "6.8pt", padding: "3px 1px", overflowWrap: "anywhere", hyphens: "auto" }}>{n.toUpperCase()}</th>)}</tr>
+        </thead>
+        <tbody>
+          {PERIODOS_BOLETA.map(([p, nombreP]) => (
+            <tr key={p}><td style={{ ...TD_B, fontWeight: 700, height: "34px" }}>{nombreP}</td>{planas.map(([k]) => <td key={k} style={TD_B}>{fmtBoleta(numBoleta(((r.cal || {})[k] || {})[p]))}</td>)}</tr>
+          ))}
+          <tr><td style={{ ...TD_B, fontWeight: 700, height: "34px" }}>PROMEDIO FINAL</td>{planas.map(([k]) => <td key={k} style={{ ...TD_B, fontWeight: 700 }}>{fmtBoleta(promedioAsignaturaBoleta((r.cal || {})[k]))}</td>)}</tr>
+        </tbody>
+      </table>
+      <div style={{ display: "flex", gap: "16px", marginTop: "14px" }}>
+        <div style={{ flex: 1 }}>
+          {caja("ARTES", r.artes)}
+          {caja("TECNOLOGÍA", r.tecnologia)}
+          {caja("ASISTENCIAS", r.asistencias)}
+          {caja("FOLIO", r.folio)}
+        </div>
+        <div style={{ flex: 1 }}>
+          {caja("LENGUA INDÍGENA", r.lengua || "—")}
+          {caja("PROMEDIO FINAL DE GRADO", fmtBoleta(promedioFinalGradoBoleta(r, grado)))}
+        </div>
+      </div>
+      <div style={{ fontSize: "9.5pt", marginTop: "22px", lineHeight: 2 }}>
+        <div><b>NOMBRE Y FIRMA DE LA DOCENTE O DEL DOCENTE:</b> {r.docente || ""}</div>
+        <div><b>NOMBRE Y FIRMA DE LA DIRECTORA O DEL DIRECTOR:</b> {director}</div>
+        <div><b>LUGAR DE EXPEDICIÓN:</b> TEPEOJUMA, PUEBLA</div>
+      </div>
+    </div>
+  );
+}
+
+const DIRECTOR_BOLETA = "NEFTALID BLADIMIR ORTAN AGUILAR";
+const DOCENTE_POR_GRADO_BOLETA = { "1": "NEFTALID BLADIMIR ORTAN AGUILAR", "2": "SALVADOR OLVERA BARRERA", "3": "SALVADOR OLVERA BARRERA" };
+
+function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
+  const [grado, setGrado] = useState(gradosPermitidos[0]);
+  const [periodo, setPeriodo] = useState("1");
+  const [regs, setRegs] = useState({});
+  const [cargando, setCargando] = useState(true);
+  const [estado, setEstado] = useState("");
+  const [imprimiendo, setImprimiendo] = useState(null);
+  const pendientes = useRef({});
+  const temporizador = useRef(null);
+  const regsRef = useRef(regs);
+  regsRef.current = regs;
+
+  const prefijo = `boleta:${CICLO_BOLETA}:`;
+  useEffect(() => {
+    let vivo = true;
+    listarStorageObjeto(prefijo).then((o) => { if (vivo) { setRegs(o || {}); setCargando(false); } });
+    return () => { vivo = false; };
+  }, []);
+
+  const lista = alumnos.filter((a) => String(a.grado) === String(grado)).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
+  const planas = asignaturasPlanas(grado);
+
+  const guardarPendientes = async () => {
+    const ids = Object.keys(pendientes.current);
+    pendientes.current = {};
+    if (!ids.length) return;
+    setEstado("Guardando…");
+    const oks = await Promise.all(ids.map((id) => setStorage(prefijo + id, regsRef.current[id])));
+    setEstado(oks.every(Boolean) ? "✓ Guardado en tu Hoja" : "No se pudo guardar; revisa la conexión");
+    if (oks.every(Boolean) && onStamp) onStamp("Guardado");
+  };
+  const actualizar = (id, cambio) => {
+    setRegs((prev) => {
+      const actual = { grado, ...(prev[id] || {}) };
+      const nuevo = cambio(actual);
+      const sig = { ...prev, [id]: nuevo };
+      regsRef.current = sig;
+      return sig;
+    });
+    pendientes.current[id] = true;
+    setEstado("Se guarda solo al dejar de escribir…");
+    if (temporizador.current) clearTimeout(temporizador.current);
+    temporizador.current = setTimeout(guardarPendientes, 1200);
+  };
+  useEffect(() => () => { if (temporizador.current) { clearTimeout(temporizador.current); guardarPendientes(); } }, []);
+
+  const cambiarNota = (id, k, valor) => {
+    let v = valor === "" ? "" : Math.max(5, Math.min(10, Math.round(Number(valor))));
+    if (valor !== "" && isNaN(Number(valor))) return;
+    actualizar(id, (r) => ({ ...r, grado, cal: { ...(r.cal || {}), [k]: { ...((r.cal || {})[k] || {}), [periodo]: v } } }));
+  };
+  const cambiarDato = (id, campo, valor) => actualizar(id, (r) => ({ ...r, grado, [campo]: valor }));
+
+  const imprimir = (cual) => {
+    setImprimiendo(cual);
+    document.body.classList.add("solo-portal");
+    window.onafterprint = () => { document.body.classList.remove("solo-portal"); setImprimiendo(null); window.onafterprint = null; };
+    setTimeout(() => window.print(), 250);
+  };
+
+  const inputNota = { width: "3.1rem", textAlign: "center", padding: "0.25rem" };
+  const completos = lista.filter((a) => promedioPeriodoBoleta(regs[a.id] || {}, grado, periodo) !== null).length;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {imprimiendo && ReactDOM.createPortal(
+        <div className="solo-impresion portal-impresion">
+          {imprimiendo === "concentrado" && <ConcentradoBoletaImprimible grado={grado} lista={lista} regs={regs} docente={DOCENTE_POR_GRADO_BOLETA[grado]} director={DIRECTOR_BOLETA} />}
+          {imprimiendo === "hojas" && lista.map((a) => (
+            <HojaBoletaAlumnoImprimible key={a.id} alumno={a} grado={grado} reg={{ docente: DOCENTE_POR_GRADO_BOLETA[grado], ...(regs[a.id] || {}) }} director={DIRECTOR_BOLETA} />
+          ))}
+        </div>,
+        document.body
+      )}
+
+      <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.05)" }}>
+        <div className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Concentrado de calificaciones para la boleta · ciclo {CICLO_BOLETA}</div>
+        <p className="text-sm" style={{ opacity: 0.7, marginTop: "0.25rem" }}>
+          Mismas asignaturas, periodos y datos de la Boleta de Evaluación oficial de cada grado. Capture aquí y luego páselo a la boleta oficial (la que trae folio, QR y sello del sistema). Calificaciones enteras de 5 a 10; el promedio final de cada asignatura y el promedio final de grado se calculan solos (1 decimal) cuando están los 3 periodos.
+        </p>
+      </div>
+
+      <SelectorGrado grados={gradosPermitidos} valor={grado} onCambia={setGrado} />
+      <div className="flex gap-2 flex-wrap items-center">
+        {PERIODOS_BOLETA.map(([p, n]) => (
+          <button key={p} onClick={() => setPeriodo(p)} className={`chip-grado ${periodo === p ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>{n}</button>
+        ))}
+        <span className="text-sm" style={{ opacity: 0.6 }}>{completos} de {lista.length} alumnos con el periodo completo</span>
+        {estado && <span className="text-sm" style={{ color: estado.startsWith("✓") ? "var(--verde)" : undefined, opacity: estado.startsWith("✓") ? 1 : 0.6 }}>{estado}</span>}
+      </div>
+
+      {cargando ? <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p> : lista.length === 0 ? (
+        <p className="text-sm text-center py-6" style={{ opacity: 0.55 }}>No hay alumnos inscritos en {grado}° grado.</p>
+      ) : (
+        <>
+          <div className="card" style={{ overflowX: "auto", padding: "0.5rem" }}>
+            <table style={{ borderCollapse: "collapse", fontSize: "0.78rem", minWidth: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", padding: "4px" }} rowSpan={2}>Alumna / alumno</th>
+                  {ASIGNATURAS_BOLETA[grado].map(([campo, l]) => (
+                    <th key={campo} colSpan={l.length} style={{ padding: "4px", borderBottom: "1px solid var(--linea)", fontSize: "0.68rem", opacity: 0.75 }}>{campo}</th>
+                  ))}
+                  <th rowSpan={2} style={{ padding: "4px", fontSize: "0.7rem" }}>Prom. periodo</th>
+                </tr>
+                <tr>{planas.map(([k, n]) => <th key={k} style={{ padding: "4px", fontSize: "0.7rem", fontWeight: 600 }}>{n}</th>)}</tr>
+              </thead>
+              <tbody>
+                {lista.map((a) => {
+                  const r = regs[a.id] || {};
+                  return (
+                    <tr key={a.id} style={{ borderTop: "1px solid var(--linea)" }}>
+                      <td style={{ padding: "4px", whiteSpace: "nowrap" }}>{nombreAlumno(a)}<div style={{ fontSize: "0.65rem", opacity: 0.5 }}>NIA {a.NIA || "—"}</div></td>
+                      {planas.map(([k]) => (
+                        <td key={k} style={{ padding: "2px", textAlign: "center" }}>
+                          <input className="campo font-mono" style={inputNota} type="number" min="5" max="10" step="1"
+                            value={(((r.cal || {})[k] || {})[periodo]) ?? ""} onChange={(e) => cambiarNota(a.id, k, e.target.value)} />
+                        </td>
+                      ))}
+                      <td style={{ textAlign: "center", fontWeight: 700 }}>{fmtBoleta(promedioPeriodoBoleta(r, grado, periodo))}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card" style={{ overflowX: "auto", padding: "0.5rem" }}>
+            <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Datos de la parte de abajo de la boleta</div>
+            <table style={{ borderCollapse: "collapse", fontSize: "0.78rem", minWidth: "100%" }}>
+              <thead>
+                <tr>{["Alumna / alumno", "Artes (disciplina)", "Tecnología (énfasis)", "Asistencias", "Folio", "Lengua indígena", "Prom. final de grado"].map((t) => <th key={t} style={{ padding: "4px", textAlign: "left", fontSize: "0.7rem" }}>{t}</th>)}</tr>
+              </thead>
+              <tbody>
+                {lista.map((a) => {
+                  const r = regs[a.id] || {};
+                  return (
+                    <tr key={a.id} style={{ borderTop: "1px solid var(--linea)" }}>
+                      <td style={{ padding: "4px", whiteSpace: "nowrap" }}>{nombreAlumno(a)}</td>
+                      {[["artes", "Ej. Música"], ["tecnologia", "Ej. Informática"], ["asistencias", "Días"], ["folio", ""], ["lengua", "—"]].map(([c, ph]) => (
+                        <td key={c} style={{ padding: "2px" }}>
+                          <input className="campo" style={{ minWidth: c === "asistencias" ? "4rem" : "7rem", padding: "0.25rem" }} value={r[c] || ""} placeholder={ph} onChange={(e) => cambiarDato(a.id, c, e.target.value)} />
+                        </td>
+                      ))}
+                      <td style={{ textAlign: "center", fontWeight: 700 }}>{fmtBoleta(promedioFinalGradoBoleta(r, grado)) || "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => imprimir("concentrado")} className="btn-primario"><Printer size={15} /> Imprimir concentrado de {grado}° (los 3 periodos)</button>
+            <button onClick={() => imprimir("hojas")} className="btn-secundario"><Printer size={15} /> Imprimir hoja por alumno (acomodo de la boleta)</button>
+          </div>
+        </>
       )}
     </div>
   );
