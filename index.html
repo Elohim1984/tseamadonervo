@@ -5864,6 +5864,240 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
   );
 }
 
+/* ---------- Recibos (5 nov 2026) ----------
+   Recibo de dinero de la APF (u otro comité) a la Dirección: se llena,
+   se guarda (recibo:<id>) y se imprime en una hoja carta con ORIGINAL y
+   COPIA. Los nombres de Tesorería y Presidencia salen de la mesa directiva
+   de la APF capturada en la app (apf:mesaDirectiva). */
+const UNIDADES_L = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve", "veinte", "veintiuno", "veintidós", "veintitrés", "veinticuatro", "veinticinco", "veintiséis", "veintisiete", "veintiocho", "veintinueve"];
+const DECENAS_L = ["", "", "", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
+const CENTENAS_L = ["", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
+function letras999(n) {
+  if (n === 0) return "";
+  if (n === 100) return "cien";
+  const c = Math.floor(n / 100), r = n % 100;
+  let t = "";
+  if (r < 30) t = UNIDADES_L[r];
+  else { const d = Math.floor(r / 10), u = r % 10; t = DECENAS_L[d] + (u ? " y " + UNIDADES_L[u] : ""); }
+  return [CENTENAS_L[c], t].filter(Boolean).join(" ");
+}
+function numeroALetras(n) {
+  n = Math.floor(Math.abs(Number(n) || 0));
+  if (n === 0) return "cero";
+  const millones = Math.floor(n / 1000000), miles = Math.floor((n % 1000000) / 1000), resto = n % 1000;
+  const partes = [];
+  if (millones) partes.push(millones === 1 ? "un millón" : letras999(millones).replace(/uno$/, "un") + " millones");
+  if (miles) partes.push(miles === 1 ? "mil" : letras999(miles).replace(/uno$/, "un").replace(/veintiuno$/, "veintiún") + " mil");
+  if (resto) partes.push(letras999(resto));
+  return partes.join(" ");
+}
+function montoConLetra(monto) {
+  const n = Number(String(monto).replace(/[^0-9.]/g, ""));
+  if (!monto || isNaN(n)) return "";
+  const enteros = Math.floor(n), cent = Math.round((n - enteros) * 100);
+  const txt = numeroALetras(enteros).replace(/uno$/, "un");
+  return `${txt.charAt(0).toUpperCase() + txt.slice(1)} ${enteros === 1 ? "peso" : "pesos"} ${String(cent).padStart(2, "0")}/100 M.N.`;
+}
+const nombrePropio = (s) => String(s || "").replace(/\s+/g, " ").trim().toLowerCase().replace(/(^|\s)(\S)/g, (m, a, b) => a + b.toUpperCase());
+const fechaLarga = (iso) => {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  return `${d} de ${meses[m - 1]} de ${y}`;
+};
+const fmtMonto = (m) => { const n = Number(String(m).replace(/[^0-9.]/g, "")); return m && !isNaN(n) ? n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""; };
+
+function ReciboImprimible({ r, etiqueta }) {
+  const linea = (v, w) => <span style={{ display: "inline-block", minWidth: w, borderBottom: "1px solid #000", padding: "0 4px" }}>{v || " "}</span>;
+  return (
+    <div style={{ border: "1.5px solid #7a1f1f", borderRadius: "6px", padding: "10px 14px", height: "118mm", boxSizing: "border-box", position: "relative", fontFamily: "Arial, Helvetica, sans-serif", fontSize: "10.5pt", color: "#000" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", borderBottom: "1.5px solid #7a1f1f", paddingBottom: "6px", marginBottom: "10px" }}>
+        <img src={ESCUDO_ESCUELA} alt="" style={{ width: "54px", height: "54px", objectFit: "contain" }} />
+        <div style={{ flex: 1, textAlign: "center", fontSize: "9pt", lineHeight: 1.35 }}>
+          <b>TELESECUNDARIA "AMADO NERVO"</b><br />CCT {DATOS_PLANTEL.cct} · Zona Escolar 052 · Turno Matutino<br />Cerro del Vigilante S/N, Xoyatla, Tepeojuma, Puebla<br />
+          <b>{r.comite || "Asociación de Padres de Familia"} · Ciclo escolar {CICLO_BOLETA}</b>
+        </div>
+        <div style={{ textAlign: "center", fontSize: "10pt", border: "1px solid #7a1f1f", padding: "4px 8px", lineHeight: 1.5 }}>
+          <b style={{ color: "#7a1f1f", fontSize: "12pt" }}>RECIBO</b><br />No. {linea(r.folio, "50px")}<br /><span style={{ fontSize: "7.5pt", color: "#555" }}>{etiqueta}</span>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: "6px", margin: "4px 0 10px" }}>
+        <b>Bueno por: $</b>{linea(fmtMonto(r.monto), "150px")}<span style={{ flex: 1 }} /><b>Fecha:</b>{linea(fechaLarga(r.fecha), "230px")}
+      </div>
+      <p style={{ lineHeight: 2, margin: "4px 0" }}>
+        Recibí de la <b>{r.comite || "Asociación de Padres de Familia"}</b> de la Telesecundaria "Amado Nervo", por conducto de su {r.cargoEntrega || "Tesorera"}, {r.entrega ? <>la C. <b>{r.entrega}</b></> : linea("", "200px")}, la cantidad de <b>$</b>{linea(fmtMonto(r.monto), "110px")} ({linea(montoConLetra(r.monto), "300px")}),
+      </p>
+      <p style={{ lineHeight: 2, margin: "4px 0" }}>
+        por concepto de: <b>{r.concepto || " "}</b>{r.detalle ? <>, {r.detalle}</> : ""}.
+      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "14px", position: "absolute", bottom: "12px", left: "14px", right: "14px", textAlign: "center", fontSize: "8.8pt", lineHeight: 1.35 }}>
+        {[["RECIBIÓ", r.recibe, r.cargoRecibe], ["ENTREGÓ", r.entrega ? "C. " + r.entrega : "", r.cargoEntrega + (r.comiteCorto ? " de la " + r.comiteCorto : "")], ["Vo. Bo.", r.vobo ? "C. " + r.vobo : "", r.cargoVobo + (r.comiteCorto ? " de la " + r.comiteCorto : "")]].map(([t, n, c]) => (
+          <div key={t} style={{ flex: 1 }}><div style={{ borderTop: "1px solid #000", margin: "0 6px 4px" }} /><b>{t}</b><br />{n || " "}<br />{c}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const PLANTILLAS_RECIBO = [
+  { id: "panel", nombre: "Comida · trabajadores del panel solar", valores: {
+    concepto: "apoyo para la comida de los trabajadores que realizaron la instalación del panel solar en la escuela", detalle: "",
+    recibe: "Mtro. Neftalid Bladimir Ortán Aguilar", cargoRecibe: "Director comisionado", cargoEntrega: "Tesorera", cargoVobo: "Presidenta" } },
+  { id: "voceo", nombre: "Voceo · aviso a la comunidad", valores: {
+    concepto: "pago por vocear (dar aviso) a la comunidad de Xoyatla", detalle: "aviso sobre: ",
+    recibe: "", cargoRecibe: "Encargado(a) del voceo", cargoEntrega: "Tesorera", cargoVobo: "Presidenta" } },
+  { id: "otro", nombre: "Otro concepto", valores: {
+    concepto: "", detalle: "", recibe: "Mtro. Neftalid Bladimir Ortán Aguilar", cargoRecibe: "Director comisionado", cargoEntrega: "Tesorera", cargoVobo: "Presidenta" } },
+];
+
+function RecibosTab({ onStamp }) {
+  const vacio = () => ({
+    id: uid(), folio: "", fecha: hoyISO(), monto: "", concepto: "", detalle: "",
+    comite: "Asociación de Padres de Familia", comiteCorto: "APF",
+    entrega: "", cargoEntrega: "Tesorera", vobo: "", cargoVobo: "Presidenta",
+    recibe: "Mtro. Neftalid Bladimir Ortán Aguilar", cargoRecibe: "Director comisionado",
+  });
+  const [r, setR] = useState(vacio());
+  const [lista, setLista] = useState([]);
+  const [mesa, setMesa] = useState({});
+  const [imprimiendo, setImprimiendo] = useState(false);
+  const [estado, setEstado] = useState("");
+
+  const cargar = async () => {
+    const [l, m] = await Promise.all([listarStorage("recibo:"), getStorage("apf:mesaDirectiva", {})]);
+    setLista((l || []).sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "") || String(b.folio).localeCompare(String(a.folio))));
+    setMesa(m || {});
+    return { l: l || [], m: m || {} };
+  };
+  useEffect(() => {
+    cargar().then(({ l, m }) => {
+      const sig = l.reduce((mx, x) => Math.max(mx, parseInt(x.folio, 10) || 0), 0) + 1;
+      setR((prev) => ({ ...prev, folio: String(sig).padStart(3, "0"), entrega: nombrePropio(m.tesorero), vobo: nombrePropio(m.presidente) }));
+    });
+  }, []);
+
+  const cambiar = (k, v) => setR((p) => ({ ...p, [k]: v }));
+  const aplicarPlantilla = (t) => setR((p) => ({
+    ...p, plantilla: t.id, ...t.valores,
+    entrega: t.entregaEsDirector ? "" : nombrePropio(mesa.tesorero),
+    vobo: nombrePropio(mesa.presidente),
+  }));
+  const guardar = async () => {
+    setEstado("Guardando…");
+    const ok = await setStorage(`recibo:${r.id}`, r);
+    setEstado(ok ? "✓ Guardado en tu Hoja" : "No se pudo guardar");
+    if (ok) { onStamp && onStamp("Guardado"); cargar(); }
+    return ok;
+  };
+  const imprimir = async () => {
+    if (r.concepto.trim()) await guardar();
+    setImprimiendo(true);
+    document.body.classList.add("solo-portal");
+    window.onafterprint = () => { document.body.classList.remove("solo-portal"); setImprimiendo(false); window.onafterprint = null; };
+    setTimeout(() => window.print(), 250);
+  };
+  const nuevo = () => {
+    const sig = lista.reduce((mx, x) => Math.max(mx, parseInt(x.folio, 10) || 0), 0) + 1;
+    setR({ ...vacio(), folio: String(sig).padStart(3, "0"), entrega: nombrePropio(mesa.tesorero), vobo: nombrePropio(mesa.presidente) });
+    setEstado("");
+  };
+  const borrar = async (id) => { await borrarStorage(`recibo:${id}`); if (r.id === id) nuevo(); cargar(); };
+
+  const campo = (k, etiqueta, props = {}) => (
+    <div style={{ flex: props.flex || 1, minWidth: props.min || "10rem" }}>
+      <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{etiqueta}</label>
+      <input className="campo" value={r[k] || ""} onChange={(e) => cambiar(k, e.target.value)} {...(props.input || {})} />
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      {imprimiendo && ReactDOM.createPortal(
+        <div className="solo-impresion portal-impresion">
+          <style>{"@page { size: letter; margin: 10mm 12mm; }"}</style>
+          <ReciboImprimible r={r} etiqueta="ORIGINAL · APF" />
+          <div style={{ textAlign: "center", fontSize: "8pt", color: "#777", margin: "6mm 0", borderTop: "1px dashed #999", paddingTop: "2px" }}>✂ recortar aquí</div>
+          <ReciboImprimible r={r} etiqueta="COPIA · DIRECCIÓN" />
+        </div>,
+        document.body
+      )}
+
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Tipo de recibo (llena el texto y las firmas; después solo ajuste monto, fecha y detalle)</div>
+        <div className="flex gap-2 flex-wrap">
+          {PLANTILLAS_RECIBO.map((t) => (
+            <button key={t.id} onClick={() => aplicarPlantilla(t)} className={`chip-grado ${r.plantilla === t.id ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>{t.nombre}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+          <div className="font-display" style={{ fontWeight: 700, fontSize: "0.92rem" }}>Recibo de dinero · {r.comite}</div>
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={nuevo} className="btn-secundario" style={{ fontSize: "0.78rem" }}><Plus size={14} /> Nuevo recibo</button>
+            <button onClick={guardar} className="btn-secundario" style={{ fontSize: "0.78rem" }}><Check size={14} /> Guardar</button>
+            <button onClick={imprimir} className="btn-primario" style={{ fontSize: "0.78rem" }}><Printer size={14} /> Imprimir / guardar PDF</button>
+          </div>
+        </div>
+        <p className="text-sm mb-3" style={{ opacity: 0.6 }}>Se imprime en una hoja carta con ORIGINAL (APF) y COPIA (Dirección). Lo que deje vacío sale como línea para llenar a mano. {estado && <b style={{ color: estado.startsWith("✓") ? "var(--verde)" : undefined }}>{estado}</b>}</p>
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-3 flex-wrap">
+            {campo("folio", "No. de recibo", { min: "7rem", flex: 0.5 })}
+            <div style={{ flex: 1, minWidth: "10rem" }}>
+              <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Fecha</label>
+              <input className="campo" type="date" value={r.fecha || ""} onChange={(e) => cambiar("fecha", e.target.value)} />
+            </div>
+            <div style={{ flex: 1, minWidth: "10rem" }}>
+              <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Monto ($)</label>
+              <input className="campo font-mono" inputMode="decimal" value={r.monto || ""} onChange={(e) => cambiar("monto", e.target.value)} placeholder="Ej. 1200" />
+              {r.monto && <div className="text-sm" style={{ opacity: 0.6, marginTop: "0.2rem" }}>{montoConLetra(r.monto)}</div>}
+            </div>
+          </div>
+          {campo("concepto", "Por concepto de", { input: { placeholder: "Ej. apoyo para la comida de los trabajadores que realizaron la instalación del panel solar en la escuela" } })}
+          {campo("detalle", "Detalle (opcional)", { input: { placeholder: "Ej. el día 4 de noviembre de 2026" } })}
+          <div className="flex gap-3 flex-wrap">
+            {campo("comite", "Comité que entrega")}
+            {campo("comiteCorto", "Siglas", { min: "6rem", flex: 0.4 })}
+          </div>
+          <div className="flex gap-3 flex-wrap">
+            {campo("entrega", "Entregó (nombre)")}
+            {campo("cargoEntrega", "Cargo", { min: "8rem", flex: 0.6 })}
+          </div>
+          <div className="flex gap-3 flex-wrap">
+            {campo("vobo", "Vo. Bo. (nombre)")}
+            {campo("cargoVobo", "Cargo", { min: "8rem", flex: 0.6 })}
+          </div>
+          <div className="flex gap-3 flex-wrap">
+            {campo("recibe", "Recibió (nombre)")}
+            {campo("cargoRecibe", "Cargo", { min: "8rem", flex: 0.6 })}
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Recibos guardados ({lista.length})</div>
+        {lista.length === 0 ? <p className="text-sm" style={{ opacity: 0.55 }}>Todavía no hay recibos guardados.</p> : (
+          <div className="flex flex-col gap-2">
+            {lista.map((x) => (
+              <div key={x.id} className="flex items-center justify-between gap-2" style={{ borderTop: "1px solid var(--linea)", paddingTop: "0.4rem" }}>
+                <div className="text-sm">
+                  <b>No. {x.folio || "—"}</b> · {fechaLarga(x.fecha)} · {x.monto ? "$" + fmtMonto(x.monto) : "sin monto"}
+                  <div style={{ opacity: 0.6, fontSize: "0.75rem" }}>{x.concepto}</div>
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => { setR(x); setEstado(""); window.scrollTo(0, 0); }} className="btn-secundario" style={{ fontSize: "0.72rem" }}>Abrir</button>
+                  <button onClick={() => borrar(x.id)} className="btn-icono"><Trash2 size={14} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Avisos ---------- */
 function Avisos({ avisos, setAvisos, usuario, rolActual, onStamp }) {
   const [titulo, setTitulo] = useState("");
@@ -24086,6 +24320,7 @@ function App() {
     { id: "consejo", label: "REPASE", icon: Vote },
     { id: "documentos", label: "Documentos de Dirección", icon: FolderKanban },
     { id: "cortecaja", label: "Corte de Caja", icon: Wallet },
+    { id: "recibos", label: "Recibos", icon: FileText },
     { id: "convivenciaescolar", label: "Convivencia Escolar", icon: HeartHandshake },
     { id: "personal", label: "Personal del Plantel", icon: UserRound },
     { id: "recursos", label: "Recursos", icon: FileText },
@@ -24100,7 +24335,7 @@ function App() {
     { id: "pic", tabs: ["pic"] },
     { id: "estadistica911", tabs: ["estadistica911"] },
     { id: "comunicacion", label: "Comunicación", tabs: ["avisos", "calendario"] },
-    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "consejo", "documentos", "cortecaja", "convivenciaescolar", "personal"] },
+    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "consejo", "documentos", "cortecaja", "recibos", "convivenciaescolar", "personal"] },
     { id: "recursos", tabs: ["recursos"] },
   ];
 
@@ -24246,6 +24481,7 @@ function App() {
         {tab === "estadistica911" && <Estadistica911Tab alumnos={alumnos} gradosPermitidos={gradosPermitidos} personal={personal} onStamp={fireStamp} />}
         {tab === "consejo" && <ConsejoEscolar onStamp={fireStamp} alumnos={alumnos} gradosPermitidos={gradosPermitidos} personal={personal} />}
         {tab === "documentos" && <DocumentosDireccion alumnos={alumnos} onStamp={fireStamp} rolActual={rol} />}
+        {tab === "recibos" && <RecibosTab onStamp={fireStamp} />}
         {tab === "cortecaja" && <DocumentosDireccion key="cortecaja" alumnos={alumnos} onStamp={fireStamp} rolActual={rol} subTabInicial="bimestral" />}
         {tab === "convivenciaescolar" && <DocumentosDireccion key="convivenciaescolar" alumnos={alumnos} onStamp={fireStamp} rolActual={rol} subTabInicial="convivencia" />}
         {tab === "personal" && <DatosPersonal personal={personal} setPersonal={setPersonal} onStamp={fireStamp} />}
