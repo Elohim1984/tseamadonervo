@@ -15753,6 +15753,7 @@ Xoyatla.</i></p>
 
 </p>
 <!--VIVO:pic-etapas47-->
+<!--VIVO:pic-recursos-->
 <h1 class="western" style="margin-top: 0in; margin-bottom: 0.1in; page-break-before: always">
 <font color="#7a1f1f"><b>Validación colegiada</b></font></h1>
 <p style="line-height: 100%; margin-bottom: 0.08in">Este PIC fue
@@ -15921,6 +15922,7 @@ function valorVivo(mapa, clave) {
 const envolverVivo = (id, html) => `<div id="vivo-${id}" class="bloque-vivo">${html}</div>`;
 
 const GENERADORES_VIVO = {
+  "pic-recursos": () => htmlRecursosSEPPIC(),
   "pic-etapa1": (mapa) => {
     const cuerpo = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa1, valorVivo(mapa, "pic:etapa1"));
     return h1Vivo("Lectura de la realidad escolar (Etapa 1)")
@@ -16004,9 +16006,139 @@ const GENERADORES_VIVO = {
       html += h3Vivo(NOMBRE_GRADO_VIVO[g]) + tablaVivo(["Trimestre", "Contenidos y PDA", "Metodología / vinculación con PIC", "Fecha de cierre"], filas);
     });
     if (!alguno) html += pendienteVivo("Pendiente de capturar en la pestaña \"Programa Analítico\" (Plano 3).");
+    html += h3Vivo("Proyectos de Saberes y Pensamiento Científico vinculados al PIC (Nuestro libro de proyectos)")
+      + tablaVivo(["Grado", "Proyecto parcial de aula", "Libro", "Qué aporta al PIC"],
+        GRADOS_VIVO.flatMap((g) => RECURSOS_SEP_PIC.proyectos[g].filter((p) => p.pri === 3).map((p) => [NOMBRE_GRADO_VIVO[g], p.pp, p.lib, p.aporta])));
     return html;
   },
 };
+
+/* ---------- Proyectos y recursos SEP vinculados al PIC (5 nov 2026) ----------
+   Revisión de los 9 tomos de "Nuestro libro de proyectos" (Colección Ximhai)
+   y del portal telesecundaria.sep.gob.mx. Se eligieron los proyectos de
+   Saberes y Pensamiento Científico que más trabajan operaciones, fracciones,
+   decimales, porcentajes y reparto (problemática del PIC). */
+const PORTAL_TELESECUNDARIA = "https://telesecundaria.sep.gob.mx/#/home";
+const RECURSOS_SEP_PIC = {
+  proyectos: {
+    "1": [
+      { pri: 3, pp: "8. Encuentra las figuras geométricas con el uso del microscopio", lib: "Tomo II, p. 120", pa: "PA 23 “Las células animales y vegetales usan los números fraccionarios” (p. 126)", aporta: "Expresar fracciones como decimales y decimales como fracciones." },
+      { pri: 3, pp: "10. El álgebra y los daños causados por el calentamiento global", lib: "Tomo II, p. 146", pa: "PA 30 “Contaminantes del calentamiento global con los números fraccionarios” (p. 156)", aporta: "Operar y medir con números fraccionarios." },
+      { pri: 3, pp: "11. ¡Buenos ejemplos!", lib: "Tomo III, p. 88", pa: "PA 31 “Trucos ingeniosos con incógnitas” (p. 90) · PA 33 “Sucesiones de progresión aritmética” (p. 98)", aporta: "Jerarquía de operaciones: el orden correcto al combinar las cuatro operaciones." },
+      { pri: 2, pp: "6. El cambio de los seres vivos en el tiempo", lib: "Tomo II, p. 89", pa: "PA 17 “La gráfica en la comprensión del pensamiento científico” (p. 98)", aporta: "Números con signo, tablas, gráficas y relación proporcional." },
+      { pri: 2, pp: "4. Una exposición en comunidad", lib: "Tomo I, p. 158", pa: "PA 10 “¡Con lo que contamos!” (p. 160)", aporta: "Contar, medir y registrar los recursos naturales de la comunidad." },
+    ],
+    "2": [
+      { pri: 3, pp: "13. Las figuras del Universo: su composición numérica y geométrica", lib: "Tomo III, p. 120", pa: "PA 38 “Un Universo inmenso, pero cuantificable” (p. 125)", aporta: "El que más trabaja decimales, fracciones y porcentajes del libro de 2°." },
+      { pri: 3, pp: "11. Notación científica y figuras geométricas", lib: "Tomo III, p. 92", pa: "PA 31 “¡Con lo que contamos!” (p. 93) · PA 33 “¡Si cada vez son más, a cada uno le toca menos!” (p. 102)", aporta: "Operaciones con magnitudes y reparto (repartir un terreno entre más personas)." },
+      { pri: 3, pp: "2. La física y el álgebra se unen", lib: "Tomo I, p. 125", pa: "PA 4 “El álgebra y las unidades de medida” (p. 126) · PA 6 “Medir la comunidad” (p. 135)", aporta: "Operaciones para calcular en la vida diaria; medir en la comunidad." },
+      { pri: 2, pp: "4. Modelos y representaciones", lib: "Tomo I, p. 154", pa: "PA 11 “La temperatura en los polígonos” (p. 159)", aporta: "Relaciones de proporcionalidad." },
+      { pri: 2, pp: "1. Yo también puedo generar conocimiento científico", lib: "Tomo I, p. 110", pa: "“Nuestra comunidad en gráficas”", aporta: "Datos de la comunidad en tablas y gráficas." },
+    ],
+    "3": [
+      { pri: 3, pp: "4. Mezclas cotidianas", lib: "Tomo I, p. 156", pa: "PA 10 “¡Mezclas por doquier!” (p. 157) · PA 12 “Efectividad de las sustancias de uso cotidiano” (p. 165)", aporta: "El que más usa porcentajes del libro de 3° (ingredientes de alimentos y productos)." },
+      { pri: 3, pp: "2. Características y medidas del entorno", lib: "Tomo I, p. 126", pa: "PA 5 “Nuestros instrumentos de medición” (p. 131) · PA 6 “Lo mensurable de nuestro entorno” (p. 135)", aporta: "Medición y cálculo en el entorno." },
+      { pri: 3, pp: "15. ¡Los números en diferentes contextos!", lib: "Tomo III, p. 141", pa: "PA 43 “¿Qué cuerpo es más grande?” (p. 142) · PA 44 “Aprendamos con Pitágoras” (p. 146)", aporta: "Medición y cálculo en contextos comunitarios." },
+      { pri: 2, pp: "3. La química y las figuras también se mezclan", lib: "Tomo I, p. 140", pa: "—", aporta: "Relaciones proporcionales." },
+      { pri: 2, pp: "10. Gráficas de mezclas y productos", lib: "Tomo II, p. 152", pa: "PA 30 “La probabilidad de la química” (p. 161)", aporta: "Proporciones, gráficas y probabilidad." },
+    ],
+  },
+  videos: {
+    "1": ["Operaciones y su propiedad conmutativa", "Operaciones y su propiedad asociativa", "Números con signo (enteros, fracciones y decimales) en la recta numérica", "Empleo de porcentajes", "Relaciones proporcional y no proporcional a partir de su representación tabular, gráfica y con diagramas", "Características de las tablas y las gráficas"],
+    "2": ["Criterios de divisibilidad y números primos en el cálculo del máximo común divisor y del mínimo común múltiplo", "Múltiplos y submúltiplos del Sistema internacional de unidades y el Sistema inglés", "Perímetro y área de figuras compuestas", "Datos estadísticos"],
+    "3": ["Reparto proporcional", "Relaciona e interpreta la variación de dos cantidades a partir de su representación tabular, gráfica y algebraica", "Lee, interpreta y comunica información de cualquier tipo de gráfica", "Medidas de tendencia central (media, mediana y moda) y dispersión para tomar decisiones"],
+  },
+  cortos: [
+    ["El último consejo", "Itandehui Jansen, 2012", "12 min", "En un pueblo indígena se cuenta en público el dinero de la caja del pueblo y al día siguiente desaparece: importancia de contar, llevar y rendir cuentas."],
+    ["Carrizos", "Dinazar Urbina Mata, 2016", "12 min", "Una niña del campo vive con sus abuelos y una sequía amenaza la milpa: contexto parecido al de Xoyatla (Etapa 1)."],
+    ["Bingo", "Andrés Borda García, 2014", "11 min", "Juego de bingo y avaricia: azar, conteo y probabilidad (3°)."],
+    ["Polvo de estrellas", "Aldo Sotelo Lázaro, 2017", "15 min", "Un niño trabaja con su padre para subsistir; la escuela cambia su forma de ver el mundo."],
+    ["Leche", "Gilberto González Penilla, 2016", "19 min", "Trabajo en una lechería en distintos horarios: tiempo, horarios y producción."],
+    ["Poliangular", "Alexandra Castellanos, 2017", "9 min", "Persecución de formas misteriosas: detonador de geometría."],
+  ],
+};
+const estrellasSEP = (n) => "★".repeat(n);
+
+// Sección del documento final (PIC) — se inserta en <!--VIVO:pic-recursos-->
+function htmlRecursosSEPPIC() {
+  let html = h1Vivo("Proyectos y recursos de Telesecundaria vinculados al PIC");
+  html += `<p style="line-height: 115%; margin-bottom: 0.08in">Proyectos parciales de aula de <i>Nuestro libro de proyectos</i> (Colección Ximhai) del campo Saberes y Pensamiento Científico que más trabajan las operaciones básicas, fracciones, decimales, porcentajes y reparto. En cada uno se incorpora el momento fijo de operaciones básicas del PIC. ★★★ = más útil.</p>`;
+  GRADOS_VIVO.forEach((g) => {
+    html += h2Vivo(NOMBRE_GRADO_VIVO[g]);
+    html += tablaVivo(["", "Proyecto parcial de aula", "Libro", "Proyectos académicos", "Qué aporta al PIC"],
+      RECURSOS_SEP_PIC.proyectos[g].map((p) => [estrellasSEP(p.pri), p.pp, p.lib, p.pa, p.aporta]));
+  });
+  html += h2Vivo("Videos detonadores (portal Telesecundaria · Videos Académicos de Matemáticas)");
+  html += tablaVivo(["Grado", "Videos"], GRADOS_VIVO.map((g) => [NOMBRE_GRADO_VIVO[g], RECURSOS_SEP_PIC.videos[g].join(" · ")]));
+  html += h2Vivo("Cortometrajes detonadores (portal Telesecundaria · Cortometrajes)");
+  html += tablaVivo(["Cortometraje", "Dirección y año", "Duración", "Uso en el PIC"], RECURSOS_SEP_PIC.cortos);
+  return html;
+}
+
+function PanelRecursosSEP({ onVer }) {
+  const [g, setG] = useState("1");
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="card" style={{ borderColor: "#2e7d32", background: "rgba(46,125,50,0.06)" }}>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <p className="text-sm" style={{ margin: 0 }}>Proyectos de los libros de Telesecundaria, videos y cortometrajes que sirven para atender la problemática del PIC (operaciones básicas). Ya forman parte del documento final del PIC.</p>
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={onVer} className="btn-secundario" style={{ fontSize: "0.72rem" }}>Ver en el PIC →</button>
+            <a href={PORTAL_TELESECUNDARIA} target="_blank" rel="noopener noreferrer" className="btn-secundario" style={{ fontSize: "0.72rem" }}>Abrir portal Telesecundaria ↗</a>
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        {GRADOS_VIVO.map((x) => <button key={x} onClick={() => setG(x)} className={`chip-grado ${g === x ? "activo" : ""}`}>{x}°</button>)}
+      </div>
+      <div className="card" style={{ overflowX: "auto" }}>
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Proyectos parciales de aula · {NOMBRE_GRADO_VIVO[g]} (Saberes y Pensamiento Científico)</div>
+        <table style={{ borderCollapse: "collapse", fontSize: "0.8rem", width: "100%" }}>
+          <thead><tr>{["", "Proyecto parcial", "Libro", "Proyectos académicos", "Qué aporta al PIC"].map((t) => <th key={t} style={{ textAlign: "left", padding: "4px 6px", borderBottom: "1px solid var(--linea)" }}>{t}</th>)}</tr></thead>
+          <tbody>
+            {RECURSOS_SEP_PIC.proyectos[g].map((p) => (
+              <tr key={p.pp} style={{ borderTop: "1px solid var(--linea)", verticalAlign: "top" }}>
+                <td style={{ padding: "4px 6px", color: "#b8860b", whiteSpace: "nowrap" }}>{estrellasSEP(p.pri)}</td>
+                <td style={{ padding: "4px 6px", fontWeight: 600 }}>{p.pp}</td>
+                <td style={{ padding: "4px 6px", whiteSpace: "nowrap" }}>{p.lib}</td>
+                <td style={{ padding: "4px 6px" }}>{p.pa}</td>
+                <td style={{ padding: "4px 6px", opacity: 0.8 }}>{p.aporta}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Videos detonadores · {NOMBRE_GRADO_VIVO[g]}</div>
+        <p className="text-sm" style={{ opacity: 0.6, marginBottom: "0.4rem" }}>Portal Telesecundaria → Materiales Educativos → {g}° → Videos Académicos (campo Saberes y Pensamiento Científico, disciplina Matemáticas). Cada proyecto parcial tiene además su video en "Videos Proyectos Parciales de Aula".</p>
+        <ul style={{ margin: 0, paddingLeft: "1.1rem" }} className="text-sm">{RECURSOS_SEP_PIC.videos[g].map((v) => <li key={v}>{v}</li>)}</ul>
+      </div>
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Cortometrajes detonadores (todos los grados)</div>
+        <p className="text-sm" style={{ opacity: 0.6, marginBottom: "0.4rem" }}>Portal Telesecundaria → Materiales Educativos → Cortometrajes. Véalos completos antes de proyectarlos al grupo.</p>
+        <div className="flex flex-col gap-2">
+          {RECURSOS_SEP_PIC.cortos.map(([t, d, m, u]) => (
+            <div key={t} className="text-sm" style={{ borderTop: "1px solid var(--linea)", paddingTop: "0.35rem" }}><b>{t}</b> <span style={{ opacity: 0.55 }}>({d} · {m})</span><div style={{ opacity: 0.8 }}>{u}</div></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Descarga el documento (con lo capturado en vivo) como archivo de Word editable.
+function descargarDocumentoWord(html, nombre) {
+  const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>${nombre}</title>`
+    + `<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->`
+    + `<style>@page WordSection1 { size: 8.5in 11in; margin: 0.8in 0.8in 0.8in 0.8in; } div.WordSection1 { page: WordSection1; } body { font-family: Arial, sans-serif; font-size: 11pt; } table { border-collapse: collapse; } td, th { border: 1px solid #000; padding: 3pt 5pt; vertical-align: top; }</style>`
+    + `</head><body><div class="WordSection1">${html.replace(/<!--VIVO:[a-z0-9-]+-->/g, "")}</div></body></html>`;
+  const blob = new Blob(["﻿", doc], { type: "application/msword" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = nombre.replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, "").replace(/\s+/g, "_") + ".doc";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
 
 // Sustituye las marcas <!--VIVO:...--> del documento por lo capturado.
 function componerDocumentoVivo(htmlBase, mapa, obs) {
@@ -16129,9 +16261,14 @@ function AnalisisResultadosEmbebido({ cual, setCual, irA, setIrA }) {
         <p className="text-sm" style={{ opacity: 0.6, margin: 0 }}>
           El documento completo (diagnóstico, gráficas de resultados, análisis e interpretación, y el resto del contenido).
         </p>
-        <button onClick={imprimirDocumento} className="btn-secundario" style={{ fontSize: "0.72rem", flexShrink: 0 }}>
-          <Printer size={13} /> Imprimir / Guardar como PDF
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => descargarDocumentoWord(DOCS[cual].html, DOCS[cual].label + " - Tse Amado Nervo")} className="btn-secundario" style={{ fontSize: "0.72rem", flexShrink: 0 }}>
+            <FileText size={13} /> Descargar en Word (editable)
+          </button>
+          <button onClick={imprimirDocumento} className="btn-secundario" style={{ fontSize: "0.72rem", flexShrink: 0 }}>
+            <Printer size={13} /> Imprimir / Guardar como PDF
+          </button>
+        </div>
       </div>
       <div className="flex gap-2 flex-wrap">
         {Object.entries(DOCS).map(([id, d]) => (
@@ -16355,6 +16492,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
     { id: "etapas47", label: "PIC — Etapas 4-7" },
     { id: "analitico", label: "Programa Analítico" },
     { id: "pic", label: "PIC" },
+    { id: "recursos", label: "Proyectos y videos SEP" },
   ];
 
   const imprimirResumen = async () => {
@@ -16399,6 +16537,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
         ))}
       </div>
 
+      {subTab === "recursos" && <PanelRecursosSEP onVer={() => verEnDocumento("pic", "pic-recursos")} />}
       {subTab === "analisis" && <AnalisisResultadosEmbebido cual={cualDocumento} setCual={setCualDocumento} irA={irA} setIrA={setIrA} />}
 
       {subTab === "etapas123" && (
