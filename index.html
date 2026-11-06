@@ -8138,7 +8138,8 @@ function FormularioAutoguardado({ claveStorage, titulo, ayuda, campos, onStamp, 
     // (aunque se haya guardado en blanco a propósito), ese valor manda.
     getStorage(claveStorage, {}).then((v) => {
       if (vivo) {
-        setValores(valoresPorDefecto ? { ...valoresPorDefecto, ...(v || {}) } : (v || {}));
+        const base = valoresPorDefecto || (String(claveStorage).startsWith("pic:") ? prePIC(claveStorage) : null);
+        setValores(base ? { ...base, ...(v || {}) } : (v || {}));
         setCargando(false);
       }
     });
@@ -16095,6 +16096,7 @@ Xoyatla.</i></p>
 
 </p>
 <!--VIVO:pic-etapas47-->
+<!--VIVO:pic-plan567-->
 <!--VIVO:pic-recursos-->
 <h1 class="western" style="margin-top: 0in; margin-bottom: 0.1in; page-break-before: always">
 <font color="#7a1f1f"><b>Validación colegiada</b></font></h1>
@@ -16253,11 +16255,7 @@ const NOMBRE_GRADO_VIVO = { "1": "1er grado", "2": "2° grado", "3": "3er grado"
 function valorVivo(mapa, clave) {
   const guardado = mapa[clave];
   let base = null;
-  let m;
-  if (clave === "pic:etapa1") base = ETAPA1_CONDICIONES_PREFILL;
-  else if ((m = clave.match(/^pic:(\d):etapa2:principal$/))) base = ETAPA2_PLANTEAMIENTO_PRINCIPAL_PREFILL_POR_GRADO[m[1]];
-  else if ((m = clave.match(/^pic:(\d):etapa4:aportacion$/))) base = ETAPA4_APORTACION_PREFILL_POR_GRADO[m[1]];
-  else if ((m = clave.match(/^pic:(\d):etapa4:cadaunoletoca$/))) base = ETAPA4_CADAUNOLETOCA_PREFILL_POR_GRADO[m[1]];
+  base = prePIC(clave);
   return base ? { ...base, ...(guardado || {}) } : (guardado || {});
 }
 
@@ -16265,6 +16263,7 @@ const envolverVivo = (id, html) => `<div id="vivo-${id}" class="bloque-vivo">${h
 
 const GENERADORES_VIVO = {
   "pic-recursos": () => htmlRecursosSEPPIC(),
+  "pic-plan567": () => htmlPlan567PIC(),
   "pic-etapa1": (mapa) => {
     const cuerpo = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa1, valorVivo(mapa, "pic:etapa1"));
     return h1Vivo("Lectura de la realidad escolar (Etapa 1)")
@@ -16938,6 +16937,213 @@ function ListaCotejoPIC({ onStamp }) {
   );
 }
 
+/* ---------- PIC 2026-2027 actualizado: problemática común + Etapas 5, 6 y 7 (6 nov 2026) ----------
+   Acordado en CTE: la problemática del PIC es COMÚN a los tres grados (bajo
+   dominio de las operaciones básicas). La Lista de cotejo de la Sesión 2 pide
+   que la Etapa 4 ya traiga planeadas las Etapas 5, 6 y 7 (acciones por grado,
+   cronograma, asambleas intergrados, responsables, presentación pública y
+   criterios de evaluación). Todo queda como prellenado editable y, con el
+   botón "Aplicar PIC actualizado", se guarda en la Hoja (con respaldo). */
+const DOC_PIC_RESP = { "1": "Mtro. Neftalid Bladimir Ortán Aguilar", "2": "Mtro. Salvador Olvera Barrera", "3": "Mtro. Salvador Olvera Barrera" };
+const PROBLEMATICA_COMUN_PIC = "En la Telesecundaria “Amado Nervo” de Xoyatla, Tepeojuma, se observa que una parte importante de las y los alumnos de 1°, 2° y 3° grado tiene un bajo dominio de las operaciones básicas (suma, resta, multiplicación, división, fracciones y decimales). Son adolescentes de una comunidad rural en la que la migración de uno o ambos padres es frecuente; varios viven con su madre sola, con sus abuelos u otros familiares, no cuentan con acceso a internet en casa y dedican buena parte de su tiempo libre a las labores del hogar y del campo, lo que reduce los espacios de apoyo y práctica fuera de la escuela. Esto afecta su capacidad para resolver problemas de la vida cotidiana, comprender y aplicar los contenidos de los campos formativos y avanzar con seguridad en aprendizajes más complejos, lo que limita su desempeño escolar. Así lo reconoció el colectivo docente con base en la lectura de la realidad realizada durante la Semana de Inicio.";
+const EVIDENCIA_GRADO_PIC = {
+  "1": "En 1er grado, Saberes y Pensamiento Científico obtuvo 3.5 de 10 en el Examen Diagnóstico (el campo más bajo) y nadie acertó “¿cuánto es 3/4 + 1/4?” ni “0.5 expresado como fracción”; en el EIA de Fase 6 el 87.5 % quedó en el nivel más bajo en multiplicación y división con decimales.",
+  "2": "En 2° grado, el 75.0 % del grupo quedó en “Requiere apoyo” en Saberes y Pensamiento Científico (EIA de Fase 6) y el campo obtuvo 4.0 de 10 en el Examen Diagnóstico; solo el 9 % resolvió un descuento del 25 % y el 100 % tuvo dificultad con multiplicación y división con decimales.",
+  "3": "En 3er grado, el 58.3 % del grupo quedó en “Requiere apoyo” en Saberes y Pensamiento Científico (EIA de Fase 6) y el campo obtuvo 3.5 de 10 en el Examen Diagnóstico; nadie resolvió la potencia 3² × 3³ y el 100 % tuvo dificultad con área y perímetro de figuras compuestas.",
+};
+const SITUACION_AULA_GRADO = {
+  "1": "Confunden fracciones y decimales (no relacionan 0.5 con 1/2 ni suman fracciones); multiplican y dividen con decimales de forma mecánica; les cuesta elegir la operación en un problema escrito.",
+  "2": "Dificultad con multiplicación y división con decimales, porcentajes y descuentos; aprendizaje mecánico sin comprensión; poca práctica constante fuera de la escuela.",
+  "3": "Dificultad con operaciones combinadas, potencias y cálculo de área y perímetro; les cuesta explicar su procedimiento y revisar si el resultado tiene sentido.",
+};
+const LOCALIZA_GRADO = {
+  "1": { libro: "PP 8 “Encuentra las figuras geométricas con el uso del microscopio” (PA 23 “Las células animales y vegetales usan los números fraccionarios”, Tomo II p. 126) y PP 10 (PA 30 “Contaminantes… con los números fraccionarios”, Tomo II p. 156)", videos: "“Números con signo (enteros, fracciones y decimales) en la recta numérica”, “Operaciones y su propiedad conmutativa” y “Empleo de porcentajes”", comunidad: "entrevistar a dos familiares o comerciantes sobre cómo usan medios, cuartos y decimales al comprar, vender o medir (kilos, litros, metros)" },
+  "2": { libro: "PP 13 “Las figuras del Universo” (PA 38 “Un Universo inmenso, pero cuantificable”, Tomo III p. 125) y PP 11 (PA 33 “¡Si cada vez son más, a cada uno le toca menos!”, Tomo III p. 102)", videos: "“Criterios de divisibilidad… máximo común divisor y mínimo común múltiplo” y “Múltiplos y submúltiplos del Sistema internacional…”", comunidad: "recopilar precios y descuentos de 10 productos de la tienda de Xoyatla y preguntar a los tenderos cómo calculan cambio, ganancias y ofertas" },
+  "3": { libro: "PP 4 “Mezclas cotidianas” (porcentajes en etiquetas, Tomo I p. 156) y PP 2 “Características y medidas del entorno” (Tomo I p. 126)", videos: "“Reparto proporcional” y “Lee, interpreta y comunica información de cualquier tipo de gráfica”", comunidad: "entrevistar a productores del campo y del mezcal sobre cómo calculan cosechas, costos, rendimiento y reparto de ganancias" },
+};
+function prellenadoPICActualizado() {
+  const v = {};
+  v["pic:etapa1"] = {
+    condicionesAcademicas: "Situaciones prioritarias identificadas por el colectivo (en orden de prioridad):\n1. Bajo dominio de las operaciones básicas (suma, resta, multiplicación, división, fracciones y decimales) en los tres grados — Saberes y Pensamiento Científico es el campo más bajo en el Examen Diagnóstico (1° 3.5, 2° 4.0, 3° 3.5) y en el EIA de Fase 6 (56.25 % de la escuela en “Requiere apoyo”).\n2. Comprensión lectora limitada para interpretar y resolver problemas escritos (Lenguajes en “Reforzar” en los tres grados).\n3. Redacción y ortografía.",
+    condicionesFamiliares: "Migración de uno o ambos padres (fenómeno relevante en Xoyatla).\nUn número relevante de alumnos vive con la madre sola o con abuelos/otros familiares.\nFalta de acceso a internet en casa (varios alumnos).",
+    condicionesPersonales: "Bullying, apodos y violencia entre compañeros (mencionados en el Diagnóstico Integral).\nBaja disponibilidad de tiempo libre para estudiar y hacer deporte (mayoría dedica su tiempo a labores del hogar/campo).",
+  };
+  v["pic:etapa5:cronograma"] = {};
+  ["1", "2", "3"].forEach((g) => {
+    const crit = {}; VALIDACION_RAPIDA_PROBLEMATICA_CRITERIOS.forEach((c, i) => { crit["criterio" + (i + 1)] = "Sí"; });
+    v[`pic:${g}:etapa2:principal`] = {
+      planteamientoFinal: PROBLEMATICA_COMUN_PIC + " " + EVIDENCIA_GRADO_PIC[g],
+      ...crit,
+      reflexionFinal: "Identificar un problema es solo nombrarlo (“no saben matemáticas”); problematizarlo es preguntarnos qué pasa, a quién le pasa, por qué y cómo lo vive la comunidad, para convertirlo en una oportunidad de aprender resolviendo situaciones reales de Xoyatla.",
+    };
+    v[`pic:${g}:etapa3:principal`] = {
+      posibleAccion: "Fortalecer el dominio de las operaciones básicas para resolver con seguridad problemas de su vida cotidiana y de su comunidad (compras, cosechas, venta de productos, gasto familiar), partiendo de sus conocimientos previos, con trabajo colaborativo, material concreto y el apoyo de las familias, y compartir lo aprendido con Xoyatla en una feria matemática.",
+    };
+    v[`pic:${g}:etapa4:aportacion`] = {
+      aulaProblematica: "Bajo dominio de las operaciones básicas (suma, resta, multiplicación, división, fracciones y decimales).",
+      aulaPorQue: "Saberes y Pensamiento Científico es el campo más débil en los tres grados (Examen Diagnóstico y EIA de Fase 6) y el colectivo lo confirmó en la lectura de la realidad. " + EVIDENCIA_GRADO_PIC[g],
+      aulaSituaciones: SITUACION_AULA_GRADO[g],
+      escuelaProblematica: "Faltan espacios y momentos permanentes para practicar y reforzar el cálculo fuera de la clase.",
+      escuelaPorQue: "Al ser una escuela bidocente con grupos pequeños, se puede aprovechar el apoyo entre alumnos de distintos grados.",
+      escuelaSituaciones: "Poco material didáctico de matemáticas; pocas actividades escolares que usen las matemáticas de forma lúdica o práctica.",
+      comunidadProblematica: "Pocas oportunidades de práctica y acompañamiento en casa.",
+      comunidadPorQue: "La migración, la falta de internet y el trabajo en el hogar y el campo limitan el apoyo fuera de la escuela.",
+      comunidadSituaciones: "Padres que migran; alumnos al cuidado de madres solas o abuelos; sin internet en casa; tiempo libre dedicado al hogar y al campo.",
+    };
+    v[`pic:${g}:etapa4:propuestas`] = {
+      aulaHorizonte: "Fortalecer el dominio de las operaciones básicas para que cada alumno resuelva con confianza problemas con las cuatro operaciones, fracciones y decimales, explique su procedimiento y avance respecto a su diagnóstico inicial, mediante práctica diaria, problemas del contexto y material concreto.",
+      escuelaHorizonte: "Crear un rincón o mural matemático permanente y tutoría entre pares de distintos grados para que la práctica sea constante, con retos semanales y juegos elaborados por los alumnos.",
+      comunidadHorizonte: "Aplicar lo aprendido en situaciones del entorno (compras, cosechas, ventas, gasto familiar) para que las familias vean el avance y el aprendizaje beneficie al bien común, presentándolo en una feria matemática.",
+    };
+    v[`pic:${g}:etapa4:cadaunoletoca`] = {
+      aulaIdeas: "Programa de actividades continuas: 15 a 20 minutos diarios de cálculo mental y escrito; problemas con situaciones reales de Xoyatla; material concreto (fichas, tiras de fracciones, dinero didáctico); revisión del procedimiento en parejas; un momento fijo de operaciones dentro de cada proyecto académico de Saberes y Pensamiento Científico.",
+      escuelaIdeas: "Mural “Reto matemático de la semana”; juegos elaborados por los alumnos (lotería de fracciones, memorama de equivalencias, “la tiendita”); tutoría entre grados una vez por semana; registro del avance de cada alumno.",
+      comunidadIdeas: "Tareas sencillas en casa con apoyo de la familia; invitar a padres, abuelos y productores a compartir cómo usan las matemáticas en su trabajo; feria matemática al cierre del ciclo.",
+    };
+    const L = LOCALIZA_GRADO[g];
+    v[`pic:${g}:etapa5:secuencia`] = {
+      queLocalizacion: `Acción 1: localizar en Nuestro libro de proyectos los contenidos de operaciones, fracciones y decimales de ${L.libro}, y en los videos académicos ${L.videos}.\nAcción 2: ${L.comunidad}.`,
+      comoLocalizacion: "En equipos, con fichas de registro (fuente, qué dice, ejemplo de la comunidad) y una tabla de datos; se inicia con un video o cortometraje detonador (“El último consejo”, “Carrizos”) y se presenta lo encontrado en una cartulina por grado.",
+      cuandoLocalizacion: "Trimestre II (enero a marzo de 2027). Asambleas intergrados: 22 ene, 19 feb y presentación de la Etapa 5 el 19 mar 2027.",
+      queElaboracion: "Elaborar alternativas de solución: juegos y materiales para practicar (lotería de fracciones, memorama de equivalencias, “la tiendita”), un recetario o tabla de precios con cálculos reales y retos para el mural matemático.",
+      comoElaboracion: "Por campos formativos y en equipos mixtos de los tres grados, con responsables por material; los de 3° asesoran a los de 1° (tutoría entre pares); se prueban los juegos en el aula y se corrigen.",
+      cuandoElaboracion: "Trimestre III (abril a junio de 2027). Asambleas intergrados: 23 abr, 21 may y presentación de la Etapa 6 el 18 jun 2027.",
+      quePresentacion: "Presentar a las familias y a la comunidad una Feria matemática “Las matemáticas de todos los días”, con los juegos, la tiendita, los cálculos de cosechas y ventas, y el avance de cada alumno.",
+      comoPresentacion: "Día 1: selección de evidencias áulicas por campo formativo; Día 2: programa, ensayo y montaje de stands por grado; Día 3: feria pública con familias, autoridades y productores invitados.",
+      cuandoPresentacion: "Semana de cierre del ciclo escolar (julio de 2027; fecha por confirmar con el calendario oficial).",
+    };
+    v[`pic:${g}:etapa6:infomano`] = {
+      aulaFuentes: `${L.libro}; videos ${L.videos}; libro de Múltiples Lenguajes para comprender problemas escritos.`,
+      aulaProyectos: "Proyectos parciales de Saberes y Pensamiento Científico vinculados al PIC (ver “Proyectos y videos SEP”).",
+      aulaAcciones: "Resolver problemas con datos reales recabados por los alumnos; elaborar juegos y materiales de práctica; registrar el avance individual comparado con el diagnóstico.",
+      escuelaFuentes: "Mural matemático, retos semanales y registro de tutoría entre pares.",
+      escuelaProyectos: "Rincón matemático y “la tiendita” escolar.",
+      escuelaAcciones: "Tutoría entre grados una vez por semana; rotación de retos; concurso de cálculo mental entre grados.",
+      comunidadFuentes: `Saberes comunitarios: ${L.comunidad}.`,
+      comunidadProyectos: "Feria matemática “Las matemáticas de todos los días”.",
+      comunidadAcciones: "Tareas en casa con la familia (gasto de la compra, reparto de una cosecha); invitación a productores y comerciantes.",
+    };
+    v[`pic:${g}:etapa7:integrar`] = {
+      aulaProyectos: "Evidencias áulicas de los proyectos parciales de Saberes y Pensamiento Científico de cada grado.",
+      aulaPropuesta: "Práctica diaria de operaciones con problemas del contexto y materiales elaborados por los alumnos.",
+      aulaAcciones: "Seleccionar las mejores evidencias por campo formativo y preparar la explicación de cada una.",
+      escuelaProyectos: "Mural y rincón matemático; tutoría entre pares.",
+      escuelaPropuesta: "Mantener el rincón matemático y la tutoría entre grados el siguiente ciclo.",
+      escuelaAcciones: "Montaje de stands por grado y concurso de cálculo mental durante la feria.",
+      comunidadProyectos: "Feria matemática con familias y comunidad.",
+      comunidadPropuesta: "Que las familias usen los juegos y tablas de cálculo en casa y apoyen la práctica.",
+      comunidadAcciones: "Invitación por voceo y recado; participación de productores y comerciantes; entrega de juegos a las familias.",
+    };
+  });
+  v["pic:etapa5:cronograma"] = {
+    primeroActividad: "Localizar contenidos de fracciones y decimales (PP 8 y PP 10) y entrevistar a familiares/comerciantes sobre su uso.", primeroCoordina: DOC_PIC_RESP["1"], primeroResponsables: "Alumnos de 1° en equipos de 2 o 3", primeroProductos: "Fichas de registro y tabla de usos de fracciones y decimales en la comunidad.", primeroTiempos: "22 ene, 19 feb y 19 mar 2027", primeroEntregaFinal: "Cartulina “Fracciones y decimales en Xoyatla” y lotería de fracciones.",
+    segundoActividad: "Localizar contenidos de decimales, porcentajes y reparto (PP 13 y PP 11) y recopilar precios y descuentos de la tienda local.", segundoCoordina: DOC_PIC_RESP["2"], segundoResponsables: "Alumnos de 2° en equipos de 2 o 3", segundoProductos: "Tabla de precios, descuentos y cambio con cálculos.", segundoTiempos: "22 ene, 19 feb y 19 mar 2027", segundoEntregaFinal: "“La tiendita” escolar con lista de precios y problemas.",
+    terceroActividad: "Localizar contenidos de porcentajes y medición (PP 4 y PP 2) y entrevistar a productores del campo y del mezcal.", terceroCoordina: DOC_PIC_RESP["3"], terceroResponsables: "Alumnos de 3° en equipos de 2 o 3; tutores de 1°", terceroProductos: "Registro de cálculos de cosecha, costos y reparto; análisis de etiquetas.", terceroTiempos: "22 ene, 19 feb y 19 mar 2027", terceroEntregaFinal: "Tabla “Lo que cuesta y lo que deja una cosecha” y retos para el mural.",
+  };
+  const fases = {
+    diagnostico: ["Examen Diagnóstico, EIA de Fase 6 y lectura de la realidad (Semana de Inicio).", "Agosto–septiembre 2026", "Colectivo docente"],
+    seleccion: ["Selección y planteamiento de la problemática común (Etapas 1 a 3).", "Septiembre–octubre 2026", "Colectivo docente y alumnos"],
+    planeacion: ["Planificación de actividades (Etapa 4) y presentación a familias.", "Noviembre 2026 (fin del Trimestre I)", "Dirección y docentes"],
+    desarrollo: ["Localización de información (Etapa 5) y elaboración de alternativas (Etapa 6).", "Trimestres II y III (enero–junio 2027)", "Docentes por grado y alumnos"],
+    comunicacion: ["Feria matemática “Las matemáticas de todos los días” (Etapa 7).", "Semana de cierre (julio 2027)", "Toda la escuela, APF y comunidad"],
+    evaluacion: ["Valoración de avances con rúbrica y comparación con el diagnóstico; proyección del siguiente ciclo.", "Julio 2027", "Colectivo docente"],
+  };
+  Object.entries(fases).forEach(([slug, [actividad, periodo, responsable]]) => { v[`pic:cronograma:${slug}`] = { actividad, periodo, responsable }; });
+  v["pic:evaluacionDifusion"] = {
+    comoPresentar: "Feria matemática pública con stands por grado (juegos, la tiendita, cálculos de cosechas y ventas), exposición oral de los alumnos de los tres grados, galería de evidencias y entrega de juegos a las familias. Se difunde por voceo, recados y, con autorización, fotos.",
+    criterios: "Avance de cada alumno respecto a su diagnóstico (Examen Diagnóstico/EIA y calificación de Matemáticas por periodo); uso correcto de las operaciones en problemas reales; explicación del procedimiento; participación y trabajo colaborativo; participación de las familias; calidad de los materiales elaborados. Se valora con rúbrica sencilla y autoevaluación.",
+  };
+  return v;
+}
+
+// Plan complementario que pide la rúbrica (asambleas, programa por campo, Etapa 7).
+const PLAN_567_PIC = {
+  asambleas: [
+    ["20 nov 2026", "Presentación de las Etapas 1 a 4 a familias y alumnos de los tres grados (con la Jornada del 6 nov como antecedente)", "Etapa 4"],
+    ["22 ene 2027", "Arranque de la localización de información: organización de equipos y fuentes", "Etapa 5"],
+    ["19 feb 2027", "Avance: lo que encontramos en libros, videos y entrevistas", "Etapa 5"],
+    ["19 mar 2027", "Presentación de la Etapa 5 (fin del Trimestre II)", "Etapa 5"],
+    ["23 abr 2027", "Arranque de la elaboración de alternativas: reparto de materiales y responsables", "Etapa 6"],
+    ["21 may 2027", "Avance y prueba de juegos y materiales", "Etapa 6"],
+    ["18 jun 2027", "Presentación de la Etapa 6 (fin del Trimestre III) y organización de la feria", "Etapa 6"],
+    ["Semana de cierre (jul 2027)", "Feria matemática pública y valoración final", "Etapa 7"],
+  ],
+  programa6: [
+    ["Saberes y Pensamiento Científico", "Lotería de fracciones y tiras de equivalencias (PP 8)", "“La tiendita”: precios, descuentos y reparto (PP 11 y 13)", "Tabla de cosecha, costos y porcentajes (PP 4 y 2)"],
+    ["Lenguajes", "Redactar problemas cortos con datos de la casa", "Instructivo de los juegos y carteles de la tiendita", "Guion de la exposición y carteles de la feria"],
+    ["Ética, Naturaleza y Sociedades", "Productos y oficios de Xoyatla (qué se vende y cómo se mide)", "Comercio justo: precios y ganancias en la comunidad", "Economía local: el mezcal y el campo"],
+    ["De lo Humano y lo Comunitario", "Juegos de cálculo mental en Educación Física (tiempos y distancias)", "Hoja de cálculo o calculadora para comprobar resultados (Tecnología)", "Presupuesto familiar y toma de decisiones"],
+  ],
+  responsables6: "1°: Mtro. Neftalid Bladimir Ortán Aguilar · 2° y 3°: Mtro. Salvador Olvera Barrera · Apoyo de familias: Mesa Directiva de la APF · Cada equipo de alumnos tiene un responsable de material.",
+  antesDuranteDespues: [
+    ["Antes", "Seleccionar evidencias áulicas por campo formativo; elaborar el programa y las invitaciones (voceo y recado); asignar stands y responsables; ensayar la exposición; preparar materiales (mesas, cartulinas, juegos, dinero didáctico)."],
+    ["Durante", "Bienvenida; recorrido por stands de cada grado; juegos con las familias en “la tiendita”; concurso de cálculo mental; exposición del avance de cada grado; registro de asistencia y fotografías."],
+    ["Después", "Valorar con la rúbrica y la autoevaluación de los alumnos; comparar con el diagnóstico; recoger comentarios de las familias; informar en CTE y proyectar el PIC del siguiente ciclo."],
+  ],
+  ordenDia: ["Registro de asistencia", "Bienvenida de la Dirección", "Presentación del proyecto por alumnos de 3°", "Recorrido por stands (1°, 2° y 3°)", "Juegos con las familias y concurso de cálculo mental", "Mensaje de una madre o padre de familia y de un productor invitado", "Compromisos y cierre"],
+  insumos: "Mesas, mantel, cartulinas, plumones, juegos elaborados por los alumnos, dinero didáctico, productos para “la tiendita”, lista de asistencia, bocina y micrófono, cámara.",
+  criterios: ["Avance individual respecto al diagnóstico (Examen Diagnóstico, EIA y calificación de Matemáticas por periodo)", "Uso correcto de las operaciones en situaciones reales", "Explicación y argumentación del procedimiento", "Trabajo colaborativo y participación de los tres grados", "Participación de las familias", "Calidad de los materiales elaborados"],
+  cronograma7: [
+    ["Día 1", "Selección de evidencias áulicas (un proyecto por campo formativo)", "Docentes y alumnos"],
+    ["Día 2", "Programa final, ensayo y montaje de stands", "Dirección, docentes y comisiones de alumnos"],
+    ["Día 3", "Feria matemática pública frente a la comunidad", "Toda la escuela, APF y comunidad"],
+  ],
+};
+function htmlPlan567PIC() {
+  let h = h1Vivo("Planeación de las Etapas 5, 6 y 7 (Etapa 4 · Lista de cotejo)");
+  h += `<p style="line-height: 115%; margin-bottom: 0.08in">Complemento de la Etapa 4 que pide la lista de cotejo de la 2ª Sesión de CTE. Las fechas son propuestas del colectivo y se ajustan al calendario escolar oficial.</p>`;
+  h += h2Vivo("Calendario de asambleas intergrados (alumnos de los tres grados, docentes y familias)");
+  h += tablaVivo(["Fecha", "Propósito de la asamblea", "Etapa"], PLAN_567_PIC.asambleas);
+  h += h2Vivo("Etapa 6 · Programa de actividades por campo formativo y grado");
+  h += tablaVivo(["Campo formativo", "1er grado", "2° grado", "3er grado"], PLAN_567_PIC.programa6);
+  h += `<p style="line-height: 115%; margin-bottom: 0.08in"><b>Responsables:</b> ${escHTMLVivo(PLAN_567_PIC.responsables6)}</p>`;
+  h += h2Vivo("Etapa 7 · Presentación pública: Feria matemática “Las matemáticas de todos los días”");
+  h += tablaVivo(["Momento", "Acciones"], PLAN_567_PIC.antesDuranteDespues);
+  h += h3Vivo("Orden del día") + `<ol style="margin: 0 0 0.08in 0.25in">${PLAN_567_PIC.ordenDia.map((x) => `<li>${escHTMLVivo(x)}</li>`).join("")}</ol>`;
+  h += `<p style="line-height: 115%; margin-bottom: 0.08in"><b>Logística e insumos:</b> ${escHTMLVivo(PLAN_567_PIC.insumos)}</p>`;
+  h += h3Vivo("Criterios de valoración y proyección") + `<ul style="margin: 0 0 0.08in 0.25in">${PLAN_567_PIC.criterios.map((x) => `<li>${escHTMLVivo(x)}</li>`).join("")}</ul>`;
+  h += h3Vivo("Cronograma de la semana de cierre") + tablaVivo(["Día", "Actividad", "Responsables"], PLAN_567_PIC.cronograma7);
+  return h;
+}
+
+let __prePIC = null;
+// Prellenado vigente de una clave pic:… (o null si no tiene).
+function prePIC(clave) { if (!__prePIC) __prePIC = prellenadoPICActualizado(); return __prePIC[clave] || null; }
+
+// Escribe en la Hoja el PIC actualizado (respalda antes lo que hubiera).
+async function aplicarPICActualizado2026() {
+  const datos = prellenadoPICActualizado();
+  const respaldo = {};
+  for (const k of Object.keys(datos)) respaldo[k] = await getStorage(k, null);
+  await setStorage(`pic:respaldo:${hoyISO()}`, respaldo);
+  const res = [];
+  for (const [k, val] of Object.entries(datos)) {
+    const ok = await setStorage(k, { ...(respaldo[k] || {}), ...val });
+    res.push(`${ok ? "✓" : "✗"} ${k}`);
+  }
+  return res;
+}
+
+function PanelPlan567({ onVer }) {
+  const [estado, setEstado] = useState(""); const [conf, setConf] = useState(false);
+  const aplicar = async () => { setEstado("Guardando en tu Hoja…"); const r = await aplicarPICActualizado2026(); const bien = r.filter((x) => x.startsWith("✓")).length; setEstado(`✓ Listo: ${bien} de ${r.length} apartados guardados (con respaldo). Ya se ven en las pestañas y en el documento del PIC.`); setConf(false); };
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="card" style={{ borderColor: "#6a1b9a", background: "rgba(106,27,154,0.05)" }}>
+        <div className="font-display" style={{ fontWeight: 700, fontSize: "0.92rem" }}>PIC actualizado · problemática común y planeación de las Etapas 5, 6 y 7</div>
+        <p className="text-sm" style={{ opacity: 0.7, margin: "0.3rem 0 0.6rem" }}>Llena las Etapas 1 a 7 de los tres grados (grupo A) con la problemática común acordada en CTE (operaciones básicas), la evidencia de cada grado, las acciones de localización por grado con los proyectos SEP, el cronograma, las asambleas intergrados, el programa por campo formativo, la feria matemática y los criterios de evaluación. Antes de escribir se guarda un respaldo de lo que había.</p>
+        <div className="flex gap-2 flex-wrap items-center">
+          {!conf ? <button onClick={() => setConf(true)} className="btn-primario" style={{ fontSize: "0.8rem" }}><Check size={14} /> Aplicar PIC actualizado a la app</button>
+            : <><span className="text-sm">¿Seguro? Reemplaza los textos de las Etapas 1 a 7 (queda respaldo).</span><button onClick={aplicar} className="btn-primario" style={{ fontSize: "0.8rem" }}>Sí, aplicar</button><button onClick={() => setConf(false)} className="btn-secundario" style={{ fontSize: "0.8rem" }}>Cancelar</button></>}
+          <button onClick={onVer} className="btn-secundario" style={{ fontSize: "0.78rem" }}>Ver en el PIC →</button>
+        </div>
+        {estado && <p className="text-sm" style={{ marginTop: "0.5rem", color: estado.startsWith("✓") ? "var(--verde)" : undefined }}>{estado}</p>}
+      </div>
+      <div className="card"><div className="doc-completo-vivo" dangerouslySetInnerHTML={{ __html: htmlPlan567PIC() }} /></div>
+    </div>
+  );
+}
+
 // Aviso arriba de cada pestaña de captura: lo escrito se guarda solo y se
 // ve al instante en el documento final.
 function AvisoDocumentoVivo({ documento, botones }) {
@@ -16973,6 +17179,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
     { id: "analitico", label: "Programa Analítico" },
     { id: "pic", label: "PIC" },
     { id: "recursos", label: "Proyectos y videos SEP" },
+    { id: "plan567", label: "PIC actualizado · Etapas 5-7" },
     { id: "cotejo", label: "Lista de cotejo (revisión)" },
   ];
 
@@ -17018,6 +17225,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
         ))}
       </div>
 
+      {subTab === "plan567" && <PanelPlan567 onVer={() => verEnDocumento("pic", "pic-plan567")} />}
       {subTab === "cotejo" && <ListaCotejoPIC onStamp={onStamp} />}
       {subTab === "recursos" && <PanelRecursosSEP onVer={() => verEnDocumento("pic", "pic-recursos")} />}
       {subTab === "analisis" && <AnalisisResultadosEmbebido cual={cualDocumento} setCual={setCualDocumento} irA={irA} setIrA={setIrA} />}
@@ -17088,7 +17296,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             titulo='Resultado — "Problematización de la realidad escolar" (todo el colectivo)'
             ayuda="Resultado ya trabajado de la tabla oficial Características / Necesidades comunitarias / Propuestas de solución, organizado por el colectivo en 3 tipos de condiciones. Territorios: Aula → Escuela → Comunidad."
             onStamp={onStamp}
-            valoresPorDefecto={ETAPA1_CONDICIONES_PREFILL}
+            
             campos={CAMPOS_CAPTURA_PLANEACION.etapa1}
           />
 
@@ -17132,7 +17340,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             titulo={`Etapa 2 — Construcción y validación de la problemática principal · ${grado}° grado`}
             ayuda="Problemática académica basada en los resultados reales del EIA Fase 6 de este grado (ver tabla arriba)."
             onStamp={onStamp}
-            valoresPorDefecto={ETAPA2_PLANTEAMIENTO_PRINCIPAL_PREFILL_POR_GRADO[grado]}
+            
             campos={CAMPOS_CAPTURA_PLANEACION.etapa2Principal}
           />
 
@@ -17215,7 +17423,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             titulo={`Aportación a la comunidad · ${grado}° grado`}
             ayuda="Por territorio: la problemática acordada, por qué se decidió, y qué situaciones contribuyen a ella."
             onStamp={onStamp}
-            valoresPorDefecto={ETAPA4_APORTACION_PREFILL_POR_GRADO[grado]}
+            
             campos={CAMPOS_CAPTURA_PLANEACION.etapa4Aportacion}
           />
 
@@ -17234,7 +17442,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             titulo={`A cada uno lo que le toca hacer · ${grado}° grado`}
             ayuda="Por territorio: ideas generales de lo que se busca obtener."
             onStamp={onStamp}
-            valoresPorDefecto={ETAPA4_CADAUNOLETOCA_PREFILL_POR_GRADO[grado]}
+            
             campos={CAMPOS_CAPTURA_PLANEACION.etapa4CadaUno}
           />
 
