@@ -6262,6 +6262,52 @@ const pruebasTexto = (r) => deportesDe(r).includes("Atletismo")
   ? [...(r.pruebas || []).map((p) => (PRUEBAS_ATLETISMO.find((x) => x.id === p) || {}).n), ...(r.relevos || []).map((p) => (RELEVOS_ATLETISMO.find((x) => x.id === p) || {}).n)].filter(Boolean).join(", ")
   : "";
 
+// Responsiva OFICIAL (formato de la Dirección de Educación Física, adaptado con los datos de la escuela).
+// Es un PDF rellenable en assets; se llena una hoja por alumno y por deporte.
+const RUTA_RESPONSIVA_OFICIAL = "assets/juegos-deportivos/Responsiva_oficial_rellenable.pdf";
+async function descargarResponsivasOficiales(lista, regs, ev) {
+  const { PDFDocument, StandardFonts } = window.PDFLib;
+  const resp = await fetch(RUTA_RESPONSIVA_OFICIAL);
+  if (!resp.ok) throw new Error("No se encontró el formato oficial de la responsiva.");
+  const plantilla = await resp.arrayBuffer();
+  const final = await PDFDocument.create();
+  const GRADO = { 1: "Primer", 2: "Segundo", 3: "Tercer" };
+  const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const fecha = ev.fechaCarta ? (() => { const [, m, d] = ev.fechaCarta.split("-").map(Number); return `${d} de ${MESES[m - 1]}`; })() : "";
+  const dia = ev.fechaEvento ? String(Number(ev.fechaEvento.split("-")[2])) : "";
+  for (const a of lista) {
+    const r = regs[a.id] || {};
+    const t = tutorDeportista(a);
+    for (const dep of deportesDe(r)) {
+      const doc = await PDFDocument.load(plantilla);
+      const fuente = await doc.embedFont(StandardFonts.Helvetica);
+      const form = doc.getForm();
+      const poner = (campo, valor, max = 11) => {
+        try {
+          const f = form.getTextField(campo); const txt = String(valor || "");
+          const ancho = f.acroField.getWidgets()[0].getRectangle().width - 4;
+          let tam = max; while (tam > 6 && fuente.widthOfTextAtSize(txt, tam) > ancho) tam -= 0.5;
+          f.setFontSize(tam); f.setText(txt);
+        } catch (e) {}
+      };
+      poner("fecha", fecha, 10);
+      poner("alumno", nombreCompletoDep(a).toUpperCase());
+      poner("grado", GRADO[a.grado] || "");
+      poner("dia", dia);
+      poner("disciplina", dep.split(" (")[0]);
+      poner("rama", ramaAlumno(a));
+      poner("tutor", (t.nombre || "").toUpperCase());
+      poner("parentesco", t.parentesco || "");
+      form.updateFieldAppearances(fuente);
+      form.flatten();
+      const [pag] = await final.copyPages(doc, [0]);
+      final.addPage(pag);
+    }
+  }
+  if (!final.getPageCount()) throw new Error("No hay alumnos con deporte registrado.");
+  descargarBytesPDF(await final.save(), `Responsivas_oficiales_Juegos_Deportivos_${CICLO_DEPORTE}.pdf`);
+}
+
 // Foto del alumno guardada en la app (pestaña Credenciales → "Foto"); si no hay, queda el recuadro para pegarla.
 function FotoAlumnoDep({ foto, w = "2.5cm", h = "3cm", leyenda = "Fotografía" }) {
   return foto
@@ -6489,12 +6535,13 @@ function JuegosDeportivosTab({ alumnos, onStamp }) {
             <div><label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Fecha de las cartas y constancias</label><input className="campo" type="date" value={ev.fechaCarta || ""} onChange={(e) => guardarEv("fechaCarta", e.target.value)} /></div>
           </div>
           <div className="flex gap-2 flex-wrap mt-4">
-            <button onClick={() => imprimir("responsivas")} className="btn-primario" style={{ fontSize: "0.78rem" }} disabled={!inscritos.length}><Printer size={14} /> Cartas responsivas ({inscritos.length})</button>
+            <button onClick={async () => { setEstado("Llenando responsivas oficiales…"); try { await descargarResponsivasOficiales(ordenInscritos, regs, ev); setEstado("✓ Responsivas oficiales descargadas (una hoja por alumno y deporte)"); } catch (e) { setEstado("No se pudieron generar: " + e.message); } }} className="btn-primario" style={{ fontSize: "0.78rem" }} disabled={!inscritos.length}><Printer size={14} /> Responsivas oficiales ({ordenInscritos.reduce((n, a) => n + deportesDe(regs[a.id]).length, 0)} hojas)</button>
+            <a href={RUTA_RESPONSIVA_OFICIAL} download="Responsiva_oficial_en_blanco.pdf" className="btn-secundario" style={{ fontSize: "0.78rem", textDecoration: "none" }}><Printer size={14} /> Responsiva en blanco (rellenable)</a>
             <button onClick={() => imprimir("constancias")} className="btn-secundario" style={{ fontSize: "0.78rem" }} disabled={!inscritos.length}><Printer size={14} /> Constancias de estudio con foto ({inscritos.length})</button>
             <button onClick={() => imprimir("cedula")} className="btn-secundario" style={{ fontSize: "0.78rem" }}><Printer size={14} /> Cédula de inscripción por deporte</button>
             <button onClick={() => imprimir("entrenador")} className="btn-secundario" style={{ fontSize: "0.78rem" }}><Printer size={14} /> Autorización de entrenador(a)</button>
           </div>
-          <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.5rem" }}>Se imprimen solo los alumnos que tienen deporte registrado. Use "Guardar como PDF" en la ventana de impresión si los quiere en archivo.</p>
+          <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.5rem" }}>Las responsivas salen en el formato oficial de la Dirección de Educación Física, ya llenas con los datos de cada alumno; quien participa en dos deportes lleva una hoja por cada uno. Se imprimen solo los alumnos que tienen deporte registrado. Use "Guardar como PDF" en la ventana de impresión si los quiere en archivo.</p>
         </div>
       )}
 
