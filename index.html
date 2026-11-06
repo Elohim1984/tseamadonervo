@@ -6114,6 +6114,332 @@ function RecibosTab({ onStamp }) {
   );
 }
 
+/* ---------- Juegos Deportivos Escolares · Nivel Secundaria (6 nov 2026) ----------
+   Normas de la Convocatoria de los Juegos Deportivos Nacionales Escolares de la
+   Educación Básica 2026-2027 (SEP-CONADE, 17 ago 2026) y del Anexo Técnico de
+   Atletismo. Registro por alumno en deporte:<ciclo>:<alumnoId> y datos del
+   evento en deporte:evento. */
+const CICLO_DEPORTE = "2026-2027";
+const DEPORTES_SECUNDARIA = ["Ajedrez", "Atletismo", "Bádminton", "Baseball 5", "Básquetbol 5x5", "Básquetbol 3x3", "Futbol Escolar (5 vs 5)", "Futbol Bandera", "Handball", "Voleibol"];
+const PRUEBAS_ATLETISMO = [
+  { id: "100", n: "100 mts." }, { id: "200", n: "200 mts." }, { id: "800", n: "800 mts." }, { id: "1500", n: "1,500 mts." },
+  { id: "marcha", n: "2,000 mts. Marcha" }, { id: "bala", n: "Impulso de bala (F 3 kg · V 8 lb)" }, { id: "disco", n: "Lanzamiento de disco (F 600 g · V 1 kg, caucho)" },
+  { id: "altura", n: "Salto de altura" }, { id: "longitud", n: "Salto de longitud" },
+  { id: "hexatlon", n: "Hexatlón (80 m planos, salto de altura, bala, salto de longitud, pelota de béisbol, 800 m)" },
+];
+const RELEVOS_ATLETISMO = [{ id: "4x100", n: "Relevo 4x100 mts." }, { id: "mixto", n: "Relevo mixto 4x100 (H, M, H, M)" }];
+const DOCS_DEPORTISTA = [
+  ["constancia", "Constancia de estudio con fotografía (cancelada con sello, matriculado a más tardar el 30 nov 2026)"],
+  ["identidad", "Acta de nacimiento, pasaporte o CURP (uno)"],
+  ["medico", "Certificado médico individual (institución oficial o médico con cédula)"],
+  ["responsiva", "Carta responsiva firmada por padre/madre o tutor"],
+  ["ine", "Copia de INE, pasaporte o licencia del padre/madre o tutor"],
+];
+const NORMAS_DEPORTE = [
+  ["Categoría", "Nivel secundaria: nacidos en 2012 y menores. No se permite participar fuera de la categoría convocada."],
+  ["Ramas", "Femenil y varonil; mixta solo en Ajedrez, Atletismo, Bádminton y Baseball 5."],
+  ["Un solo deporte", "Cada alumno participa en un solo deporte y representa a un solo plantel y turno en todas las etapas."],
+  ["Equipos", "En deportes de conjunto, Ajedrez por equipos y relevos, todos deben ser del mismo plantel y turno."],
+  ["Atletismo", "Máximo 2 pruebas individuales y 1 relevo. Quien hace Hexatlón puede hacer además un relevo. En secundaria, quien corre 1,500 m no puede hacer ninguna otra prueba en la etapa estatal."],
+  ["Entrenador o auxiliar", "Preferentemente docentes o licenciados en educación física; necesita autorización por escrito del director del plantel e identificación oficial."],
+  ["Requisitos del deportista", "Constancia de estudio con fotografía, acta/pasaporte/CURP, certificado médico, carta responsiva del padre o tutor con copia de su INE."],
+  ["Etapas", "Zona escolar (Zona 052: 18 y 19 de noviembre de 2026) → Sector → Estatal (a más tardar abril 2027) → Nacional (8 al 28 de junio de 2027)."],
+  ["Uniforme y conducta", "Uniforme escolar o de competencia similar para todo el equipo. Juego limpio y respeto; no se permiten implementos ruidosos que inciten a la violencia."],
+];
+const anioNac = (a) => { const y = parseInt(String(a.ALUMNO_FECHA_NACIMIENTO || "").slice(0, 4), 10); return y > 1990 ? y : null; };
+const edadAl = (a, fecha) => { const f = String(a.ALUMNO_FECHA_NACIMIENTO || ""); if (!anioNac(a)) return null; const n = new Date(f + "T00:00:00"), h = fecha ? new Date(fecha + "T00:00:00") : new Date(); let e = h.getFullYear() - n.getFullYear(); if (h < new Date(h.getFullYear(), n.getMonth(), n.getDate())) e--; return e; };
+const ramaAlumno = (a) => (String(a.ALUMNO_GENERO || "").toUpperCase().startsWith("H") ? "Varonil" : "Femenil");
+const nombreCompletoDep = (a) => [a.ALUMNO_NOMBRES, a.ALUMNO_APELLIDO_PATERNO, a.ALUMNO_APELLIDO_MATERNO].map((x) => String(x || "").trim()).filter(Boolean).join(" ");
+function tutorDeportista(a) {
+  const nom = (p) => [a[p + "_NOMBRES"], a[p + "_APELLIDO_PATERNO"], a[p + "_APELLIDO_MATERNO"]].map((x) => String(x || "").trim()).filter(Boolean).join(" ");
+  const si = (v) => ["SI", "SÍ", "TRUE", "1", "S"].includes(String(v || "").trim().toUpperCase());
+  if (nom("TUTOR")) return { nombre: nom("TUTOR"), parentesco: a.TUTOR_PARENTESCO || "Tutor(a)", tel: a.TUTOR_CELULAR || "" };
+  if (si(a.MADRE_ES_TUTOR) && nom("MADRE")) return { nombre: nom("MADRE"), parentesco: "Madre", tel: a.MADRE_CELULAR || "" };
+  if (si(a.PADRE_ES_TUTOR) && nom("PADRE")) return { nombre: nom("PADRE"), parentesco: "Padre", tel: a.PADRE_CELULAR || "" };
+  if (nom("MADRE")) return { nombre: nom("MADRE"), parentesco: "Madre", tel: a.MADRE_CELULAR || "" };
+  return { nombre: nom("PADRE"), parentesco: "Padre", tel: a.PADRE_CELULAR || "" };
+}
+// Revisa las reglas del registro de un alumno y regresa la lista de avisos.
+function validarRegistroDeporte(a, r) {
+  const av = [];
+  const y = anioNac(a);
+  if (!y) av.push("Revisar la fecha de nacimiento en la ficha del alumno.");
+  else if (y < 2012) av.push("Fuera de categoría: nació antes de 2012.");
+  if (r.deporte === "Atletismo") {
+    const p = r.pruebas || [];
+    const indiv = p.filter((x) => x !== "hexatlon");
+    if (p.includes("hexatlon") && indiv.length) av.push("Con Hexatlón solo puede agregar un relevo.");
+    if (indiv.length > 2) av.push("Máximo 2 pruebas individuales.");
+    if (p.includes("1500") && p.length > 1) av.push("Quien corre 1,500 m no puede hacer otra prueba (etapa estatal).");
+    if ((r.relevos || []).length > 1) av.push("Solo 1 relevo.");
+  }
+  return av;
+}
+
+function EncabezadoEscuelaDep({ titulo }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "10px", borderBottom: "2px solid #7a1f1f", paddingBottom: "6px", marginBottom: "10px" }}>
+      <img src={ESCUDO_ESCUELA} alt="" style={{ width: "54px", height: "54px", objectFit: "contain" }} />
+      <div style={{ flex: 1, textAlign: "center", fontSize: "9.5pt", lineHeight: 1.35 }}>
+        <b>TELESECUNDARIA "AMADO NERVO"</b> · CCT {DATOS_PLANTEL.cct} · Turno Matutino<br />Zona Escolar 052 · Cerro del Vigilante S/N, Xoyatla, Tepeojuma, Puebla<br />
+        <b style={{ fontSize: "11pt" }}>{titulo}</b>
+      </div>
+      <div style={{ width: "54px" }} />
+    </div>
+  );
+}
+const fmtFechaDep = (iso) => { if (!iso) return "____ de ______________ de 2026"; const [y, m, d] = iso.split("-").map(Number); return `${d} de ${["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"][m - 1]} de ${y}`; };
+const pruebasTexto = (r) => r.deporte === "Atletismo"
+  ? [...(r.pruebas || []).map((p) => (PRUEBAS_ATLETISMO.find((x) => x.id === p) || {}).n), ...(r.relevos || []).map((p) => (RELEVOS_ATLETISMO.find((x) => x.id === p) || {}).n)].filter(Boolean).join(", ")
+  : "";
+
+function CartaResponsivaDeporte({ a, r, ev }) {
+  const t = tutorDeportista(a);
+  const linea = (v, w) => <span style={{ display: "inline-block", minWidth: w, borderBottom: "1px solid #000", padding: "0 3px" }}>{v || " "}</span>;
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "10.5pt", color: "#000", lineHeight: 1.75, pageBreakAfter: "always", breakAfter: "page" }}>
+      <EncabezadoEscuelaDep titulo="CARTA RESPONSIVA · JUEGOS DEPORTIVOS ESCOLARES 2026-2027" />
+      <p style={{ textAlign: "right", margin: "0 0 8px" }}>Xoyatla, Tepeojuma, Puebla, a {fmtFechaDep(ev.fechaCarta)}.</p>
+      <p style={{ margin: "0 0 6px" }}><b>C. Director(a) de la Telesecundaria "Amado Nervo"</b><br />P r e s e n t e</p>
+      <p style={{ textAlign: "justify" }}>
+        Quien suscribe, {linea(t.nombre ? t.nombre.toUpperCase() : "", "260px")}, en mi carácter de {linea(t.parentesco, "90px")} del (de la) alumno(a){" "}
+        <b>{nombreCompletoDep(a).toUpperCase()}</b>, CURP <b>{a.ALUMNO_CURP || "__________________"}</b>, de <b>{a.grado}° grado, grupo {a.ESCUELA_GRUPO || "A"}</b>, de {edadAl(a, ev.fechaEvento) ?? "__"} años de edad,
+        <b> AUTORIZO</b> su participación en los <b>{ev.nombre || "Juegos Deportivos Escolares de la Educación Básica 2026-2027"}</b>, etapa {linea(ev.etapa || "de zona", "110px")},
+        en el deporte de <b>{r.deporte || "____________"}</b>{pruebasTexto(r) ? <> (pruebas: {pruebasTexto(r)})</> : null}, rama <b>{ramaAlumno(a).toLowerCase()}</b>,
+        que se realizará el {linea(ev.fechaTexto || "", "160px")} en {linea(ev.sede || "", "200px")}, incluyendo los traslados que se requieran.
+      </p>
+      <p style={{ textAlign: "justify" }}>
+        Declaro que mi hijo(a) se encuentra en buen estado de salud y en condiciones para la práctica deportiva (anexo certificado médico). Me comprometo a que porte su uniforme, asista puntualmente, cumpla con el reglamento del evento y se conduzca con respeto y juego limpio. Conozco que la actividad deportiva implica riesgos propios del deporte y libero a la escuela y a su personal de responsabilidad por lesiones derivadas de la práctica normal del mismo, siempre que se hayan tomado las medidas de cuidado correspondientes.
+      </p>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9.5pt", margin: "6px 0" }}>
+        <tbody>
+          {[["Tipo de sangre", a.ALUMNO_TIPO_SANGRE || ""], ["Alergias o padecimientos", ""], ["Medicamento que toma", ""], ["Teléfono del padre/madre o tutor", t.tel || ""], ["Otro contacto de emergencia (nombre y teléfono)", ""]].map(([k, v]) => (
+            <tr key={k}><td style={{ border: "1px solid #000", padding: "4px 6px", width: "40%", fontWeight: 700 }}>{k}</td><td style={{ border: "1px solid #000", padding: "4px 6px" }}>{v}</td></tr>
+          ))}
+        </tbody>
+      </table>
+      <p style={{ fontSize: "9pt" }}>Anexo: copia de INE, pasaporte o licencia de manejo vigente del padre, madre o tutor.</p>
+      <div style={{ display: "flex", justifyContent: "space-around", marginTop: "40px", textAlign: "center", fontSize: "9.5pt", lineHeight: 1.35 }}>
+        <div style={{ width: "42%", borderTop: "1px solid #000", paddingTop: "3px" }}>{t.nombre ? t.nombre.toUpperCase() : "Nombre y firma"}<br />Padre, madre o tutor</div>
+        <div style={{ width: "42%", borderTop: "1px solid #000", paddingTop: "3px" }}>{NOMBRE_COMPLETO.directora}<br />Director(a) del plantel · Vo. Bo.</div>
+      </div>
+    </div>
+  );
+}
+
+function ConstanciaEstudiosDeporte({ a, ev }) {
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "11pt", color: "#000", lineHeight: 1.8, pageBreakAfter: "always", breakAfter: "page" }}>
+      <EncabezadoEscuelaDep titulo="CONSTANCIA DE ESTUDIOS" />
+      <div style={{ display: "flex", gap: "18px", alignItems: "flex-start", marginTop: "14px" }}>
+        <div style={{ flex: 1 }}>
+          <p><b>A QUIEN CORRESPONDA:</b></p>
+          <p style={{ textAlign: "justify" }}>
+            El que suscribe, Director(a) de la Telesecundaria "Amado Nervo", con Clave de Centro de Trabajo {DATOS_PLANTEL.cct}, turno matutino, hace constar que el (la) alumno(a)
+            <b> {nombreCompletoDep(a).toUpperCase()}</b>, con CURP <b>{a.ALUMNO_CURP || "__________________"}</b>, se encuentra inscrito(a) y cursa el <b>{a.grado}° grado, grupo {a.ESCUELA_GRUPO || "A"}</b>, en el ciclo escolar 2026-2027, el cual inició en esta escuela.
+          </p>
+          <p style={{ textAlign: "justify" }}>Se extiende la presente a petición del interesado para los fines de su participación en los {ev.nombre || "Juegos Deportivos Escolares de la Educación Básica 2026-2027"}, en Xoyatla, Tepeojuma, Puebla, a {fmtFechaDep(ev.fechaCarta)}.</p>
+        </div>
+        <div style={{ width: "3cm", height: "4cm", border: "1px dashed #000", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", fontSize: "8pt", flexShrink: 0 }}>Fotografía<br />(cancelada con el sello de la escuela)</div>
+      </div>
+      <div style={{ textAlign: "center", marginTop: "70px", fontSize: "10pt", lineHeight: 1.4 }}>
+        <div style={{ display: "inline-block", borderTop: "1px solid #000", padding: "4px 30px 0" }}>ATENTAMENTE<br />{NOMBRE_COMPLETO.directora}<br />Director(a) del plantel</div>
+        <div style={{ fontSize: "8.5pt", marginTop: "18px", opacity: 0.7 }}>Sello de la escuela</div>
+      </div>
+    </div>
+  );
+}
+
+function ConcentradoDeportistas({ lista, regs, ev }) {
+  const porDeporte = {};
+  lista.forEach((a) => { const r = regs[a.id]; if (r && r.deporte) (porDeporte[r.deporte] = porDeporte[r.deporte] || []).push(a); });
+  const td = { border: "1px solid #000", padding: "3px 5px", fontSize: "8.8pt", verticalAlign: "top" };
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#000", pageBreakAfter: "always", breakAfter: "page" }}>
+      <EncabezadoEscuelaDep titulo={`CÉDULA DE INSCRIPCIÓN DE DEPORTISTAS · ${(ev.nombre || "Juegos Deportivos Escolares 2026-2027").toUpperCase()}`} />
+      <p style={{ fontSize: "9.5pt", margin: "0 0 6px" }}>Etapa: <b>{ev.etapa || "de zona"}</b> · Fecha: <b>{ev.fechaTexto || "18 y 19 de noviembre de 2026"}</b> · Sede: <b>{ev.sede || "________"}</b> · Entrenador(a): <b>{ev.entrenador || "________"}</b></p>
+      {Object.keys(porDeporte).length === 0 && <p>Sin alumnos registrados.</p>}
+      {Object.entries(porDeporte).map(([dep, als]) => (
+        <div key={dep} style={{ pageBreakInside: "avoid", marginBottom: "8px" }}>
+          <div style={{ fontWeight: 700, background: "#e6dcc3", padding: "3px 6px", border: "1px solid #000", fontSize: "9.5pt" }}>{dep} · {als.length} alumno(s)</div>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr>{["No.", "Nombre del alumno", "CURP", "Fecha nac.", "Grado", "Rama", "Pruebas / posición", "Docs."].map((h) => <th key={h} style={{ ...td, background: "#f2f2f2" }}>{h}</th>)}</tr></thead>
+            <tbody>{als.map((a, i) => { const r = regs[a.id] || {}; const d = r.docs || {}; const n = DOCS_DEPORTISTA.filter(([k]) => d[k]).length; return (
+              <tr key={a.id}><td style={td}>{i + 1}</td><td style={td}>{nombreCompletoDep(a).toUpperCase()}</td><td style={td}>{a.ALUMNO_CURP}</td><td style={td}>{a.ALUMNO_FECHA_NACIMIENTO}</td><td style={td}>{a.grado}°</td><td style={td}>{ramaAlumno(a)}</td><td style={td}>{pruebasTexto(r) || r.posicion || ""}</td><td style={td}>{n}/{DOCS_DEPORTISTA.length}</td></tr>
+            ); })}</tbody>
+          </table>
+        </div>
+      ))}
+      <div style={{ display: "flex", justifyContent: "space-around", marginTop: "40px", textAlign: "center", fontSize: "9.5pt" }}>
+        <div style={{ width: "40%", borderTop: "1px solid #000", paddingTop: "3px" }}>{ev.entrenador || "Entrenador(a)"}<br />Entrenador(a) / responsable</div>
+        <div style={{ width: "40%", borderTop: "1px solid #000", paddingTop: "3px" }}>{NOMBRE_COMPLETO.directora}<br />Director(a) del plantel</div>
+      </div>
+    </div>
+  );
+}
+
+function OficioEntrenadorDeporte({ ev }) {
+  return (
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "11pt", color: "#000", lineHeight: 1.8, pageBreakAfter: "always", breakAfter: "page" }}>
+      <EncabezadoEscuelaDep titulo="AUTORIZACIÓN DE ENTRENADOR(A)" />
+      <p style={{ textAlign: "right" }}>Xoyatla, Tepeojuma, Puebla, a {fmtFechaDep(ev.fechaCarta)}.</p>
+      <p><b>A QUIEN CORRESPONDA:</b></p>
+      <p style={{ textAlign: "justify" }}>Por medio de la presente, la Dirección de la Telesecundaria "Amado Nervo", CCT {DATOS_PLANTEL.cct}, turno matutino, <b>AUTORIZA</b> al (a la) C. <b>{(ev.entrenador || "______________________________").toUpperCase()}</b>, {ev.cargoEntrenador || "docente de este plantel"}, para fungir como <b>Entrenador(a)</b> y responsable de las y los alumnos deportistas que representan a esta escuela en los {ev.nombre || "Juegos Deportivos Escolares de la Educación Básica 2026-2027"}, etapa {ev.etapa || "de zona"}, a realizarse el {ev.fechaTexto || "______"} en {ev.sede || "______"}.</p>
+      <p>Se anexa copia de su identificación oficial con fotografía.</p>
+      <div style={{ textAlign: "center", marginTop: "70px", fontSize: "10pt", lineHeight: 1.4 }}>
+        <div style={{ display: "inline-block", borderTop: "1px solid #000", padding: "4px 30px 0" }}>ATENTAMENTE<br />{NOMBRE_COMPLETO.directora}<br />Director(a) del plantel</div>
+        <div style={{ fontSize: "8.5pt", marginTop: "18px", opacity: 0.7 }}>Sello de la escuela</div>
+      </div>
+    </div>
+  );
+}
+
+function JuegosDeportivosTab({ alumnos, onStamp }) {
+  const [regs, setRegs] = useState({});
+  const [ev, setEv] = useState({ nombre: "Juegos Deportivos Escolares de la Educación Básica 2026-2027", etapa: "de zona", fechaEvento: "2026-11-18", fechaTexto: "18 y 19 de noviembre de 2026", sede: "", entrenador: "", cargoEntrenador: "docente de este plantel", fechaCarta: hoyISO() });
+  const [cargando, setCargando] = useState(true);
+  const [vista, setVista] = useState("registro");
+  const [grado, setGrado] = useState("todos");
+  const [estado, setEstado] = useState("");
+  const [imprimiendo, setImprimiendo] = useState(null);
+  const temp = useRef({});
+  const prefijo = `deporte:${CICLO_DEPORTE}:`;
+  useEffect(() => {
+    Promise.all([listarStorageObjeto(prefijo), getStorage("deporte:evento", null)]).then(([o, e]) => {
+      setRegs(o || {}); if (e) setEv((p) => ({ ...p, ...e })); setCargando(false);
+    });
+  }, []);
+  const lista = alumnos.filter((a) => grado === "todos" || String(a.grado) === grado)
+    .sort((a, b) => (a.grado - b.grado) || nombreAlumno(a).localeCompare(nombreAlumno(b)));
+  const guardarReg = (id, r) => {
+    setRegs((p) => ({ ...p, [id]: r })); setEstado("Se guarda solo…");
+    clearTimeout(temp.current[id]);
+    temp.current[id] = setTimeout(async () => { const ok = await setStorage(prefijo + id, r); setEstado(ok ? "✓ Guardado en tu Hoja" : "No se pudo guardar"); }, 900);
+  };
+  const guardarEv = (k, v) => {
+    const n = { ...ev, [k]: v }; setEv(n); setEstado("Se guarda solo…");
+    clearTimeout(temp.current.__ev);
+    temp.current.__ev = setTimeout(async () => { const ok = await setStorage("deporte:evento", n); setEstado(ok ? "✓ Guardado en tu Hoja" : "No se pudo guardar"); }, 900);
+  };
+  const toggle = (arr, v) => ((arr || []).includes(v) ? arr.filter((x) => x !== v) : [...(arr || []), v]);
+  const inscritos = alumnos.filter((a) => regs[a.id] && regs[a.id].deporte);
+  const imprimir = (cual) => {
+    setImprimiendo(cual); document.body.classList.add("solo-portal");
+    window.onafterprint = () => { document.body.classList.remove("solo-portal"); setImprimiendo(null); window.onafterprint = null; };
+    setTimeout(() => window.print(), 300);
+  };
+  if (cargando) return <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>;
+  const ordenInscritos = [...inscritos].sort((a, b) => (a.grado - b.grado) || nombreAlumno(a).localeCompare(nombreAlumno(b)));
+  return (
+    <div className="flex flex-col gap-4">
+      {imprimiendo && ReactDOM.createPortal(
+        <div className="solo-impresion portal-impresion">
+          <style>{"@page { size: letter; margin: 14mm 15mm; }"}</style>
+          {imprimiendo === "responsivas" && ordenInscritos.map((a) => <CartaResponsivaDeporte key={a.id} a={a} r={regs[a.id]} ev={ev} />)}
+          {imprimiendo === "constancias" && ordenInscritos.map((a) => <ConstanciaEstudiosDeporte key={a.id} a={a} ev={ev} />)}
+          {imprimiendo === "cedula" && <ConcentradoDeportistas lista={ordenInscritos} regs={regs} ev={ev} />}
+          {imprimiendo === "entrenador" && <OficioEntrenadorDeporte ev={ev} />}
+        </div>, document.body)}
+
+      <div className="flex gap-2 flex-wrap">
+        {[["registro", "Registro de deportistas"], ["normas", "Normas y requisitos"], ["evento", "Datos del evento e impresión"]].map(([id, t]) => (
+          <button key={id} onClick={() => setVista(id)} className={`chip-grado ${vista === id ? "activo" : ""}`} style={{ fontSize: "0.8rem" }}>{t}</button>
+        ))}
+        {estado && <span className="text-sm" style={{ color: estado.startsWith("✓") ? "var(--verde)" : undefined, opacity: estado.startsWith("✓") ? 1 : 0.6, alignSelf: "center" }}>{estado}</span>}
+      </div>
+
+      {vista === "normas" && (
+        <div className="flex flex-col gap-4">
+          <div className="card">
+            <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Normas · Juegos Deportivos Nacionales Escolares 2026-2027 (Secundaria)</div>
+            <table style={{ borderCollapse: "collapse", width: "100%", fontSize: "0.82rem" }}><tbody>
+              {NORMAS_DEPORTE.map(([k, v]) => <tr key={k} style={{ borderTop: "1px solid var(--linea)", verticalAlign: "top" }}><td style={{ padding: "5px 6px", fontWeight: 700, width: "24%" }}>{k}</td><td style={{ padding: "5px 6px" }}>{v}</td></tr>)}
+            </tbody></table>
+          </div>
+          <div className="card">
+            <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Deportes oficiales de secundaria</div>
+            <p className="text-sm">{DEPORTES_SECUNDARIA.join(" · ")}</p>
+          </div>
+          <div className="card">
+            <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Atletismo · pruebas (Anexo Técnico)</div>
+            <ul className="text-sm" style={{ margin: 0, paddingLeft: "1.1rem" }}>{[...PRUEBAS_ATLETISMO, ...RELEVOS_ATLETISMO].map((p) => <li key={p.id}>{p.n}</li>)}</ul>
+          </div>
+          <div className="card">
+            <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Documentos por deportista</div>
+            <ul className="text-sm" style={{ margin: 0, paddingLeft: "1.1rem" }}>{DOCS_DEPORTISTA.map(([k, t]) => <li key={k}>{t}</li>)}</ul>
+            <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.4rem" }}>Formatos oficiales de la Dirección de Educación Física (SEP Puebla): carpeta "Juegos Deportivos CONADE 2026-2027" en SharePoint (solo descarga).</p>
+          </div>
+        </div>
+      )}
+
+      {vista === "evento" && (
+        <div className="card">
+          <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Datos del evento (salen en responsivas, constancias, cédula y oficio)</div>
+          <div className="grid grid-cols-2 gap-3">
+            {[["nombre", "Nombre del evento"], ["etapa", "Etapa (de zona, sector, estatal)"], ["fechaTexto", "Fecha(s) del evento (texto)"], ["sede", "Sede"], ["entrenador", "Entrenador(a) responsable"], ["cargoEntrenador", "Cargo del entrenador(a)"]].map(([k, t]) => (
+              <div key={k}><label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{t}</label><input className="campo" value={ev[k] || ""} onChange={(e) => guardarEv(k, e.target.value)} /></div>
+            ))}
+            <div><label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Primer día del evento (para calcular la edad)</label><input className="campo" type="date" value={ev.fechaEvento || ""} onChange={(e) => guardarEv("fechaEvento", e.target.value)} /></div>
+            <div><label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Fecha de las cartas y constancias</label><input className="campo" type="date" value={ev.fechaCarta || ""} onChange={(e) => guardarEv("fechaCarta", e.target.value)} /></div>
+          </div>
+          <div className="flex gap-2 flex-wrap mt-4">
+            <button onClick={() => imprimir("responsivas")} className="btn-primario" style={{ fontSize: "0.78rem" }} disabled={!inscritos.length}><Printer size={14} /> Cartas responsivas ({inscritos.length})</button>
+            <button onClick={() => imprimir("constancias")} className="btn-secundario" style={{ fontSize: "0.78rem" }} disabled={!inscritos.length}><Printer size={14} /> Constancias de estudio con foto ({inscritos.length})</button>
+            <button onClick={() => imprimir("cedula")} className="btn-secundario" style={{ fontSize: "0.78rem" }}><Printer size={14} /> Cédula de inscripción por deporte</button>
+            <button onClick={() => imprimir("entrenador")} className="btn-secundario" style={{ fontSize: "0.78rem" }}><Printer size={14} /> Autorización de entrenador(a)</button>
+          </div>
+          <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.5rem" }}>Se imprimen solo los alumnos que tienen deporte registrado. Use "Guardar como PDF" en la ventana de impresión si los quiere en archivo.</p>
+        </div>
+      )}
+
+      {vista === "registro" && (
+        <>
+          <div className="card" style={{ borderColor: "#2e7d32", background: "rgba(46,125,50,0.06)" }}>
+            <p className="text-sm" style={{ margin: 0 }}>Elija el deporte de cada alumno (solo uno). En atletismo marque hasta 2 pruebas y 1 relevo; la app avisa si algo no cumple la norma. Marque los documentos que ya entregó. <b>{inscritos.length}</b> alumno(s) inscritos.</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {["todos", "1", "2", "3"].map((g) => <button key={g} onClick={() => setGrado(g)} className={`chip-grado ${grado === g ? "activo" : ""}`}>{g === "todos" ? "Todos" : g + "°"}</button>)}
+          </div>
+          <div className="flex flex-col gap-2">
+            {lista.map((a) => {
+              const r = regs[a.id] || {}; const av = r.deporte ? validarRegistroDeporte(a, r) : (anioNac(a) ? [] : ["Revisar la fecha de nacimiento en la ficha del alumno."]);
+              return (
+                <div key={a.id} className="card" style={{ padding: "0.7rem 0.9rem" }}>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div>
+                      <span className="text-sm font-medium">{nombreAlumno(a)}</span>
+                      <span style={{ fontSize: "0.7rem", opacity: 0.6 }}> · {a.grado}° · {ramaAlumno(a)} · nac. {anioNac(a) || "¿?"} · {edadAl(a, ev.fechaEvento) ?? "¿?"} años</span>
+                    </div>
+                    <select className="campo" style={{ maxWidth: "15rem" }} value={r.deporte || ""} onChange={(e) => guardarReg(a.id, { ...r, deporte: e.target.value })}>
+                      <option value="">— No participa —</option>
+                      {DEPORTES_SECUNDARIA.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  {r.deporte === "Atletismo" && (
+                    <div className="flex gap-1 flex-wrap mt-2">
+                      {PRUEBAS_ATLETISMO.map((p) => <button key={p.id} onClick={() => guardarReg(a.id, { ...r, pruebas: toggle(r.pruebas, p.id) })} className={`chip-grado ${(r.pruebas || []).includes(p.id) ? "activo" : ""}`} style={{ fontSize: "0.7rem" }}>{p.n.split(" (")[0]}</button>)}
+                      {RELEVOS_ATLETISMO.map((p) => <button key={p.id} onClick={() => guardarReg(a.id, { ...r, relevos: toggle(r.relevos, p.id) })} className={`chip-grado ${(r.relevos || []).includes(p.id) ? "activo" : ""}`} style={{ fontSize: "0.7rem" }}>{p.n}</button>)}
+                    </div>
+                  )}
+                  {r.deporte && r.deporte !== "Atletismo" && (
+                    <input className="campo mt-2" style={{ fontSize: "0.8rem" }} placeholder="Posición / prueba / observaciones (opcional)" value={r.posicion || ""} onChange={(e) => guardarReg(a.id, { ...r, posicion: e.target.value })} />
+                  )}
+                  {r.deporte && (
+                    <div className="flex gap-1 flex-wrap mt-2">
+                      {DOCS_DEPORTISTA.map(([k, t]) => <button key={k} title={t} onClick={() => guardarReg(a.id, { ...r, docs: { ...(r.docs || {}), [k]: !(r.docs || {})[k] } })} className={`chip-grado ${(r.docs || {})[k] ? "activo" : ""}`} style={{ fontSize: "0.68rem" }}>{(r.docs || {})[k] ? "✓ " : ""}{t.split(" (")[0].split(",")[0]}</button>)}
+                    </div>
+                  )}
+                  {av.length > 0 && <div className="text-sm mt-1" style={{ color: "#b00020" }}>⚠ {av.join(" ")}</div>}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ---------- Avisos ---------- */
 function Avisos({ avisos, setAvisos, usuario, rolActual, onStamp }) {
   const [titulo, setTitulo] = useState("");
@@ -24616,6 +24942,7 @@ function App() {
     { id: "documentos", label: "Documentos de Dirección", icon: FolderKanban },
     { id: "cortecaja", label: "Corte de Caja", icon: Wallet },
     { id: "recibos", label: "Recibos", icon: FileText },
+    { id: "deportes", label: "Juegos deportivos", icon: Users },
     { id: "convivenciaescolar", label: "Convivencia Escolar", icon: HeartHandshake },
     { id: "personal", label: "Personal del Plantel", icon: UserRound },
     { id: "recursos", label: "Recursos", icon: FileText },
@@ -24630,7 +24957,7 @@ function App() {
     { id: "pic", tabs: ["pic"] },
     { id: "estadistica911", tabs: ["estadistica911"] },
     { id: "comunicacion", label: "Comunicación", tabs: ["avisos", "calendario"] },
-    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "consejo", "documentos", "cortecaja", "recibos", "convivenciaescolar", "personal"] },
+    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "consejo", "documentos", "cortecaja", "recibos", "deportes", "convivenciaescolar", "personal"] },
     { id: "recursos", tabs: ["recursos"] },
   ];
 
@@ -24777,6 +25104,7 @@ function App() {
         {tab === "consejo" && <ConsejoEscolar onStamp={fireStamp} alumnos={alumnos} gradosPermitidos={gradosPermitidos} personal={personal} />}
         {tab === "documentos" && <DocumentosDireccion alumnos={alumnos} onStamp={fireStamp} rolActual={rol} />}
         {tab === "recibos" && <RecibosTab onStamp={fireStamp} />}
+        {tab === "deportes" && <JuegosDeportivosTab alumnos={alumnos} onStamp={fireStamp} />}
         {tab === "cortecaja" && <DocumentosDireccion key="cortecaja" alumnos={alumnos} onStamp={fireStamp} rolActual={rol} subTabInicial="bimestral" />}
         {tab === "convivenciaescolar" && <DocumentosDireccion key="convivenciaescolar" alumnos={alumnos} onStamp={fireStamp} rolActual={rol} subTabInicial="convivencia" />}
         {tab === "personal" && <DatosPersonal personal={personal} setPersonal={setPersonal} onStamp={fireStamp} />}
