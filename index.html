@@ -3795,7 +3795,71 @@ function SeleccionUsuario({ onSelect }) {
 }
 
 /* ---------- Inicio ---------- */
-function Inicio({ rol, alumnos, asistencia, avisos, eventos, gradosPermitidos }) {
+/* ---------- Agenda de Inicio (6 nov 2026) ----------
+   Junta los eventos del calendario (los capturados y los que llegan de Google
+   Calendar) con el calendario oficial (EFEMERIDES) de los próximos 30 días,
+   marca las ENTREGAS en rojo, dice cuántos días faltan, permite marcar
+   "Hecho" (agenda:hechos) y da un botón para ir directo a la pestaña. */
+const ACCESOS_AGENDA = [
+  [/calificaci|boleta/i, "calificaciones", "Concentrado de calificaciones"],
+  [/\bCTE\b|consejo t[eé]cnico|ruta de transferencia|seguimiento a CTE/i, "cte", "CTE"],
+  [/deportiv|juegos/i, "deportes", "Juegos deportivos"],
+  [/corte de caja|informe bimestral|APF/i, "cortecaja", "Corte de Caja"],
+  [/recibo|voceo/i, "recibos", "Recibos"],
+  [/911|estad[ií]stica/i, "estadistica911", "Estadística 911.5"],
+  [/PIC|integraci[oó]n comunitaria|lectura|academia/i, "pic", "Programa Analítico y PIC"],
+  [/REPASE|participaci[oó]n escolar|consejo de participaci/i, "consejo", "REPASE"],
+  [/dispositivos|acuerdo 09\/09/i, "documentos", "Documentos de Dirección"],
+  [/convivencia|violencia/i, "convivenciaescolar", "Convivencia Escolar"],
+];
+const diasEntre = (a, b) => Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000);
+function AgendaInicio({ eventos, setTab }) {
+  const hoy = hoyISO();
+  const [hechos, setHechos] = useState({});
+  useEffect(() => { getStorage("agenda:hechos", {}).then((v) => setHechos(v || {})); }, []);
+  const vistos = new Set();
+  const items = [...(eventos || []), ...EFEMERIDES.map((e) => ({ ...e, oficial: true }))]
+    .filter((e) => e && e.fecha && e.titulo && e.fecha >= hoy && diasEntre(hoy, e.fecha) <= 30)
+    .filter((e) => { const k = e.fecha + "|" + e.titulo.trim().toLowerCase(); if (vistos.has(k)) return false; vistos.add(k); return true; })
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const marcar = (k) => { const n = { ...hechos, [k]: !hechos[k] }; setHechos(n); setStorage("agenda:hechos", n); };
+  const etiquetaDias = (f) => { const d = diasEntre(hoy, f); return d === 0 ? "HOY" : d === 1 ? "Mañana" : `en ${d} días`; };
+  const pendientes = items.filter((e) => !hechos[e.fecha + "|" + e.titulo]);
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <CalendarCheck2 size={16} color="var(--rojo)" />
+          <span className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Agenda · próximos 30 días</span>
+        </div>
+        <span className="font-mono" style={{ fontSize: "0.65rem", opacity: 0.6 }}>{pendientes.length} pendiente(s) · {items.filter((e) => /^ENTREGA/i.test(e.titulo) && !hechos[e.fecha + "|" + e.titulo]).length} entrega(s)</span>
+      </div>
+      {items.length === 0 ? <p className="text-sm" style={{ opacity: 0.55 }}>No hay actividades en los próximos 30 días.</p> : (
+        <div className="flex flex-col">
+          {items.map((e) => {
+            const k = e.fecha + "|" + e.titulo; const hecho = !!hechos[k];
+            const entrega = /^ENTREGA/i.test(e.titulo); const d = diasEntre(hoy, e.fecha);
+            const acc = ACCESOS_AGENDA.find(([re]) => re.test(e.titulo));
+            const color = entrega ? "var(--rojo)" : d <= 2 ? "#b8860b" : "var(--azul)";
+            return (
+              <div key={k} className="flex items-center gap-2 py-1.5" style={{ borderTop: "1px solid var(--linea)", opacity: hecho ? 0.45 : 1 }}>
+                <input type="checkbox" checked={hecho} onChange={() => marcar(k)} title="Marcar como hecho" style={{ width: "1.05rem", height: "1.05rem", flexShrink: 0 }} />
+                <div style={{ minWidth: "4.6rem", textAlign: "center", flexShrink: 0 }}>
+                  <div className="font-mono" style={{ fontSize: "0.62rem", fontWeight: 700, color }}>{etiquetaDias(e.fecha)}</div>
+                  <div className="font-mono" style={{ fontSize: "0.6rem", opacity: 0.55 }}>{fechaBonita(e.fecha)}</div>
+                </div>
+                <div className="text-sm" style={{ flex: 1, textDecoration: hecho ? "line-through" : "none", color: entrega ? "var(--rojo)" : undefined, fontWeight: entrega ? 600 : 400 }}>{e.titulo}</div>
+                {acc && setTab && <button onClick={() => setTab(acc[1])} className="btn-secundario" style={{ fontSize: "0.65rem", padding: "0.15rem 0.45rem", flexShrink: 0 }}>{acc[2]} →</button>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Inicio({ rol, alumnos, asistencia, avisos, eventos, gradosPermitidos, setTab }) {
   const alumnosVisibles = alumnos.filter((a) => gradosPermitidos.includes(a.grado));
   const hoy = hoyISO();
   let marcados = 0, presentes = 0;
@@ -3813,7 +3877,8 @@ function Inicio({ rol, alumnos, asistencia, avisos, eventos, gradosPermitidos })
     .filter((e) => e.fecha >= hoy)
     .sort((a, b) => a.fecha.localeCompare(b.fecha))
     .slice(0, 1);
-  const ultimosAvisos = [...avisos].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 3);
+  // Solo avisos de las últimas 3 semanas (antes salían avisos viejos de agosto).
+  const ultimosAvisos = [...avisos].filter((a) => a.fecha && diasEntre(a.fecha, hoy) <= 21).sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 3);
 
   return (
     <div className="flex flex-col gap-4">
@@ -3839,14 +3904,14 @@ function Inicio({ rol, alumnos, asistencia, avisos, eventos, gradosPermitidos })
         </div>
       ))}
 
-      <div className="card">
+      <AgendaInicio eventos={eventos} setTab={setTab} />
+
+      {ultimosAvisos.length > 0 && <div className="card">
         <div className="flex items-center gap-2 mb-2">
           <Megaphone size={16} color="var(--azul)" />
-          <span className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Avisos recientes</span>
+          <span className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Avisos de las últimas 3 semanas</span>
         </div>
-        {ultimosAvisos.length === 0 ? (
-          <p className="text-sm" style={{ opacity: 0.55 }}>Sin avisos todavía.</p>
-        ) : (
+        {(
           ultimosAvisos.map((a) => (
             <div key={a.id} className="py-1.5" style={{ borderTop: "1px solid var(--linea)" }}>
               <div className="text-sm font-medium">{a.titulo}</div>
@@ -3854,7 +3919,7 @@ function Inicio({ rol, alumnos, asistencia, avisos, eventos, gradosPermitidos })
             </div>
           ))
         )}
-      </div>
+      </div>}
 
       <div className="card">
         <div className="flex items-center gap-2 mb-2">
@@ -25274,7 +25339,7 @@ function App() {
       </nav>
 
       <main className="px-4 py-5 max-w-lg sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full">
-        {tab === "inicio" && <Inicio rol={rol} alumnos={alumnos} asistencia={asistencia} avisos={avisos} eventos={eventos} gradosPermitidos={gradosPermitidos} />}
+        {tab === "inicio" && <Inicio setTab={setTab} rol={rol} alumnos={alumnos} asistencia={asistencia} avisos={avisos} eventos={eventos} gradosPermitidos={gradosPermitidos} />}
         {tab === "datosescuela" && <DatosEscuelaTab onStamp={fireStamp} />}
         {tab === "diagnostico" && <DiagnosticoTab />}
         {tab === "resultadosdx" && (
