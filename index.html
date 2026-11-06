@@ -6224,13 +6224,17 @@ function tutorDeportista(a) {
   if (nom("MADRE")) return { nombre: nom("MADRE"), parentesco: "Madre", tel: a.MADRE_CELULAR || "" };
   return { nombre: nom("PADRE"), parentesco: "Padre", tel: a.PADRE_CELULAR || "" };
 }
+// Deportes de un alumno (antes era un solo deporte en r.deporte).
+const deportesDe = (r) => (r && Array.isArray(r.deportes) ? r.deportes : (r && r.deporte ? [r.deporte] : []));
 // Revisa las reglas del registro de un alumno y regresa la lista de avisos.
 function validarRegistroDeporte(a, r) {
   const av = [];
   const y = anioNac(a);
   if (!y) av.push("Revisar la fecha de nacimiento en la ficha del alumno.");
   else if (y < 2012) av.push("Fuera de categoría: nació antes de 2012.");
-  if (r.deporte === "Atletismo") {
+  const deps = deportesDe(r);
+  if (deps.length > 1) av.push(`Participa en ${deps.length} deportes: en la etapa de zona puede hacerlo si la Supervisión lo permite, pero desde la etapa estatal la convocatoria pide un solo deporte por alumno.`);
+  if (deps.includes("Atletismo")) {
     const p = r.pruebas || [];
     const indiv = p.filter((x) => x !== "hexatlon");
     if (p.includes("hexatlon") && indiv.length) av.push("Con Hexatlón solo puede agregar un relevo.");
@@ -6254,45 +6258,73 @@ function EncabezadoEscuelaDep({ titulo }) {
   );
 }
 const fmtFechaDep = (iso) => { if (!iso) return "____ de ______________ de 2026"; const [y, m, d] = iso.split("-").map(Number); return `${d} de ${["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"][m - 1]} de ${y}`; };
-const pruebasTexto = (r) => r.deporte === "Atletismo"
+const pruebasTexto = (r) => deportesDe(r).includes("Atletismo")
   ? [...(r.pruebas || []).map((p) => (PRUEBAS_ATLETISMO.find((x) => x.id === p) || {}).n), ...(r.relevos || []).map((p) => (RELEVOS_ATLETISMO.find((x) => x.id === p) || {}).n)].filter(Boolean).join(", ")
   : "";
 
-function CartaResponsivaDeporte({ a, r, ev }) {
+// Foto del alumno guardada en la app (pestaña Credenciales → "Foto"); si no hay, queda el recuadro para pegarla.
+function FotoAlumnoDep({ foto, w = "2.5cm", h = "3cm", leyenda = "Fotografía" }) {
+  return foto
+    ? <img src={`data:image/jpeg;base64,${foto}`} alt="" style={{ width: w, height: h, objectFit: "cover", border: "1px solid #000", display: "block", flexShrink: 0 }} />
+    : <div style={{ width: w, height: h, border: "1px dashed #000", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", fontSize: "7.5pt", flexShrink: 0 }}>{leyenda}</div>;
+}
+function CartaResponsivaDeporte({ a, r, ev, foto }) {
   const t = tutorDeportista(a);
-  const linea = (v, w) => <span style={{ display: "inline-block", minWidth: w, borderBottom: "1px solid #000", padding: "0 3px" }}>{v || " "}</span>;
+  const deps = deportesDe(r);
+  const L = (v, w) => <span style={{ display: "inline-block", minWidth: w, borderBottom: "1px solid #000", padding: "0 3px", lineHeight: 1.3 }}>{v || "\u00a0"}</span>;
+  const td = { border: "1px solid #000", padding: "3px 6px", fontSize: "9pt", verticalAlign: "top" };
+  const th = { ...td, background: "#e6dcc3", fontWeight: 700, width: "30%" };
+  const filasDep = deps.map((d) => [d, d === "Atletismo" ? (pruebasTexto(r) || "Por definir") : ((r.posiciones || {})[d] || "Equipo")]);
   return (
-    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "10.5pt", color: "#000", lineHeight: 1.75, pageBreakAfter: "always", breakAfter: "page" }}>
-      <EncabezadoEscuelaDep titulo="CARTA RESPONSIVA · JUEGOS DEPORTIVOS ESCOLARES 2026-2027" />
-      <p style={{ textAlign: "right", margin: "0 0 8px" }}>Xoyatla, Tepeojuma, Puebla, a {fmtFechaDep(ev.fechaCarta)}.</p>
-      <p style={{ margin: "0 0 6px" }}><b>C. Director(a) de la Telesecundaria "Amado Nervo"</b><br />P r e s e n t e</p>
-      <p style={{ textAlign: "justify" }}>
-        Quien suscribe, {linea(t.nombre ? t.nombre.toUpperCase() : "", "260px")}, en mi carácter de {linea(t.parentesco, "90px")} del (de la) alumno(a){" "}
-        <b>{nombreCompletoDep(a).toUpperCase()}</b>, CURP <b>{a.ALUMNO_CURP || "__________________"}</b>, de <b>{a.grado}° grado, grupo {a.ESCUELA_GRUPO || "A"}</b>, de {edadAl(a, ev.fechaEvento) ?? "__"} años de edad,
-        <b> AUTORIZO</b> su participación en los <b>{ev.nombre || "Juegos Deportivos Escolares de la Educación Básica 2026-2027"}</b>, etapa {linea(ev.etapa || "de zona", "110px")},
-        en el deporte de <b>{r.deporte || "____________"}</b>{pruebasTexto(r) ? <> (pruebas: {pruebasTexto(r)})</> : null}, rama <b>{ramaAlumno(a).toLowerCase()}</b>,
-        que se realizará el {linea(ev.fechaTexto || "", "160px")} en {linea(ev.sede || "", "200px")}, incluyendo los traslados que se requieran.
+    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "10pt", color: "#000", lineHeight: 1.45, pageBreakAfter: "always", breakAfter: "page" }}>
+      <EncabezadoEscuelaDep titulo="CARTA RESPONSIVA Y AUTORIZACIÓN DEL PADRE, MADRE O TUTOR" />
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9.5pt", marginBottom: "6px" }}>
+        <span><b>Asunto:</b> Autorización de participación en {ev.nombre || "Juegos Deportivos Escolares de la Educación Básica 2026-2027"}</span>
+        <span>Xoyatla, Tepeojuma, Pue., a {fmtFechaDep(ev.fechaCarta)}</span>
+      </div>
+      <p style={{ margin: "0 0 4px" }}><b>{NOMBRE_COMPLETO.directora.toUpperCase()}</b><br />DIRECTOR DE LA TELESECUNDARIA “AMADO NERVO”, CCT {DATOS_PLANTEL.cct}<br />P R E S E N T E</p>
+      <p style={{ textAlign: "justify", margin: "6px 0" }}>
+        Quien suscribe, C. {L(t.nombre ? t.nombre.toUpperCase() : "", "250px")}, en mi carácter de {L(t.parentesco, "80px")}, me identifico con {L("", "130px")} número {L("", "130px")}, y
+        <b> AUTORIZO</b> la participación de mi hijo(a) en el evento deportivo que se describe a continuación, bajo los siguientes datos:
       </p>
-      <p style={{ textAlign: "justify" }}>
-        Declaro que mi hijo(a) se encuentra en buen estado de salud y en condiciones para la práctica deportiva (anexo certificado médico). Me comprometo a que porte su uniforme, asista puntualmente, cumpla con el reglamento del evento y se conduzca con respeto y juego limpio. Conozco que la actividad deportiva implica riesgos propios del deporte y libero a la escuela y a su personal de responsabilidad por lesiones derivadas de la práctica normal del mismo, siempre que se hayan tomado las medidas de cuidado correspondientes.
-      </p>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9.5pt", margin: "6px 0" }}>
-        <tbody>
-          {[["Tipo de sangre", a.ALUMNO_TIPO_SANGRE || ""], ["Alergias o padecimientos", ""], ["Medicamento que toma", ""], ["Teléfono del padre/madre o tutor", t.tel || ""], ["Otro contacto de emergencia (nombre y teléfono)", ""]].map(([k, v]) => (
-            <tr key={k}><td style={{ border: "1px solid #000", padding: "4px 6px", width: "40%", fontWeight: 700 }}>{k}</td><td style={{ border: "1px solid #000", padding: "4px 6px" }}>{v}</td></tr>
-          ))}
-        </tbody>
+      <div style={{ display: "flex", gap: "8px", alignItems: "stretch", margin: "4px 0" }}>
+      <table style={{ flex: 1, borderCollapse: "collapse" }}><tbody>
+        <tr><td style={th}>Alumno(a)</td><td style={td} colSpan={3}><b>{nombreCompletoDep(a).toUpperCase()}</b></td></tr>
+        <tr><td style={th}>CURP</td><td style={td}>{a.ALUMNO_CURP || ""}</td><td style={{ ...th, width: "18%" }}>Grado y grupo</td><td style={td}>{a.grado}° “{a.ESCUELA_GRUPO || "A"}”</td></tr>
+        <tr><td style={th}>Fecha de nacimiento / edad</td><td style={td}>{a.ALUMNO_FECHA_NACIMIENTO || ""} · {edadAl(a, ev.fechaEvento) ?? "__"} años</td><td style={{ ...th, width: "18%" }}>Rama</td><td style={td}>{ramaAlumno(a)} · Categoría 2012 y menores</td></tr>
+        <tr><td style={th}>Evento y etapa</td><td style={td} colSpan={3}>{ev.nombre || "Juegos Deportivos Escolares de la Educación Básica 2026-2027"} · etapa {ev.etapa || "de zona"}</td></tr>
+        <tr><td style={th}>Fecha(s) y sede</td><td style={td} colSpan={3}>{ev.fechaTexto || "______"} · {ev.sede || "______________________________"}</td></tr>
+        <tr><td style={th}>Entrenador(a) responsable</td><td style={td} colSpan={3}>{ev.entrenador || "______________________________"}</td></tr>
+      </tbody></table>
+      <FotoAlumnoDep foto={foto} w="2.6cm" h="3.3cm" />
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", margin: "4px 0" }}>
+        <thead><tr><th style={{ ...th, width: "30%", textAlign: "left" }}>Deporte en que participa</th><th style={{ ...th, width: "auto", textAlign: "left" }}>Pruebas / posición</th></tr></thead>
+        <tbody>{filasDep.map(([d, p]) => <tr key={d}><td style={td}><b>{d}</b></td><td style={td}>{p}</td></tr>)}</tbody>
       </table>
-      <p style={{ fontSize: "9pt" }}>Anexo: copia de INE, pasaporte o licencia de manejo vigente del padre, madre o tutor.</p>
-      <div style={{ display: "flex", justifyContent: "space-around", marginTop: "40px", textAlign: "center", fontSize: "9.5pt", lineHeight: 1.35 }}>
-        <div style={{ width: "42%", borderTop: "1px solid #000", paddingTop: "3px" }}>{t.nombre ? t.nombre.toUpperCase() : "Nombre y firma"}<br />Padre, madre o tutor</div>
-        <div style={{ width: "42%", borderTop: "1px solid #000", paddingTop: "3px" }}>{NOMBRE_COMPLETO.directora}<br />Director(a) del plantel · Vo. Bo.</div>
+      <p style={{ margin: "6px 0 2px", fontWeight: 700 }}>Manifiesto bajo protesta de decir verdad que:</p>
+      <ol style={{ margin: "0 0 4px 16px", padding: 0, fontSize: "9.3pt", textAlign: "justify" }}>
+        <li>Mi hijo(a) se encuentra en buen estado de salud y en condiciones para la práctica deportiva, lo que acredito con el certificado médico que anexo.</li>
+        <li>Autorizo su traslado a la sede del evento con el personal docente responsable y me comprometo a recogerlo(a) puntualmente al término de la actividad.</li>
+        <li>Me comprometo a que porte su uniforme, lleve agua y alimentos, asista puntualmente y se conduzca con respeto y juego limpio, conforme al reglamento del evento.</li>
+        <li>Conozco que la práctica deportiva implica riesgos propios de la actividad; en caso de lesión o emergencia autorizo que reciba la atención médica necesaria y se me avise de inmediato.</li>
+      </ol>
+      <table style={{ width: "100%", borderCollapse: "collapse", margin: "4px 0" }}><tbody>
+        <tr><td style={th}>Tipo de sangre</td><td style={td}>{a.ALUMNO_TIPO_SANGRE || ""}</td><td style={{ ...th, width: "18%" }}>Alergias</td><td style={td}></td></tr>
+        <tr><td style={th}>Padecimientos / medicamentos</td><td style={td} colSpan={3}></td></tr>
+        <tr><td style={th}>Teléfono del tutor</td><td style={td}>{t.tel || ""}</td><td style={{ ...th, width: "18%" }}>Contacto de emergencia</td><td style={td}></td></tr>
+      </tbody></table>
+      <p style={{ fontSize: "8.8pt", margin: "4px 0" }}><b>Anexos:</b> copia de identificación oficial vigente del padre, madre o tutor (INE, pasaporte o licencia) y certificado médico del alumno(a).</p>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginTop: "34px", textAlign: "center", fontSize: "8.8pt", lineHeight: 1.3 }}>
+        <div style={{ flex: 1, borderTop: "1px solid #000", paddingTop: "3px" }}>{t.nombre ? t.nombre.toUpperCase() : "Nombre y firma"}<br />Padre, madre o tutor</div>
+        <div style={{ flex: 1, borderTop: "1px solid #000", paddingTop: "3px" }}>{nombreCompletoDep(a).toUpperCase()}<br />Alumno(a)</div>
+        <div style={{ flex: 1, borderTop: "1px solid #000", paddingTop: "3px" }}>{NOMBRE_COMPLETO.directora.toUpperCase()}<br />Director · Vo. Bo. y sello</div>
       </div>
     </div>
   );
 }
 
-function ConstanciaEstudiosDeporte({ a, ev }) {
+function ConstanciaEstudiosDeporte({ a, ev, foto }) {
   return (
     <div style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "11pt", color: "#000", lineHeight: 1.8, pageBreakAfter: "always", breakAfter: "page" }}>
       <EncabezadoEscuelaDep titulo="CONSTANCIA DE ESTUDIOS" />
@@ -6305,7 +6337,7 @@ function ConstanciaEstudiosDeporte({ a, ev }) {
           </p>
           <p style={{ textAlign: "justify" }}>Se extiende la presente a petición del interesado para los fines de su participación en los {ev.nombre || "Juegos Deportivos Escolares de la Educación Básica 2026-2027"}, en Xoyatla, Tepeojuma, Puebla, a {fmtFechaDep(ev.fechaCarta)}.</p>
         </div>
-        <div style={{ width: "3cm", height: "4cm", border: "1px dashed #000", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", fontSize: "8pt", flexShrink: 0 }}>Fotografía<br />(cancelada con el sello de la escuela)</div>
+        <FotoAlumnoDep foto={foto} w="3cm" h="4cm" leyenda={<>Fotografía<br />(cancelada con el sello de la escuela)</>} />
       </div>
       <div style={{ textAlign: "center", marginTop: "70px", fontSize: "10pt", lineHeight: 1.4 }}>
         <div style={{ display: "inline-block", borderTop: "1px solid #000", padding: "4px 30px 0" }}>ATENTAMENTE<br />{NOMBRE_COMPLETO.directora}<br />Director(a) del plantel</div>
@@ -6315,9 +6347,9 @@ function ConstanciaEstudiosDeporte({ a, ev }) {
   );
 }
 
-function ConcentradoDeportistas({ lista, regs, ev }) {
+function ConcentradoDeportistas({ lista, regs, ev, fotos = {} }) {
   const porDeporte = {};
-  lista.forEach((a) => { const r = regs[a.id]; if (r && r.deporte) (porDeporte[r.deporte] = porDeporte[r.deporte] || []).push(a); });
+  lista.forEach((a) => { deportesDe(regs[a.id]).forEach((d) => { (porDeporte[d] = porDeporte[d] || []).push(a); }); });
   const td = { border: "1px solid #000", padding: "3px 5px", fontSize: "8.8pt", verticalAlign: "top" };
   return (
     <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#000", pageBreakAfter: "always", breakAfter: "page" }}>
@@ -6328,9 +6360,9 @@ function ConcentradoDeportistas({ lista, regs, ev }) {
         <div key={dep} style={{ pageBreakInside: "avoid", marginBottom: "8px" }}>
           <div style={{ fontWeight: 700, background: "#e6dcc3", padding: "3px 6px", border: "1px solid #000", fontSize: "9.5pt" }}>{dep} · {als.length} alumno(s)</div>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr>{["No.", "Nombre del alumno", "CURP", "Fecha nac.", "Grado", "Rama", "Pruebas / posición", "Docs."].map((h) => <th key={h} style={{ ...td, background: "#f2f2f2" }}>{h}</th>)}</tr></thead>
+            <thead><tr>{["No.", "Foto", "Nombre del alumno", "CURP", "Fecha nac.", "Grado", "Rama", "Pruebas / posición", "Docs."].map((h) => <th key={h} style={{ ...td, background: "#f2f2f2" }}>{h}</th>)}</tr></thead>
             <tbody>{als.map((a, i) => { const r = regs[a.id] || {}; const d = r.docs || {}; const n = DOCS_DEPORTISTA.filter(([k]) => d[k]).length; return (
-              <tr key={a.id}><td style={td}>{i + 1}</td><td style={td}>{nombreCompletoDep(a).toUpperCase()}</td><td style={td}>{a.ALUMNO_CURP}</td><td style={td}>{a.ALUMNO_FECHA_NACIMIENTO}</td><td style={td}>{a.grado}°</td><td style={td}>{ramaAlumno(a)}</td><td style={td}>{pruebasTexto(r) || r.posicion || ""}</td><td style={td}>{n}/{DOCS_DEPORTISTA.length}</td></tr>
+              <tr key={a.id}><td style={td}>{i + 1}</td><td style={{ ...td, padding: "2px" }}><FotoAlumnoDep foto={fotos[a.id]} w="1.3cm" h="1.6cm" leyenda="Foto" /></td><td style={td}>{nombreCompletoDep(a).toUpperCase()}</td><td style={td}>{a.ALUMNO_CURP}</td><td style={td}>{a.ALUMNO_FECHA_NACIMIENTO}</td><td style={td}>{a.grado}°</td><td style={td}>{ramaAlumno(a)}</td><td style={td}>{dep === "Atletismo" ? pruebasTexto(r) : ((r.posiciones || {})[dep] || r.posicion || "")}</td><td style={td}>{n}/{DOCS_DEPORTISTA.length}</td></tr>
             ); })}</tbody>
           </table>
         </div>
@@ -6387,8 +6419,17 @@ function JuegosDeportivosTab({ alumnos, onStamp }) {
     temp.current.__ev = setTimeout(async () => { const ok = await setStorage("deporte:evento", n); setEstado(ok ? "✓ Guardado en tu Hoja" : "No se pudo guardar"); }, 900);
   };
   const toggle = (arr, v) => ((arr || []).includes(v) ? arr.filter((x) => x !== v) : [...(arr || []), v]);
-  const inscritos = alumnos.filter((a) => regs[a.id] && regs[a.id].deporte);
-  const imprimir = (cual) => {
+  const inscritos = alumnos.filter((a) => deportesDe(regs[a.id]).length > 0);
+  const [fotos, setFotos] = useState({});
+  const imprimir = async (cual) => {
+    if (cual !== "entrenador") {
+      setEstado("Cargando fotografías de los alumnos…");
+      const nuevas = { ...fotos };
+      for (const a of inscritos) if (nuevas[a.id] === undefined) { try { nuevas[a.id] = await cargarFotoAlumno(a.id); } catch (e) { nuevas[a.id] = ""; } }
+      setFotos(nuevas);
+      const sin = inscritos.filter((a) => !nuevas[a.id]).length;
+      setEstado(sin ? `${sin} alumno(s) sin foto en la app: saldrá el recuadro para pegarla.` : "✓ Fotografías listas");
+    }
     setImprimiendo(cual); document.body.classList.add("solo-portal");
     window.onafterprint = () => { document.body.classList.remove("solo-portal"); setImprimiendo(null); window.onafterprint = null; };
     setTimeout(() => window.print(), 300);
@@ -6400,9 +6441,9 @@ function JuegosDeportivosTab({ alumnos, onStamp }) {
       {imprimiendo && ReactDOM.createPortal(
         <div className="solo-impresion portal-impresion">
           <style>{"@page { size: letter; margin: 14mm 15mm; }"}</style>
-          {imprimiendo === "responsivas" && ordenInscritos.map((a) => <CartaResponsivaDeporte key={a.id} a={a} r={regs[a.id]} ev={ev} />)}
-          {imprimiendo === "constancias" && ordenInscritos.map((a) => <ConstanciaEstudiosDeporte key={a.id} a={a} ev={ev} />)}
-          {imprimiendo === "cedula" && <ConcentradoDeportistas lista={ordenInscritos} regs={regs} ev={ev} />}
+          {imprimiendo === "responsivas" && ordenInscritos.map((a) => <CartaResponsivaDeporte key={a.id} a={a} r={regs[a.id]} ev={ev} foto={fotos[a.id]} />)}
+          {imprimiendo === "constancias" && ordenInscritos.map((a) => <ConstanciaEstudiosDeporte key={a.id} a={a} ev={ev} foto={fotos[a.id]} />)}
+          {imprimiendo === "cedula" && <ConcentradoDeportistas lista={ordenInscritos} regs={regs} ev={ev} fotos={fotos} />}
           {imprimiendo === "entrenador" && <OficioEntrenadorDeporte ev={ev} />}
         </div>, document.body)}
 
@@ -6467,34 +6508,37 @@ function JuegosDeportivosTab({ alumnos, onStamp }) {
           </div>
           <div className="flex flex-col gap-2">
             {lista.map((a) => {
-              const r = regs[a.id] || {}; const av = r.deporte ? validarRegistroDeporte(a, r) : (anioNac(a) ? [] : ["Revisar la fecha de nacimiento en la ficha del alumno."]);
+              const r = regs[a.id] || {}; const deps = deportesDe(r); const av = deps.length ? validarRegistroDeporte(a, r) : (anioNac(a) ? [] : ["Revisar la fecha de nacimiento en la ficha del alumno."]);
               return (
                 <div key={a.id} className="card" style={{ padding: "0.7rem 0.9rem" }}>
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div>
                       <span className="text-sm font-medium">{nombreAlumno(a)}</span>
-                      <span style={{ fontSize: "0.7rem", opacity: 0.6 }}> · {a.grado}° · {ramaAlumno(a)} · nac. {anioNac(a) || "¿?"} · {edadAl(a, ev.fechaEvento) ?? "¿?"} años</span>
+                      <span style={{ fontSize: "0.7rem", opacity: 0.6 }}> · {a.grado}° A · {ramaAlumno(a)} · nac. {anioNac(a) || "¿?"} · {edadAl(a, ev.fechaEvento) ?? "¿?"} años</span>
                     </div>
-                    <select className="campo" style={{ maxWidth: "15rem" }} value={r.deporte || ""} onChange={(e) => guardarReg(a.id, { ...r, deporte: e.target.value })}>
-                      <option value="">— No participa —</option>
-                      {DEPORTES_SECUNDARIA.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </select>
+                    <span className="text-sm" style={{ opacity: 0.6 }}>{deps.length ? deps.join(" · ") : "No participa"}</span>
                   </div>
-                  {r.deporte === "Atletismo" && (
-                    <div className="flex gap-1 flex-wrap mt-2">
-                      {PRUEBAS_ATLETISMO.map((p) => <button key={p.id} onClick={() => guardarReg(a.id, { ...r, pruebas: toggle(r.pruebas, p.id) })} className={`chip-grado ${(r.pruebas || []).includes(p.id) ? "activo" : ""}`} style={{ fontSize: "0.7rem" }}>{p.n.split(" (")[0]}</button>)}
-                      {RELEVOS_ATLETISMO.map((p) => <button key={p.id} onClick={() => guardarReg(a.id, { ...r, relevos: toggle(r.relevos, p.id) })} className={`chip-grado ${(r.relevos || []).includes(p.id) ? "activo" : ""}`} style={{ fontSize: "0.7rem" }}>{p.n}</button>)}
+                  <div className="flex gap-1 flex-wrap mt-2">
+                    {DEPORTES_SECUNDARIA.map((d) => <button key={d} onClick={() => guardarReg(a.id, { ...r, deporte: undefined, deportes: toggle(deps, d) })} className={`chip-grado ${deps.includes(d) ? "activo" : ""}`} style={{ fontSize: "0.7rem" }}>{deps.includes(d) ? "✓ " : ""}{d}</button>)}
+                  </div>
+                  {deps.includes("Atletismo") && (
+                    <div className="mt-2" style={{ borderLeft: "3px solid #b8860b", paddingLeft: "0.5rem" }}>
+                      <div style={{ fontSize: "0.7rem", opacity: 0.65, marginBottom: "0.2rem" }}>Atletismo · pruebas (máx. 2) y relevo (1)</div>
+                      <div className="flex gap-1 flex-wrap">
+                        {PRUEBAS_ATLETISMO.map((p) => <button key={p.id} onClick={() => guardarReg(a.id, { ...r, deportes: deps, pruebas: toggle(r.pruebas, p.id) })} className={`chip-grado ${(r.pruebas || []).includes(p.id) ? "activo" : ""}`} style={{ fontSize: "0.68rem" }}>{p.n.split(" (")[0]}</button>)}
+                        {RELEVOS_ATLETISMO.map((p) => <button key={p.id} onClick={() => guardarReg(a.id, { ...r, deportes: deps, relevos: toggle(r.relevos, p.id) })} className={`chip-grado ${(r.relevos || []).includes(p.id) ? "activo" : ""}`} style={{ fontSize: "0.68rem" }}>{p.n}</button>)}
+                      </div>
                     </div>
                   )}
-                  {r.deporte && r.deporte !== "Atletismo" && (
-                    <input className="campo mt-2" style={{ fontSize: "0.8rem" }} placeholder="Posición / prueba / observaciones (opcional)" value={r.posicion || ""} onChange={(e) => guardarReg(a.id, { ...r, posicion: e.target.value })} />
-                  )}
-                  {r.deporte && (
+                  {deps.filter((d) => d !== "Atletismo").map((d) => (
+                    <input key={d} className="campo mt-2" style={{ fontSize: "0.8rem" }} placeholder={`${d} · posición o prueba (opcional)`} value={(r.posiciones || {})[d] || ""} onChange={(e) => guardarReg(a.id, { ...r, deportes: deps, posiciones: { ...(r.posiciones || {}), [d]: e.target.value } })} />
+                  ))}
+                  {deps.length > 0 && (
                     <div className="flex gap-1 flex-wrap mt-2">
-                      {DOCS_DEPORTISTA.map(([k, t]) => <button key={k} title={t} onClick={() => guardarReg(a.id, { ...r, docs: { ...(r.docs || {}), [k]: !(r.docs || {})[k] } })} className={`chip-grado ${(r.docs || {})[k] ? "activo" : ""}`} style={{ fontSize: "0.68rem" }}>{(r.docs || {})[k] ? "✓ " : ""}{t.split(" (")[0].split(",")[0]}</button>)}
+                      {DOCS_DEPORTISTA.map(([k, t]) => <button key={k} title={t} onClick={() => guardarReg(a.id, { ...r, deportes: deps, docs: { ...(r.docs || {}), [k]: !(r.docs || {})[k] } })} className={`chip-grado ${(r.docs || {})[k] ? "activo" : ""}`} style={{ fontSize: "0.68rem" }}>{(r.docs || {})[k] ? "✓ " : ""}{t.split(" (")[0].split(",")[0]}</button>)}
                     </div>
                   )}
-                  {av.length > 0 && <div className="text-sm mt-1" style={{ color: "#b00020" }}>⚠ {av.join(" ")}</div>}
+                  {av.length > 0 && <div className="text-sm mt-1" style={{ color: av.every((x) => x.startsWith("Participa en")) ? "#9a6b00" : "#b00020" }}>⚠ {av.join(" ")}</div>}
                 </div>
               );
             })}
