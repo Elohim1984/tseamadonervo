@@ -16474,6 +16474,144 @@ const CAMPOS_CAPTURA_PLANEACION = {
   ],
 };
 
+/* ---------- Lista de cotejo del PIC (Etapas 1 a 4) · CTE Sesión 2, 2026-2027 ----------
+   Instrumento oficial "Lista de cotejo para la valoración de la presentación de
+   las Etapas 1, 2, 3 y 4 del Proyecto de Integración Comunitaria" (Educación
+   Telesecundaria). Se guarda en pic:cotejo = { respuestas: {i: "si"|"no"}, obs }. */
+const LISTA_COTEJO_PIC = [
+  ["Etapa 1: Lectura de la realidad y de la vida cotidiana", [
+    "Existe un listado claro y jerarquizado de las situaciones o necesidades prioritarias a atender, previamente identificadas por el colectivo docente.",
+    "Presenta un diagnóstico de las características del entorno, el desarrollo personal y la vida comunitaria que fundamentan la lectura de la realidad.",
+    "Muestra evidencias cualitativas/documentales de diálogo colectivo (asambleas intergrados) sobre la finalidad, beneficios, organización e integración de los grados en el proyecto.",
+  ]],
+  ["Etapa 2: Situación problemática", [
+    "Explica de manera precisa las problemáticas del contexto territorial delimitado, analizándolas desde sus dimensiones social y académica, identificando la problemática acordada, justificando por qué se decidió y las situaciones que contribuyen a la misma.",
+    "Aporta evidencias cualitativas y cuantitativas (entrevistas, observaciones, datos estadísticos) que demuestran las limitaciones en el aprendizaje y el desarrollo comunitario, precisando su alcance e impacto (¿qué se conoce del problema?, ¿qué evidencias se tienen?, ¿qué hechos lo determinan?, ¿en qué medida afecta a otros ámbitos?).",
+    "Selecciona y justifica una problemática académica o social prioritaria que fundamenta la integración curricular y la incorporación de nuevos contenidos.",
+  ]],
+  ["Etapa 3: Horizontes de expectativas", [
+    "Establece el punto de partida de los estudiantes, adaptando la propuesta a sus conocimientos previos, experiencias y necesidades particulares.",
+    "Construye el horizonte de expectativas considerando directamente las causas del problema y las alternativas de solución planteadas.",
+    "Orienta el sentido del proyecto, delimitando sus alcances e intenciones pedagógicas y comunitarias.",
+    "Redacta el horizonte iniciando con un verbo en infinitivo y respondiendo a: ¿Qué se pretende hacer?, ¿Para qué? y ¿Cómo se realizará?",
+    "Evidencia la participación activa de alumnos, docentes y miembros de la comunidad en asambleas para la definición del horizonte.",
+  ]],
+  ["Etapa 4: Planificación de actividades", [
+    "Diseña una estructura de planeación articulada que contempla las subsecuentes fases: Etapa 5 (Localización de la información), Etapa 6 (Elaboración de alternativas de solución) y Etapa 7 (Presentación de alternativas de solución).",
+    "Etapa 5: Describe al menos 2 acciones por grado enfocadas en la localización de contenidos (usando los PPA/PA) en fuentes impresas, digitales, audiovisuales y saberes comunitarios, recuperados mediante entrevistas y registros comunitarios (¿Qué vamos a hacer?).",
+    "Etapa 5: Define la forma de seleccionar, registrar y presentar información (puede usar estrategias detonadoras) mediante un cronograma estructurado de actividades (¿Cómo lo vamos a hacer?).",
+    "Etapa 5: Establece el calendario de asambleas intergrados previas a la presentación formal de la etapa (¿Cuándo lo vamos a hacer?).",
+    "Etapa 6 (¿Qué vamos a hacer?): Diseña un programa de actividades articulado por campos formativos y grados que detalle las posibles alternativas de solución.",
+    "Etapa 6 (¿Cómo lo vamos a hacer?): Distribuye equitativamente las actividades y asigna responsables para la ejecución de las alternativas de solución.",
+    "Etapa 6 (¿Cuándo lo vamos a hacer?): Fija las fechas de las asambleas intergrados previas a la presentación de la etapa 6.",
+    "Etapa 7 (¿Qué vamos a hacer?): Planifica la presentación pública de resultados o avances, especificando las acciones antes, durante y después del evento.",
+    "Etapa 7 (¿Cómo lo vamos a hacer?): Define la secuencia, el orden del día, la logística y los insumos necesarios para la exposición del proyecto.",
+    "Etapa 7 (Valoración y proyección): Determina criterios claros de evaluación para consolidar los aprendizajes logrados y proyectar intervenciones futuras.",
+    "Etapa 7 (¿Cuándo lo vamos a hacer?): Presenta un cronograma para la selección de evidencias áulicas, elaboración del programa final y presentación de las estrategias frente a la comunidad.",
+  ]],
+  ["Claridad y organización de la exposición", [
+    "Presenta la información de forma estructurada, fluida y comprensible, apoyándose en recursos visuales adecuados (tablas integradoras, diapositivas, reportes de resultados, etc.).",
+  ]],
+  ["Trabajo colaborativo", [
+    "Demuestra la participación activa, articulada y comprometida de estudiantes de los tres grados, docentes y familias en la presentación del proyecto.",
+  ]],
+];
+// Dónde se trabaja cada criterio dentro de la app (para saber qué completar).
+const DONDE_COTEJO_PIC = {
+  "0-0": "PIC — Etapas 1-3 → Etapa 1", "0-1": "PIC — Etapas 1-3 → Etapa 1 (condiciones)", "0-2": "Evidencias de asambleas (fotos/actas)",
+  "1-0": "Etapa 2 (planteamiento) y Etapa 4 → Aportación", "1-1": "Etapa 2 + resultados de Examen Diagnóstico y EIA", "1-2": "Etapa 2",
+  "2-0": "Etapa 3 (punto de partida)", "2-1": "Etapa 3 / Etapa 4 → Propuestas", "2-2": "Etapa 3", "2-3": "Etapa 3 (horizonte con verbo en infinitivo)", "2-4": "Evidencias de asamblea",
+  "3-0": "PIC — Etapas 4-7", "3-1": "Etapa 5 → Secuencia de actividades + Proyectos y videos SEP", "3-2": "Etapa 5 → Cronograma", "3-3": "Etapa 5 → Cronograma (asambleas)",
+  "3-4": "Etapa 6", "3-5": "Etapa 6 → Seguimiento", "3-6": "Etapa 6", "3-7": "Etapa 7", "3-8": "Etapa 7", "3-9": "PIC → Evaluación y difusión", "3-10": "Etapa 7 / Cronograma por fase",
+  "4-0": "Documento final del PIC (Resultados y análisis)", "5-0": "Guion de exposición por grados",
+};
+
+function ListaCotejoPIC({ onStamp }) {
+  const [datos, setDatos] = useState({ respuestas: {}, obs: "" });
+  const [cargando, setCargando] = useState(true);
+  const [estado, setEstado] = useState("");
+  const [imprimiendo, setImprimiendo] = useState(false);
+  const temp = useRef(null);
+  useEffect(() => { getStorage("pic:cotejo", { respuestas: {}, obs: "" }).then((v) => { setDatos({ respuestas: {}, obs: "", ...(v || {}) }); setCargando(false); }); }, []);
+  const guardar = (nuevo) => {
+    setDatos(nuevo); setEstado("Se guarda solo…");
+    if (temp.current) clearTimeout(temp.current);
+    temp.current = setTimeout(async () => { const ok = await setStorage("pic:cotejo", nuevo); setEstado(ok ? "✓ Guardado en tu Hoja" : "No se pudo guardar"); ok && onStamp && onStamp("Guardado"); }, 900);
+  };
+  const marcar = (k, v) => guardar({ ...datos, respuestas: { ...datos.respuestas, [k]: datos.respuestas[k] === v ? "" : v } });
+  const total = LISTA_COTEJO_PIC.reduce((s, [, l]) => s + l.length, 0);
+  const si = Object.values(datos.respuestas).filter((v) => v === "si").length;
+  const no = Object.values(datos.respuestas).filter((v) => v === "no").length;
+  const imprimir = () => {
+    setImprimiendo(true); document.body.classList.add("solo-portal");
+    window.onafterprint = () => { document.body.classList.remove("solo-portal"); setImprimiendo(false); window.onafterprint = null; };
+    setTimeout(() => window.print(), 250);
+  };
+  if (cargando) return <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>;
+  const tdI = { border: "1px solid #000", padding: "4px 6px", fontSize: "9pt", verticalAlign: "top" };
+  return (
+    <div className="flex flex-col gap-4">
+      {imprimiendo && ReactDOM.createPortal(
+        <div className="solo-impresion portal-impresion" style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#000" }}>
+          <div style={{ textAlign: "center", fontWeight: 700, fontSize: "11pt" }}>LISTA DE COTEJO PARA LA VALORACIÓN DE LA PRESENTACIÓN DE LAS ETAPAS 1, 2, 3 Y 4 DEL PROYECTO DE INTEGRACIÓN COMUNITARIA</div>
+          <div style={{ textAlign: "center", fontSize: "9.5pt", marginBottom: "8px" }}>Educación Telesecundaria · Ciclo Escolar 2026-2027 · Telesecundaria “Amado Nervo” · CCT {DATOS_PLANTEL.cct}</div>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr><th style={{ ...tdI, width: "22%", background: "#ddd" }}>Etapa / Dimensión</th><th style={{ ...tdI, background: "#ddd" }}>Criterios de valoración e indicadores</th><th style={{ ...tdI, width: "6%", background: "#ddd" }}>Sí</th><th style={{ ...tdI, width: "6%", background: "#ddd" }}>No</th></tr></thead>
+            <tbody>
+              {LISTA_COTEJO_PIC.flatMap(([etapa, l], i) => l.map((c, j) => (
+                <tr key={i + "-" + j} style={{ pageBreakInside: "avoid" }}>
+                  {j === 0 && <td style={{ ...tdI, fontWeight: 700 }} rowSpan={l.length}>{etapa}</td>}
+                  <td style={tdI}>{c}</td>
+                  <td style={{ ...tdI, textAlign: "center", fontWeight: 700 }}>{datos.respuestas[i + "-" + j] === "si" ? "X" : ""}</td>
+                  <td style={{ ...tdI, textAlign: "center", fontWeight: 700 }}>{datos.respuestas[i + "-" + j] === "no" ? "X" : ""}</td>
+                </tr>
+              )))}
+            </tbody>
+          </table>
+          <div style={{ border: "1px solid #000", padding: "6px", marginTop: "8px", minHeight: "70px", fontSize: "9.5pt" }}><b>OBSERVACIONES Y REALIMENTACIÓN GENERAL:</b><br />{datos.obs}</div>
+        </div>, document.body)}
+      <div className="card" style={{ borderColor: "#6a1b9a", background: "rgba(106,27,154,0.05)" }}>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div>
+            <div className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Lista de cotejo · revisión del PIC (Etapas 1 a 4)</div>
+            <p className="text-sm" style={{ opacity: 0.65, margin: "0.2rem 0 0" }}>Instrumento oficial de la 2ª Sesión de CTE con el que se valora la presentación del PIC. Marque Sí o No en cada criterio; a la derecha dice en qué parte de la app se trabaja. {estado && <b style={{ color: estado.startsWith("✓") ? "var(--verde)" : undefined }}>{estado}</b>}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm"><b style={{ color: "var(--verde)" }}>{si} Sí</b> · <b style={{ color: "#b00020" }}>{no} No</b> · {total - si - no} sin marcar</span>
+            <button onClick={imprimir} className="btn-primario" style={{ fontSize: "0.75rem" }}><Printer size={14} /> Imprimir lista</button>
+          </div>
+        </div>
+      </div>
+      {LISTA_COTEJO_PIC.map(([etapa, l], i) => (
+        <div key={etapa} className="card">
+          <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.86rem" }}>{etapa}</div>
+          <div className="flex flex-col gap-2">
+            {l.map((c, j) => {
+              const k = i + "-" + j; const v = datos.respuestas[k];
+              return (
+                <div key={k} className="flex gap-3 items-start" style={{ borderTop: j ? "1px solid var(--linea)" : "none", paddingTop: j ? "0.5rem" : 0 }}>
+                  <div style={{ flex: 1 }}>
+                    <div className="text-sm">{c}</div>
+                    <div style={{ fontSize: "0.7rem", opacity: 0.55, marginTop: "0.15rem" }}>Se trabaja en: {DONDE_COTEJO_PIC[k] || "—"}</div>
+                  </div>
+                  <div className="flex gap-1" style={{ flexShrink: 0 }}>
+                    <button onClick={() => marcar(k, "si")} className={`chip-grado ${v === "si" ? "activo" : ""}`} style={{ fontSize: "0.75rem", ...(v === "si" ? { background: "#2e7d32", borderColor: "#2e7d32" } : {}) }}>Sí</button>
+                    <button onClick={() => marcar(k, "no")} className={`chip-grado ${v === "no" ? "activo" : ""}`} style={{ fontSize: "0.75rem", ...(v === "no" ? { background: "#b00020", borderColor: "#b00020" } : {}) }}>No</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <div className="card">
+        <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Observaciones y realimentación general</label>
+        <textarea className="campo" rows={4} value={datos.obs || ""} onChange={(e) => guardar({ ...datos, obs: e.target.value })} />
+      </div>
+    </div>
+  );
+}
+
 // Aviso arriba de cada pestaña de captura: lo escrito se guarda solo y se
 // ve al instante en el documento final.
 function AvisoDocumentoVivo({ documento, botones }) {
@@ -16509,6 +16647,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
     { id: "analitico", label: "Programa Analítico" },
     { id: "pic", label: "PIC" },
     { id: "recursos", label: "Proyectos y videos SEP" },
+    { id: "cotejo", label: "Lista de cotejo (revisión)" },
   ];
 
   const imprimirResumen = async () => {
@@ -16553,6 +16692,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
         ))}
       </div>
 
+      {subTab === "cotejo" && <ListaCotejoPIC onStamp={onStamp} />}
       {subTab === "recursos" && <PanelRecursosSEP onVer={() => verEnDocumento("pic", "pic-recursos")} />}
       {subTab === "analisis" && <AnalisisResultadosEmbebido cual={cualDocumento} setCual={setCualDocumento} irA={irA} setIrA={setIrA} />}
 
