@@ -3809,7 +3809,7 @@ const ACCESOS_AGENDA = [
   [/911|estad[ií]stica/i, "estadistica911", "Estadística 911.5"],
   [/PIC|integraci[oó]n comunitaria|lectura|academia/i, "pic", "Programa Analítico y PIC"],
   [/REPASE|participaci[oó]n escolar|consejo de participaci/i, "consejo", "REPASE"],
-  [/dispositivos|acuerdo 09\/09/i, "documentos", "Documentos de Dirección"],
+  [/dispositivos|acuerdo 09\/09/i, "dispositivos", "Dispositivos (Acuerdo 09/09/26)"],
   [/convivencia|violencia/i, "convivenciaescolar", "Convivencia Escolar"],
 ];
 const diasEntre = (a, b) => Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000);
@@ -6501,6 +6501,151 @@ function JuegosDeportivosTab({ alumnos, onStamp }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/* ---------- Acuerdo 09/09/26 · uso responsable de dispositivos digitales (6 nov 2026) ----------
+   Formatos obligatorios de Educación Básica (1-B Convocatoria, 2-B Acta de
+   Asamblea, 3-B Carta Compromiso). Los PDF oficiales en blanco están en
+   assets/acuerdo-09-09-26/ (no traen datos personales); la app escribe encima
+   los datos de la escuela y de cada alumno al momento de descargar. */
+const RUTA_ACUERDO_0909 = "assets/acuerdo-09-09-26/";
+const MESES_ACU = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const partesFechaAcu = (iso) => { if (!iso) return null; const [y, m, d] = iso.split("-").map(Number); return { d: String(d), m: MESES_ACU[m - 1], y: String(y), larga: `${d} de ${MESES_ACU[m - 1]} de ${y}` }; };
+async function cargarPlantillaAcuerdo(nombre) {
+  const { PDFDocument } = window.PDFLib;
+  const r = await fetch(RUTA_ACUERDO_0909 + nombre);
+  if (!r.ok) throw new Error("No se encontró el formato " + nombre);
+  return PDFDocument.load(await r.arrayBuffer(), { ignoreEncryption: true });
+}
+function escribirAcu(pagina, fuente, texto, x, top, tam = 10, centrado = false) {
+  if (!texto) return;
+  const { rgb } = window.PDFLib;
+  const t = String(texto);
+  const w = fuente.widthOfTextAtSize(t, tam);
+  pagina.drawText(t, { x: centrado ? x - w / 2 : x, y: 792 - top, size: tam, font: fuente, color: rgb(0, 0, 0.45) });
+}
+const PLANTEL_ACU = () => ({
+  plantel: 'Telesecundaria "Amado Nervo"', cct: DATOS_PLANTEL.cct, domicilio: "Cerro del Vigilante S/N, C.P. 74394", localidad: DATOS_PLANTEL.localidad,
+  municipio: DATOS_PLANTEL.municipio, estado: "Puebla", telefono: "244 441 9381", zona: "052", corde: "Izúcar de Matamoros",
+});
+async function descargarConvocatoriaAcuerdo(dat) {
+  const { StandardFonts } = window.PDFLib;
+  const doc = await cargarPlantillaAcuerdo("1-B_Convocatoria.pdf");
+  const f = await doc.embedFont(StandardFonts.Helvetica), fb = await doc.embedFont(StandardFonts.HelveticaBold);
+  const p = doc.getPages()[0]; const P = PLANTEL_ACU();
+  [[128, 131, P.plantel], [230, 145.5, P.cct], [139, 160, P.domicilio], [141, 174.5, P.localidad], [140, 189, P.municipio], [137, 203.5, P.telefono], [159, 218, P.zona], [134, 232.5, P.corde]].forEach(([x, y, t]) => escribirAcu(p, f, t, x, y));
+  const fa = partesFechaAcu(dat.fechaAsamblea);
+  if (fa) { escribirAcu(p, f, fa.d, 425, 397); escribirAcu(p, f, fa.m, 100, 411); escribirAcu(p, f, fa.y.slice(-1), 254, 411); }
+  escribirAcu(p, f, dat.hora, 315, 411);
+  const fc = partesFechaAcu(dat.fechaConvocatoria); if (fc) escribirAcu(p, f, fc.larga, 215, 702);
+  const { rgb } = window.PDFLib; p.drawRectangle({ x: 150, y: 792 - 632, width: 300, height: 24, color: rgb(1, 1, 1) });
+  escribirAcu(p, fb, NOMBRE_COMPLETO.directora, 306, 628, 10.5, true);
+  descargarBytesPDF(await doc.save(), "1-B_Convocatoria_Amado_Nervo.pdf");
+}
+async function descargarActaAcuerdo(dat) {
+  const { StandardFonts } = window.PDFLib;
+  const doc = await cargarPlantillaAcuerdo("2-B_Acta_Asamblea.pdf");
+  const f = await doc.embedFont(StandardFonts.Helvetica);
+  const [p0, , p2] = doc.getPages(); const P = PLANTEL_ACU();
+  [[186, P.plantel], [199.5, P.cct], [212.5, P.localidad], [225.5, P.municipio], [239, P.estado]].forEach(([y, t]) => escribirAcu(p0, f, t, 266, y));
+  const fa = partesFechaAcu(dat.fechaAsamblea);
+  escribirAcu(p0, f, [fa ? fa.larga : "", dat.hora ? dat.hora + " horas" : ""].filter(Boolean).join(", "), 266, 252);
+  escribirAcu(p0, f, dat.lugar || "Instalaciones de la escuela", 266, 278);
+  const fc = partesFechaAcu(dat.fechaConvocatoria); if (fc) escribirAcu(p0, f, fc.larga, 336, 333);
+  if (dat.horaCierre) { const [h, m] = String(dat.horaCierre).split(":"); escribirAcu(p2, f, h || "", 142, 254); escribirAcu(p2, f, m || "", 168, 254); }
+  descargarBytesPDF(await doc.save(), "2-B_Acta_Asamblea_Amado_Nervo.pdf");
+}
+async function descargarCartasAcuerdo(lista, dat) {
+  const { PDFDocument, StandardFonts } = window.PDFLib;
+  const plantilla = await cargarPlantillaAcuerdo("3-B_Carta_Compromiso.pdf");
+  const final = await PDFDocument.create();
+  const f = await final.embedFont(StandardFonts.Helvetica), fb = await final.embedFont(StandardFonts.HelveticaBold);
+  const P = PLANTEL_ACU(); const fc = partesFechaAcu(dat.fechaCarta);
+  const items = lista.length ? lista : [null];
+  for (const a of items) {
+    const pags = await final.copyPages(plantilla, [0, 1, 2]);
+    pags.forEach((pg) => final.addPage(pg));
+    const [p0, p1, p2] = pags;
+    [[178, P.plantel], [191.5, P.cct], [204.5, P.localidad], [217.5, P.municipio], [231, P.estado]].forEach(([y, t]) => escribirAcu(p0, f, t, 266, y));
+    escribirAcu(p1, fb, P.telefono, 90, 711);
+    if (fc) { escribirAcu(p2, f, fc.d, 115, 179); escribirAcu(p2, f, fc.m, 255, 179); }
+    if (a) {
+      escribirAcu(p2, f, { 1: "Primero", 2: "Segundo", 3: "Tercero" }[a.grado] || "", 238, 223);
+      escribirAcu(p2, f, a.ESCUELA_GRUPO || "A", 238, 251.5);
+      escribirAcu(p2, f, nombreAlumno(a), 238, 273);
+      const t = tutorDeportista(a); if (t.nombre) escribirAcu(p2, f, t.nombre.toUpperCase(), 306, 360, 10, true);
+    }
+  }
+  descargarBytesPDF(await final.save(), lista.length ? `3-B_Cartas_Compromiso_${lista.length}_alumnos.pdf` : "3-B_Carta_Compromiso_en_blanco.pdf");
+}
+
+const PASOS_ACUERDO_0909 = [
+  ["difusion", "Conocer y difundir el Acuerdo 09/09/26 y el Decálogo con el personal"],
+  ["convocatoria", "Entregar la Convocatoria (1-B) a madres, padres y tutores"],
+  ["asamblea", "Realizar la Asamblea General Extraordinaria Informativa"],
+  ["acta", "Firmar el Acta de Asamblea (2-B) con docentes y familias"],
+  ["cartas", "Recabar las Cartas Compromiso (3-B) firmadas de cada alumno"],
+  ["canal", "Dar a conocer el teléfono oficial de la escuela para urgencias"],
+  ["resguardo", "Integrar y resguardar el expediente para la Supervisión"],
+];
+function AcuerdoDispositivosTab({ alumnos, onStamp }) {
+  const [dat, setDat] = useState({ fechaAsamblea: "", hora: "", fechaConvocatoria: hoyISO(), lugar: "Instalaciones de la escuela", horaCierre: "", fechaCarta: "", pasos: {} });
+  const [cargando, setCargando] = useState(true);
+  const [estado, setEstado] = useState(""); const [trabajando, setTrabajando] = useState("");
+  const [grado, setGrado] = useState("todos");
+  const temp = useRef(null);
+  useEffect(() => { getStorage("acuerdo0909:datos", null).then((v) => { if (v) setDat((p) => ({ ...p, ...v })); setCargando(false); }); }, []);
+  const cambiar = (k, v) => { const n = { ...dat, [k]: v }; setDat(n); setEstado("Se guarda solo…"); clearTimeout(temp.current); temp.current = setTimeout(async () => { const ok = await setStorage("acuerdo0909:datos", n); setEstado(ok ? "✓ Guardado en tu Hoja" : "No se pudo guardar"); }, 900); };
+  const ejecutar = async (etq, fn) => { setTrabajando(etq); try { await fn(); onStamp && onStamp("Descargado"); } catch (e) { console.error(e); setEstado("No se pudo generar el PDF: " + e.message); } setTrabajando(""); };
+  const lista = alumnos.filter((a) => grado === "todos" || String(a.grado) === grado).sort((a, b) => (a.grado - b.grado) || nombreAlumno(a).localeCompare(nombreAlumno(b)));
+  const hechos = PASOS_ACUERDO_0909.filter(([k]) => (dat.pasos || {})[k]).length;
+  if (cargando) return <p className="text-sm" style={{ opacity: 0.5 }}>Cargando…</p>;
+  const campo = (k, t, tipo = "text") => (<div><label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>{t}</label><input className="campo" type={tipo} value={dat[k] || ""} onChange={(e) => cambiar(k, e.target.value)} /></div>);
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.05)" }}>
+        <div className="font-display" style={{ fontWeight: 700, fontSize: "0.92rem" }}>Acuerdo 09/09/26 · Uso responsable y seguro de dispositivos digitales</div>
+        <p className="text-sm" style={{ opacity: 0.7, margin: "0.3rem 0 0.5rem" }}>En vigor desde el 3 de noviembre de 2026 (Oficio SEP-1.1-SEP/2400/202 y SEP-1.1.1-DGEBPN/0040/2026). Los formatos 1-B, 2-B y 3-B son obligatorios; cada escuela los requisita, integra y resguarda para cuando los pida la autoridad. {estado && <b style={{ color: estado.startsWith("✓") ? "var(--verde)" : undefined }}>{estado}</b>}</p>
+        <div className="flex gap-2 flex-wrap">
+          <a className="btn-secundario" style={{ fontSize: "0.75rem" }} href={RUTA_ACUERDO_0909 + "Acuerdo_09-09-26.pdf"} target="_blank" rel="noopener noreferrer"><FileText size={13} /> Acuerdo 09/09/26</a>
+          <a className="btn-secundario" style={{ fontSize: "0.75rem" }} href={RUTA_ACUERDO_0909 + "Uso_responsable_dispositivos_digitales.pdf"} target="_blank" rel="noopener noreferrer"><FileText size={13} /> Uso responsable de dispositivos digitales</a>
+        </div>
+      </div>
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Ruta de cumplimiento · {hechos} de {PASOS_ACUERDO_0909.length}</div>
+        {PASOS_ACUERDO_0909.map(([k, t], i) => (
+          <label key={k} className="flex items-center gap-2 py-1 text-sm" style={{ borderTop: i ? "1px solid var(--linea)" : "none", cursor: "pointer" }}>
+            <input type="checkbox" checked={!!(dat.pasos || {})[k]} onChange={() => cambiar("pasos", { ...(dat.pasos || {}), [k]: !(dat.pasos || {})[k] })} /> <span style={{ textDecoration: (dat.pasos || {})[k] ? "line-through" : "none", opacity: (dat.pasos || {})[k] ? 0.55 : 1 }}>{i + 1}. {t}</span>
+          </label>
+        ))}
+      </div>
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Datos de la asamblea (se escriben en los formatos)</div>
+        <div className="grid grid-cols-2 gap-3">
+          {campo("fechaAsamblea", "Fecha de la asamblea", "date")}
+          {campo("hora", "Hora de la asamblea (ej. 08:30)")}
+          {campo("fechaConvocatoria", "Fecha de la convocatoria", "date")}
+          {campo("lugar", "Lugar de la asamblea")}
+          {campo("horaCierre", "Hora de cierre del acta (ej. 10:15)")}
+          {campo("fechaCarta", "Fecha de firma de las cartas compromiso", "date")}
+        </div>
+        <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.4rem" }}>Lo que deje vacío queda en blanco para llenarlo a mano. Los datos de la escuela, del director, de cada alumno y de su tutor se ponen solos.</p>
+      </div>
+      <div className="card">
+        <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.88rem" }}>Descargar formatos oficiales llenos</div>
+        <div className="flex gap-2 flex-wrap">
+          <button disabled={!!trabajando} onClick={() => ejecutar("conv", () => descargarConvocatoriaAcuerdo(dat))} className="btn-primario" style={{ fontSize: "0.78rem" }}><Download size={14} /> {trabajando === "conv" ? "Generando…" : "1-B Convocatoria"}</button>
+          <button disabled={!!trabajando} onClick={() => ejecutar("acta", () => descargarActaAcuerdo(dat))} className="btn-primario" style={{ fontSize: "0.78rem" }}><Download size={14} /> {trabajando === "acta" ? "Generando…" : "2-B Acta de Asamblea"}</button>
+          <button disabled={!!trabajando} onClick={() => ejecutar("blanco", () => descargarCartasAcuerdo([], dat))} className="btn-secundario" style={{ fontSize: "0.78rem" }}><Download size={14} /> 3-B Carta en blanco</button>
+        </div>
+        <div className="flex gap-2 flex-wrap items-center mt-3">
+          <span className="text-sm">Cartas compromiso (3-B), una por alumno:</span>
+          {["todos", "1", "2", "3"].map((g) => <button key={g} onClick={() => setGrado(g)} className={`chip-grado ${grado === g ? "activo" : ""}`}>{g === "todos" ? "Todos" : g + "°"}</button>)}
+          <button disabled={!!trabajando || !lista.length} onClick={() => ejecutar("cartas", () => descargarCartasAcuerdo(lista, dat))} className="btn-primario" style={{ fontSize: "0.78rem" }}><Download size={14} /> {trabajando === "cartas" ? "Generando…" : `Descargar ${lista.length} carta(s)`}</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -25216,6 +25361,7 @@ function App() {
     { id: "cortecaja", label: "Corte de Caja", icon: Wallet },
     { id: "recibos", label: "Recibos", icon: FileText },
     { id: "deportes", label: "Juegos deportivos", icon: Users },
+    { id: "dispositivos", label: "Dispositivos (Acuerdo 09/09/26)", icon: ShieldAlert },
     { id: "convivenciaescolar", label: "Convivencia Escolar", icon: HeartHandshake },
     { id: "personal", label: "Personal del Plantel", icon: UserRound },
     { id: "recursos", label: "Recursos", icon: FileText },
@@ -25230,7 +25376,7 @@ function App() {
     { id: "pic", tabs: ["pic"] },
     { id: "estadistica911", tabs: ["estadistica911"] },
     { id: "comunicacion", label: "Comunicación", tabs: ["avisos", "calendario"] },
-    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "consejo", "documentos", "cortecaja", "recibos", "deportes", "convivenciaescolar", "personal"] },
+    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "consejo", "documentos", "cortecaja", "recibos", "deportes", "dispositivos", "convivenciaescolar", "personal"] },
     { id: "recursos", tabs: ["recursos"] },
   ];
 
@@ -25378,6 +25524,7 @@ function App() {
         {tab === "documentos" && <DocumentosDireccion alumnos={alumnos} onStamp={fireStamp} rolActual={rol} />}
         {tab === "recibos" && <RecibosTab onStamp={fireStamp} />}
         {tab === "deportes" && <JuegosDeportivosTab alumnos={alumnos} onStamp={fireStamp} />}
+        {tab === "dispositivos" && <AcuerdoDispositivosTab alumnos={alumnos} onStamp={fireStamp} />}
         {tab === "cortecaja" && <DocumentosDireccion key="cortecaja" alumnos={alumnos} onStamp={fireStamp} rolActual={rol} subTabInicial="bimestral" />}
         {tab === "convivenciaescolar" && <DocumentosDireccion key="convivenciaescolar" alumnos={alumnos} onStamp={fireStamp} rolActual={rol} subTabInicial="convivencia" />}
         {tab === "personal" && <DatosPersonal personal={personal} setPersonal={setPersonal} onStamp={fireStamp} />}
