@@ -15814,16 +15814,38 @@ function useDatosVivosPlaneacion() {
    DOCUMENTOS_PLANEACION_COMPLETOS). "cual" y "setCual" los controla el
    componente que llama a este (ProgramaAnaliticoPIC), para que las
    tarjetas de arriba puedan elegir qué documento mostrar aquí. */
+// Versión general del PIC: quita las secciones de cada grado (1er, 2° y 3er grado) y deja
+// lo de toda la escuela y lo que integra a los tres grupos (cronograma, asambleas, feria…).
+function versionGeneralPIC(html) {
+  try {
+    const doc = new DOMParser().parseFromString(`<div id="raiz">${html}</div>`, "text/html");
+    const raiz = doc.getElementById("raiz");
+    const texto = (el) => (el.textContent || "").replace(/\s+/g, " ").trim();
+    Array.from(raiz.querySelectorAll("h2")).forEach((h2) => {
+      const t = texto(h2);
+      if (/^(1er grado|2° grado|3er grado)$/.test(t) || t.startsWith("Cronograma de actividades para cada presentación")) {
+        let n = h2.nextSibling;
+        h2.remove();
+        while (n && !(n.nodeType === 1 && /^H[12]$/.test(n.nodeName))) { const sig = n.nextSibling; n.remove(); n = sig; }
+      } else if (t.startsWith("General — la escuela")) h2.remove();
+    });
+    return raiz.innerHTML.replace("Ciclo Escolar 2026-2027 · 1°, 2° y 3° grado", "Ciclo Escolar 2026-2027 · Versión general de la escuela (1° A, 2° A y 3° A)");
+  } catch (e) { return html; }
+}
 function AnalisisResultadosEmbebido({ cual, setCual, irA, setIrA }) {
   const [imprimiendoDoc, setImprimiendoDoc] = useState(false);
+  const [soloGeneral, setSoloGeneral] = useState(false);
   const { mapa, obs, actualizado, cargando, recargar } = useDatosVivosPlaneacion();
   const BASE = {
     pa: { label: "Programa Analítico", html: DOCUMENTO_COMPLETO_PROGRAMA_ANALITICO_HTML },
     pemc: { label: "PEMC 2026-2027", html: DOCUMENTO_COMPLETO_PEMC_HTML },
     pic: { label: "PIC 2026-2027", html: DOCUMENTO_COMPLETO_PIC_HTML },
   };
-  const htmlVivo = useMemo(() => componerDocumentoVivo(BASE[cual].html, mapa, obs), [cual, mapa, obs]);
-  const DOCS = { ...BASE, [cual]: { ...BASE[cual], html: htmlVivo } };
+  const htmlVivo = useMemo(() => {
+    const h = componerDocumentoVivo(BASE[cual].html, mapa, obs);
+    return cual === "pic" && soloGeneral ? versionGeneralPIC(h) : h;
+  }, [cual, mapa, obs, soloGeneral]);
+  const DOCS = { ...BASE, [cual]: { ...BASE[cual], html: htmlVivo, label: BASE[cual].label + (cual === "pic" && soloGeneral ? " - Version general" : "") } };
   const tieneVivo = /<!--VIVO:/.test(BASE[cual].html);
   const contenedor = useRef(null);
 
@@ -15874,10 +15896,18 @@ function AnalisisResultadosEmbebido({ cual, setCual, irA, setIrA }) {
         </div>
       </div>
       <div className="flex gap-2 flex-wrap">
-        {Object.entries(DOCS).map(([id, d]) => (
+        {Object.entries(BASE).map(([id, d]) => (
           <button key={id} onClick={() => setCual(id)} className={`chip-grado ${cual === id ? "activo" : ""}`} style={{ fontSize: "0.78rem" }}>{d.label}</button>
         ))}
       </div>
+      {cual === "pic" && (
+        <div className="flex items-center gap-2 flex-wrap" style={{ fontSize: "0.78rem" }}>
+          <span style={{ opacity: 0.7 }}>Versión del PIC:</span>
+          <button onClick={() => setSoloGeneral(false)} className={`chip-grado ${!soloGeneral ? "activo" : ""}`} style={{ fontSize: "0.75rem" }}>Completa (General + 1° A, 2° A y 3° A)</button>
+          <button onClick={() => setSoloGeneral(true)} className={`chip-grado ${soloGeneral ? "activo" : ""}`} style={{ fontSize: "0.75rem" }}>Versión general</button>
+          {soloGeneral && <span style={{ opacity: 0.6 }}>Solo lo de la escuela y lo que integra a los tres grupos (cronograma, asambleas, feria). Word e Imprimir descargan esta versión.</span>}
+        </div>
+      )}
       {tieneVivo && (
         <div className="flex items-center gap-2 flex-wrap text-sm" style={{ fontSize: "0.75rem" }}>
           <span style={{ color: "var(--verde)", fontWeight: 600 }}>● En vivo</span>
