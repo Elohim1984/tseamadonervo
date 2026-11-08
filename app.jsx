@@ -24836,6 +24836,10 @@ function App() {
   const setEstilosAprendizaje = (v) => guardarListaPorId("estilosvak:", setEstilosAprendizajeState, estilosAprendizaje, v);
 
   const estilos = `
+  body.copiloto-abierto #volver-portal { display: none !important; }
+
+  @media print { .no-imprimir { display: none !important; } }
+
   /* En celular, las tablas anchas se deslizan de lado en vez de desbordar la pantalla (no afecta la impresión). */
   @media screen and (max-width: 640px) {
     main table { display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
@@ -25051,6 +25055,7 @@ function App() {
     <div className="app-shell min-h-screen pb-10">
       <style>{estilos}</style>
       <SelloOverlay stamp={stamp} />
+      <Copiloto alumnos={alumnos} pestana={(TABS.find((t) => t.id === tab) || {}).label || tab} usuario={usuario.nombre} />
 
       {avisoGuardado && (
         <div style={{ background: "var(--rojo)", color: "#fff", padding: "0.6rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
@@ -25217,6 +25222,156 @@ function App() {
   );
 }
 
+
+
+/* ---------- Copiloto IA (Google Gemini, gratis, por un Apps Script aparte) ---------- */
+// La clave de la IA vive solo en el Apps Script del director (herramientas/copiloto-apps-script.gs),
+// nunca en esta página. Aquí solo se guarda, por dispositivo, la liga /exec de ese script.
+const CLAVE_LIGA_IA = "controlEscolarLigaIA";
+const SUGERENCIAS_COPILOTO = [
+  ["Aviso para padres", "Redacta un aviso breve y respetuoso para madres, padres y tutores sobre: "],
+  ["Oficio a Supervisión", "Redacta un oficio formal dirigido a la Supervisión Escolar Zona 052 sobre: "],
+  ["Ideas para el PIC", "Dame 5 actividades concretas para trabajar en el aula la problemática del PIC (bajo dominio de operaciones básicas: suma, resta, multiplicación, división, fracciones y decimales), adaptadas a 1°, 2° y 3° de telesecundaria."],
+  ["Mejorar lo de pantalla", "Revisa lo que tengo en pantalla y propón cómo mejorar la redacción, sin inventar datos."],
+  ["Orden del día CTE", "Propón un orden del día para la próxima sesión de Consejo Técnico Escolar de una telesecundaria bidocente, con tiempos."],
+];
+function textoIAaHTML(t) {
+  const esc = String(t || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return esc.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^#{1,4}\s*(.+)$/gm, "<b>$1</b>").replace(/^\s*[\*\-]\s+/gm, "• ").replace(/\n/g, "<br/>");
+}
+function Copiloto({ alumnos, pestana, usuario }) {
+  const [abierto, setAbierto] = useState(false);
+  const [liga, setLiga] = useState(() => { try { return localStorage.getItem(CLAVE_LIGA_IA) || ""; } catch (e) { return ""; } });
+  const [ligaNueva, setLigaNueva] = useState("");
+  const [estadoLiga, setEstadoLiga] = useState("");
+  const [mensajes, setMensajes] = useState(() => { try { return JSON.parse(sessionStorage.getItem("copiloto:mensajes") || "[]"); } catch (e) { return []; } });
+  const [entrada, setEntrada] = useState("");
+  const [cargando, setCargando] = useState(false);
+  const [usarPantalla, setUsarPantalla] = useState(false);
+  const fin = useRef(null);
+  useEffect(() => { document.body.classList.toggle("copiloto-abierto", abierto); return () => document.body.classList.remove("copiloto-abierto"); }, [abierto]);
+  useEffect(() => { try { sessionStorage.setItem("copiloto:mensajes", JSON.stringify(mensajes.slice(-30))); } catch (e) {} if (fin.current) fin.current.scrollIntoView({ block: "end" }); }, [mensajes, abierto]);
+
+  const probarLiga = async () => {
+    const l = ligaNueva.trim();
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(l)) { setEstadoLiga("La liga debe empezar con https://script.google.com/macros/s/ y terminar en /exec"); return; }
+    setEstadoLiga("Probando…");
+    try {
+      const r = await (await fetch(l)).json();
+      if (r && r.servicio === "copiloto") {
+        if (!r.listo) { setEstadoLiga("El script responde, pero falta la clave GEMINI_API_KEY en sus propiedades (paso 4)."); return; }
+        try { localStorage.setItem(CLAVE_LIGA_IA, l); } catch (e) {}
+        setLiga(l); setEstadoLiga("");
+      } else setEstadoLiga("Esa liga no es la del Copiloto (¿pegó la de la Hoja de la escuela?).");
+    } catch (e) { setEstadoLiga("No se pudo conectar. Revise que el acceso sea 'Cualquier usuario'."); }
+  };
+
+  const sistema = () => {
+    const porGrado = [1, 2, 3].map((g) => `${g}° A: ${alumnos.filter((a) => String(a.grado) === String(g)).length} alumnos`).join(", ");
+    let pantalla = "";
+    if (usarPantalla) { const m = document.querySelector("main"); pantalla = m ? m.innerText.replace(/\n{3,}/g, "\n\n").slice(0, 12000) : ""; }
+    return [
+      "Eres el Copiloto de la Telesecundaria \"Amado Nervo\" (CCT 21ETV0473W, turno matutino, Xoyatla, Tepeojuma, Puebla, Zona Escolar 052, Sector 11). Ayudas al director en tareas administrativas y pedagógicas.",
+      "Escuela bidocente: solo hay 3 grados con un grupo cada uno (1° A, 2° A y 3° A). Director con grupo: Neftalid Bladimir Ortán Aguilar (1° A). Docente de 2° A y 3° A: Salvador Olvera Barrera. Ciclo escolar 2026-2027, Nueva Escuela Mexicana (NEM), Plan de Estudio 2022, Fase 6.",
+      "Problemática del PIC: bajo dominio de las operaciones básicas (suma, resta, multiplicación, división, fracciones y decimales).",
+      `Matrícula actual: ${porGrado}. Usuario: ${usuario}. Pestaña abierta en la app: ${pestana}. Fecha de hoy: ${new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`,
+      "Reglas: responde siempre en español de México, claro y sencillo, sin tecnicismos. No inventes datos oficiales, fechas, folios ni nombres; si falta un dato, déjalo como ____ o pregunta. Para documentos oficiales usa redacción formal. No pidas ni repitas CURP, teléfonos ni domicilios. Respuestas concisas, listas para copiar.",
+      pantalla ? "Contenido que el director tiene en pantalla:\n\"\"\"\n" + pantalla + "\n\"\"\"" : "",
+    ].filter(Boolean).join("\n");
+  };
+
+  const enviar = async (texto) => {
+    const t = String(texto ?? entrada).trim();
+    if (!t || cargando) return;
+    const nuevos = [...mensajes, { rol: "yo", texto: t }];
+    setMensajes(nuevos); setEntrada(""); setCargando(true);
+    try {
+      const r = await fetch(liga, { method: "POST", body: JSON.stringify({ sistema: sistema(), mensajes: nuevos.map((m) => ({ rol: m.rol === "yo" ? "usuario" : "ia", texto: m.texto })) }) });
+      const d = await r.json();
+      setMensajes([...nuevos, { rol: "ia", texto: d.ok ? d.texto : "⚠ " + (d.error || "No hubo respuesta.") + (/quota|RESOURCE_EXHAUSTED|429/i.test(d.error || "") ? "\n(Se alcanzó el límite gratuito por ahora; intente en unos minutos.)" : "") }]);
+    } catch (e) {
+      setMensajes([...nuevos, { rol: "ia", texto: "⚠ No se pudo conectar con el Copiloto. Revise su internet." }]);
+    }
+    setCargando(false);
+  };
+
+  const copiar = (t) => { try { navigator.clipboard.writeText(t); } catch (e) {} };
+
+  return (
+    <>
+      {!abierto && (
+        <button onClick={() => setAbierto(true)} className="no-imprimir" title="Copiloto IA"
+          style={{ position: "fixed", left: "16px", bottom: "16px", zIndex: 60, background: "var(--azul-profundo)", color: "#fff", border: "2px solid rgba(255,255,255,0.8)", borderRadius: "999px", padding: "0.6rem 1rem", fontWeight: 700, fontSize: "0.85rem", boxShadow: "0 6px 18px rgba(0,0,0,0.3)", cursor: "pointer" }}>
+          ✨ Copiloto
+        </button>
+      )}
+      {abierto && (
+        <div className="no-imprimir" style={{ position: "fixed", left: "12px", bottom: "12px", zIndex: 60, width: "min(420px, calc(100vw - 24px))", height: "min(620px, calc(100vh - 24px))", background: "var(--papel)", border: "1px solid var(--linea)", borderRadius: "14px", boxShadow: "0 16px 40px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ background: "var(--azul-profundo)", color: "#fff", padding: "0.6rem 0.8rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
+            <div><div style={{ fontWeight: 700 }}>✨ Copiloto IA</div><div style={{ fontSize: "0.65rem", opacity: 0.75 }}>Con Google Gemini · revise siempre lo que propone</div></div>
+            <div className="flex gap-1">
+              {liga && mensajes.length > 0 && <button onClick={() => setMensajes([])} style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: "6px", padding: "0.25rem 0.5rem", fontSize: "0.7rem", cursor: "pointer" }}>Nueva conversación</button>}
+              <button onClick={() => setAbierto(false)} style={{ background: "transparent", color: "#fff", border: "none", cursor: "pointer" }}><X size={18} /></button>
+            </div>
+          </div>
+          {!liga ? (
+            <div style={{ padding: "0.9rem", overflowY: "auto", fontSize: "0.8rem", lineHeight: 1.5 }}>
+              <p style={{ fontWeight: 700, marginBottom: "0.4rem" }}>Activar el Copiloto (una sola vez, gratis)</p>
+              <ol style={{ paddingLeft: "1.1rem", margin: 0 }}>
+                <li>Entre a <b>aistudio.google.com/apikey</b> con la cuenta de la escuela y presione <b>Crear clave de API</b>. Cópiela.</li>
+                <li>Entre a <b>script.google.com</b> → <b>Nuevo proyecto</b> y llámelo "Copiloto Amado Nervo".</li>
+                <li>Borre lo que trae y pegue el código del Copiloto (se lo da Claude, o está en GitHub en <i>herramientas/copiloto-apps-script.gs</i>). Guarde.</li>
+                <li>Engrane <b>Configuración del proyecto</b> → <b>Propiedades del script</b> → Agregar: <b>GEMINI_API_KEY</b> = su clave.</li>
+                <li><b>Implementar</b> → <b>Nueva implementación</b> → <b>Aplicación web</b> · Ejecutar como: <b>Yo</b> · Acceso: <b>Cualquier usuario</b>. Autorice.</li>
+                <li>Copie la liga que termina en <b>/exec</b> y péguela aquí:</li>
+              </ol>
+              <input className="campo mt-2" placeholder="https://script.google.com/macros/s/..../exec" value={ligaNueva} onChange={(e) => setLigaNueva(e.target.value)} />
+              <button className="btn-primario mt-2" onClick={probarLiga}>Conectar Copiloto</button>
+              {estadoLiga && <p style={{ marginTop: "0.5rem", color: estadoLiga === "Probando…" ? "inherit" : "#b00020" }}>{estadoLiga}</p>}
+              <p style={{ marginTop: "0.6rem", opacity: 0.65, fontSize: "0.72rem" }}>La clave queda guardada solo en su script de Google, no en esta página. Esta liga se guarda en este dispositivo (en cada computadora o celular se pega una vez).</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ flex: 1, overflowY: "auto", padding: "0.7rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {mensajes.length === 0 && (
+                  <div style={{ fontSize: "0.78rem" }}>
+                    <p style={{ opacity: 0.7, marginBottom: "0.5rem" }}>¿En qué le ayudo? Puede escribir lo que necesite o elegir una idea:</p>
+                    <div className="flex flex-col gap-1.5">
+                      {SUGERENCIAS_COPILOTO.map(([t, q]) => (
+                        <button key={t} className="btn-secundario" style={{ fontSize: "0.75rem", justifyContent: "flex-start", textAlign: "left" }}
+                          onClick={() => { if (t === "Mejorar lo de pantalla") { setUsarPantalla(true); setTimeout(() => enviar(q), 0); } else if (q.endsWith(": ")) setEntrada(q); else enviar(q); }}>{t}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {mensajes.map((m, i) => (
+                  <div key={i} style={{ alignSelf: m.rol === "yo" ? "flex-end" : "flex-start", maxWidth: "92%", background: m.rol === "yo" ? "var(--azul-profundo)" : "#fff", color: m.rol === "yo" ? "#fff" : "inherit", border: m.rol === "yo" ? "none" : "1px solid var(--linea)", borderRadius: "12px", padding: "0.5rem 0.7rem", fontSize: "0.8rem", lineHeight: 1.45 }}>
+                    <div dangerouslySetInnerHTML={{ __html: textoIAaHTML(m.texto) }} />
+                    {m.rol === "ia" && !m.texto.startsWith("⚠") && <button onClick={() => copiar(m.texto.replace(/\*\*/g, ""))} style={{ marginTop: "0.35rem", fontSize: "0.68rem", background: "none", border: "1px solid var(--linea)", borderRadius: "6px", padding: "0.15rem 0.45rem", cursor: "pointer" }}>Copiar</button>}
+                  </div>
+                ))}
+                {cargando && <div style={{ fontSize: "0.78rem", opacity: 0.6 }}>Pensando…</div>}
+                <div ref={fin} />
+              </div>
+              <div style={{ borderTop: "1px solid var(--linea)", padding: "0.5rem" }}>
+                <label style={{ display: "flex", gap: "0.35rem", alignItems: "flex-start", fontSize: "0.68rem", opacity: 0.8, marginBottom: "0.35rem" }}>
+                  <input type="checkbox" checked={usarPantalla} onChange={(e) => setUsarPantalla(e.target.checked)} style={{ marginTop: "2px" }} />
+                  <span>Usar lo que tengo en pantalla ({pestana}). Úselo con documentos (PIC, oficios), no con fichas de alumnos: lo que se ve en pantalla se envía a Google.</span>
+                </label>
+                <div className="flex gap-1.5">
+                  <textarea className="campo" rows={2} style={{ flex: 1, fontSize: "0.8rem", resize: "none" }} placeholder="Escriba su pregunta…" value={entrada}
+                    onChange={(e) => setEntrada(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }} />
+                  <button className="btn-primario" onClick={() => enviar()} disabled={cargando || !entrada.trim()} style={{ alignSelf: "stretch" }}>Enviar</button>
+                </div>
+                <div style={{ fontSize: "0.62rem", opacity: 0.55, marginTop: "0.3rem" }}>No escriba CURP, teléfonos ni datos personales. <a href="#" onClick={(e) => { e.preventDefault(); try { localStorage.removeItem(CLAVE_LIGA_IA); } catch (x) {} setLiga(""); }}>Cambiar liga</a></div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
 
 window.montarControlEscolar = function () {
   const raiz = ReactDOM.createRoot(document.getElementById("root"));
