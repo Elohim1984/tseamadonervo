@@ -25401,6 +25401,22 @@ function Copiloto({ alumnos, pestana, usuario }) {
   const [convId, setConvId] = useState(() => { try { return sessionStorage.getItem("copiloto:convId") || ""; } catch (e) { return ""; } });
   const [historial, setHistorial] = useState(null);
   const [borrandoId, setBorrandoId] = useState("");
+  const [editandoId, setEditandoId] = useState("");
+  const [tituloNuevo, setTituloNuevo] = useState("");
+  const [borrandoTodo, setBorrandoTodo] = useState(false);
+  const [tituloConv, setTituloConv] = useState(() => { try { return sessionStorage.getItem("copiloto:titulo") || ""; } catch (e) { return ""; } });
+  useEffect(() => { try { sessionStorage.setItem("copiloto:titulo", tituloConv); } catch (e) {} }, [tituloConv]);
+  const renombrar = async (c) => {
+    const t = tituloNuevo.trim().slice(0, 80);
+    if (!t) { setEditandoId(""); return; }
+    await setStorage("ia:conv:" + c.id, { ...c, titulo: t, tituloManual: true });
+    if (c.id === convId) setTituloConv(t);
+    setEditandoId(""); cargarHistorial();
+  };
+  const borrarTodo = async () => {
+    for (const c of historial || []) await borrarStorage("ia:conv:" + c.id);
+    setBorrandoTodo(false); nuevaConversacion(); cargarHistorial();
+  };
   useEffect(() => { getStorage("ia:notas", "").then((n) => { setNotas(n || ""); setNotasGuardadas(n || ""); }); }, []);
   useEffect(() => { try { sessionStorage.setItem("copiloto:convId", convId); } catch (e) {} }, [convId]);
   const guardarNotas = async () => {
@@ -25418,11 +25434,11 @@ function Copiloto({ alumnos, pestana, usuario }) {
     // Cada celda de la Hoja admite ~50,000 caracteres: se guardan los mensajes más recientes que quepan.
     let lista = msgs.slice(-30).map((m) => ({ rol: m.rol, texto: String(m.texto).slice(0, 8000) }));
     const primera = (msgs.find((m) => m.rol === "yo") || {}).texto || "Conversación";
-    let reg = { id, titulo: primera.slice(0, 70), fecha: new Date().toISOString(), mensajes: lista };
+    let reg = { id, titulo: tituloConv || primera.slice(0, 70), tituloManual: !!tituloConv, fecha: new Date().toISOString(), mensajes: lista };
     while (JSON.stringify(reg).length > 45000 && reg.mensajes.length > 2) reg = { ...reg, mensajes: reg.mensajes.slice(2) };
     setStorage("ia:conv:" + id, reg);
   };
-  const nuevaConversacion = () => { setMensajes([]); setConvId(""); setVista("chat"); };
+  const nuevaConversacion = () => { setMensajes([]); setConvId(""); setTituloConv(""); setVista("chat"); };
   const fin = useRef(null);
   useEffect(() => { document.body.classList.toggle("copiloto-abierto", abierto); return () => document.body.classList.remove("copiloto-abierto"); }, [abierto]);
   useEffect(() => { try { sessionStorage.setItem("copiloto:mensajes", JSON.stringify(mensajes.slice(-30))); } catch (e) {} if (fin.current) fin.current.scrollIntoView({ block: "end" }); }, [mensajes, abierto]);
@@ -25559,16 +25575,35 @@ function Copiloto({ alumnos, pestana, usuario }) {
               <div style={{ fontWeight: 700 }}>🕘 Conversaciones guardadas</div>
               {historial === null && <div style={{ opacity: 0.6 }}>Cargando…</div>}
               {historial && historial.length === 0 && <div style={{ opacity: 0.6 }}>Todavía no hay conversaciones guardadas. Se guardan solas al recibir cada respuesta.</div>}
+              {historial && historial.length > 0 && (
+                <div style={{ fontSize: "0.72rem", opacity: 0.85 }}>
+                  {historial.length} conversación(es) ·{" "}
+                  {borrandoTodo
+                    ? <span>¿Borrar <b>todas</b>? No se pueden recuperar. <a href="#" style={{ color: "#b00020" }} onClick={(e) => { e.preventDefault(); borrarTodo(); }}>Sí, borrar todas</a> · <a href="#" onClick={(e) => { e.preventDefault(); setBorrandoTodo(false); }}>No</a></span>
+                    : <a href="#" style={{ color: "#b00020" }} onClick={(e) => { e.preventDefault(); setBorrandoTodo(true); }}>🗑 Borrar todo el historial</a>}
+                </div>
+              )}
               {historial && historial.map((c) => (
                 <div key={c.id} style={{ border: "1px solid var(--linea)", borderRadius: "8px", padding: "0.45rem 0.6rem", background: c.id === convId ? "rgba(31,78,121,0.08)" : "#fff" }}>
-                  <button onClick={() => { setMensajes(c.mensajes); setConvId(c.id); setVista("chat"); }} style={{ background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", width: "100%" }}>
+                  {editandoId === c.id ? (
+                    <div className="flex gap-1.5 items-center" style={{ marginBottom: "0.2rem" }}>
+                      <input className="campo" autoFocus value={tituloNuevo} maxLength={80} onChange={(e) => setTituloNuevo(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") renombrar(c); if (e.key === "Escape") setEditandoId(""); }} style={{ fontSize: "0.8rem", flex: 1 }} placeholder="Escriba un título" />
+                      <button className="btn-primario" style={{ fontSize: "0.7rem", padding: "0.3rem 0.6rem" }} onClick={() => renombrar(c)}>Guardar</button>
+                    </div>
+                  ) : null}
+                  <button onClick={() => { setMensajes(c.mensajes); setConvId(c.id); setTituloConv(c.tituloManual ? c.titulo : ""); setVista("chat"); }} style={{ background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", width: "100%", display: editandoId === c.id ? "none" : "block" }}>
                     <div style={{ fontWeight: 600 }}>{c.titulo}</div>
                     <div style={{ fontSize: "0.68rem", opacity: 0.6 }}>{new Date(c.fecha).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {c.mensajes.length} mensajes</div>
                   </button>
                   <div style={{ marginTop: "0.25rem" }}>
                     {borrandoId === c.id
                       ? <span style={{ fontSize: "0.7rem" }}>¿Borrar? <a href="#" onClick={async (e) => { e.preventDefault(); await borrarStorage("ia:conv:" + c.id); if (c.id === convId) nuevaConversacion(); setBorrandoId(""); cargarHistorial(); }}>Sí, borrar</a> · <a href="#" onClick={(e) => { e.preventDefault(); setBorrandoId(""); }}>No</a></span>
-                      : <a href="#" style={{ fontSize: "0.7rem", opacity: 0.7 }} onClick={(e) => { e.preventDefault(); setBorrandoId(c.id); }}>Borrar</a>}
+                      : <span style={{ fontSize: "0.7rem" }}>
+                          <a href="#" style={{ opacity: 0.8 }} onClick={(e) => { e.preventDefault(); setTituloNuevo(c.titulo); setEditandoId(c.id); }}>✏️ Poner título</a>
+                          <span style={{ opacity: 0.4 }}> · </span>
+                          <a href="#" style={{ opacity: 0.8, color: "#b00020" }} onClick={(e) => { e.preventDefault(); setBorrandoId(c.id); }}>🗑 Borrar</a>
+                        </span>}
                   </div>
                 </div>
               ))}
