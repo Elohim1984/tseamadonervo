@@ -24891,6 +24891,18 @@ function App() {
   const setEstilosAprendizaje = (v) => guardarListaPorId("estilosvak:", setEstilosAprendizajeState, estilosAprendizaje, v);
 
   const estilos = `
+  /* Adornos de temporada */
+  .adorno-caida { position: absolute; top: 2.2rem; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .adorno-caida span { position: absolute; top: -1.5rem; opacity: 0.85; animation-name: adorno-cae; animation-timing-function: linear; animation-iteration-count: infinite; }
+  @keyframes adorno-cae { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(7rem) rotate(200deg); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .adorno-caida { display: none; } }
+  .adorno-guirnalda { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 0.6rem; flex-wrap: wrap; margin: -0.6rem -1rem 0.6rem; padding: 0.25rem 2rem 0.35rem; background: rgba(255,255,255,0.08); border-bottom: 1px dashed rgba(255,255,255,0.25); font-size: 0.8rem; text-align: center; }
+  .adorno-iconos { letter-spacing: 0.15rem; font-size: 1rem; }
+  .adorno-mensaje { font-weight: 700; letter-spacing: 0.02em; }
+  .adorno-guirnalda button { position: absolute; right: 0.4rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: rgba(255,255,255,0.6); font-size: 1rem; cursor: pointer; }
+  header > .flex { position: relative; z-index: 1; }
+  @media (max-width: 480px) { .adorno-iconos:last-of-type { display: none; } }
+
   body.copiloto-abierto #volver-portal { display: none !important; }
 
   @media print { .no-imprimir { display: none !important; } }
@@ -25122,7 +25134,8 @@ function App() {
         </div>
       )}
 
-      <header className="px-4 pt-5 pb-3" style={{ background: "var(--azul-profundo)", color: "#fff" }}>
+      <header className="px-4 pt-5 pb-3" style={{ background: "var(--azul-profundo)", color: "#fff", position: "relative", overflow: "hidden" }}>
+        <AdornoTemporada />
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img src={ESCUDO_ESCUELA} alt="Escudo de la escuela" className="escudo-header" />
@@ -25527,6 +25540,56 @@ function Copiloto({ alumnos, pestana, usuario }) {
         </div>
       )}
     </>
+  );
+}
+
+
+/* ---------- Adornos de temporada (cambian solos según la fecha) ---------- */
+// Cada tema: desde/hasta en formato MM-DD (inclusive). El primero que coincida con la fecha de hoy se usa.
+// Para ver uno antes de tiempo: agregar ?tema=<id> a la dirección (ej. ?tema=navidad).
+const TEMAS_TEMPORADA = [
+  { id: "anionuevo", desde: "12-31", hasta: "01-02", iconos: ["🎆", "🥂", "🎉", "✨", "🕛"], mensaje: () => `¡Feliz Año Nuevo ${new Date().getMonth() === 11 ? new Date().getFullYear() + 1 : new Date().getFullYear()}!`, cae: ["✨", "🎊"] },
+  { id: "reyes", desde: "01-03", hasta: "01-06", iconos: ["👑", "🐪", "🎁", "⭐", "🍞"], mensaje: () => "¡Feliz Día de Reyes!", cae: ["⭐"] },
+  { id: "navidad", desde: "12-01", hasta: "12-30", iconos: ["🎄", "🦌", "🎁", "⛄", "🎅", "🔔", "🕯️"], mensaje: () => "¡Feliz Navidad y felices fiestas!", cae: ["❄️", "❄", "✻"] },
+  { id: "guadalupe", desde: "12-11", hasta: "12-12", iconos: ["🌹", "🕯️", "🌹"], mensaje: () => "12 de diciembre · Día de la Virgen de Guadalupe", cae: ["🌹"] },
+  { id: "muertos", desde: "10-28", hasta: "11-02", iconos: ["💀", "🌼", "🕯️", "🍞", "🌼"], mensaje: () => "Día de Muertos · tradición que nos une", cae: ["🌼"] },
+  { id: "revolucion", desde: "11-18", hasta: "11-20", iconos: ["🇲🇽", "🥁", "🎺"], mensaje: () => "20 de noviembre · Aniversario de la Revolución Mexicana", cae: [] },
+  { id: "amor", desde: "02-13", hasta: "02-14", iconos: ["💌", "🤝", "💛"], mensaje: () => "Día del Amor y la Amistad", cae: ["💛"] },
+  { id: "bandera", desde: "02-24", hasta: "02-24", iconos: ["🇲🇽"], mensaje: () => "24 de febrero · Día de la Bandera", cae: [] },
+  { id: "primavera", desde: "03-20", hasta: "03-21", iconos: ["🌸", "🌼", "🦋"], mensaje: () => "¡Bienvenida la primavera!", cae: ["🌸"] },
+  { id: "nino", desde: "04-29", hasta: "04-30", iconos: ["🎈", "🪁", "🧸", "🎈"], mensaje: () => "¡Feliz Día de la Niña y del Niño!", cae: ["🎈"] },
+  { id: "mama", desde: "05-09", hasta: "05-10", iconos: ["💐", "🌷", "💐"], mensaje: () => "¡Feliz Día de las Madres!", cae: ["🌷"] },
+  { id: "maestro", desde: "05-14", hasta: "05-15", iconos: ["🍎", "📚", "✏️"], mensaje: () => "¡Feliz Día de la Maestra y del Maestro!", cae: [] },
+  { id: "papa", desde: "06-15", hasta: "06-21", iconos: ["👔", "🛠️", "💙"], mensaje: () => "¡Feliz Día del Padre!", cae: [], soloTercerDomingo: true },
+  { id: "fin", desde: "07-10", hasta: "07-17", iconos: ["🎓", "🏅", "🎉"], mensaje: () => "¡Felicidades por un ciclo escolar más!", cae: ["🎉"] },
+  { id: "patrias", desde: "09-13", hasta: "09-16", iconos: ["🇲🇽", "🌶️", "🎺", "🇲🇽"], mensaje: () => "¡Viva México! · Fiestas Patrias", cae: [] },
+];
+function temaDeHoy() {
+  try { const q = new URLSearchParams(location.search).get("tema"); if (q) return TEMAS_TEMPORADA.find((t) => t.id === q) || null; } catch (e) {}
+  const h = new Date(); const md = String(h.getMonth() + 1).padStart(2, "0") + "-" + String(h.getDate()).padStart(2, "0");
+  const dentro = (t) => (t.desde <= t.hasta ? md >= t.desde && md <= t.hasta : md >= t.desde || md <= t.hasta);
+  // los temas de un solo día o muy cortos ganan a los largos (ej. 12 de diciembre dentro de Navidad)
+  const candidatos = TEMAS_TEMPORADA.filter(dentro).filter((t) => !t.soloTercerDomingo || (h.getDay() === 0 && h.getDate() >= 15 && h.getDate() <= 21));
+  candidatos.sort((a, b) => (a.id === "navidad") - (b.id === "navidad"));
+  return candidatos[0] || null;
+}
+function AdornoTemporada() {
+  const [tema] = useState(temaDeHoy);
+  const [oculto, setOculto] = useState(() => { try { return tema && localStorage.getItem("adorno:oculto") === tema.id + new Date().getFullYear(); } catch (e) { return false; } });
+  if (!tema || oculto) return null;
+  const copos = (tema.cae || []).length ? Array.from({ length: 14 }, (_, i) => ({ c: tema.cae[i % tema.cae.length], l: (i * 7.3 + 3) % 100, d: 6 + (i % 5) * 1.7, r: (i % 7) * 0.9, t: 0.7 + (i % 3) * 0.25 })) : [];
+  return (
+    <div className="adorno-temporada no-imprimir" aria-hidden="false">
+      <div className="adorno-caida" aria-hidden="true">
+        {copos.map((k, i) => <span key={i} style={{ left: k.l + "%", animationDuration: k.d + "s", animationDelay: k.r + "s", fontSize: k.t + "rem" }}>{k.c}</span>)}
+      </div>
+      <div className="adorno-guirnalda">
+        <span className="adorno-iconos" aria-hidden="true">{tema.iconos.join(" ")}</span>
+        <span className="adorno-mensaje">{tema.mensaje()}</span>
+        <span className="adorno-iconos" aria-hidden="true">{[...tema.iconos].reverse().join(" ")}</span>
+        <button title="Ocultar adornos" onClick={() => { try { localStorage.setItem("adorno:oculto", tema.id + new Date().getFullYear()); } catch (e) {} setOculto(true); }}>×</button>
+      </div>
+    </div>
   );
 }
 
