@@ -16018,7 +16018,8 @@ function htmlSeguimientoVivo(v) {
 }
 
 const GRADOS_VIVO = ["1", "2", "3"];
-const NOMBRE_GRADO_VIVO = { "1": "1er grado", "2": "2° grado", "3": "3er grado" };
+const NOMBRE_GRADO_VIVO = { general: "General — la escuela (1° A, 2° A y 3° A)", "1": "1er grado", "2": "2° grado", "3": "3er grado" };
+const GRADOS_CON_GENERAL_VIVO = ["general", "1", "2", "3"];
 
 // Valor de una clave, con el prellenado que también muestra el formulario.
 function valorVivo(mapa, clave) {
@@ -16041,17 +16042,15 @@ const GENERADORES_VIVO = {
   },
   "pic-etapas23": (mapa) => {
     let html = h1Vivo("Situación problemática y propuesta de solución (Etapas 2 y 3)");
-    const gen = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picSeleccion, valorVivo(mapa, "pic:general:seleccion"));
-    html += h2Vivo("Planteamiento general — los tres grados") + (gen || pendienteVivo("Pendiente de capturar en PIC paso a paso → Etapa 2 → General."));
-    GRADOS_VIVO.forEach((g) => {
+    GRADOS_CON_GENERAL_VIVO.forEach((g) => {
       const sel = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picSeleccion, valorVivo(mapa, `pic:${g}:seleccion`));
       const e2 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Principal, valorVivo(mapa, `pic:${g}:etapa2:principal`));
       const e3 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa3Principal, valorVivo(mapa, `pic:${g}:etapa3:principal`));
       const s2 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Secundaria, valorVivo(mapa, `pic:${g}:etapa2`));
       const s3 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa3Secundaria, valorVivo(mapa, `pic:${g}:etapa3`));
       html += h2Vivo(NOMBRE_GRADO_VIVO[g]);
-      html += h3Vivo("Etapa 2 — Situación problemática") + (e2 ? e2.replace(h3Vivo(limpiarEtiquetaVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Principal[0].etiqueta)), "") : pendienteVivo("Pendiente de capturar."));
       if (sel) html += h3Vivo("Selección y planteamiento del problema") + sel;
+      html += h3Vivo("Etapa 2 — Situación problemática") + (e2 ? e2.replace(h3Vivo(limpiarEtiquetaVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Principal[0].etiqueta)), "") : pendienteVivo("Pendiente de capturar."));
       html += h3Vivo("Etapa 3 — Posible acción con lo aprendido") + (e3 ? e3.replace(/^<p[^>]*><b>[^<]*<\/b><\/p>/, "") : pendienteVivo("Pendiente de capturar."));
       if (s2 || s3) html += h3Vivo("Problemática secundaria (opcional)") + s2 + s3;
     });
@@ -16059,7 +16058,7 @@ const GENERADORES_VIVO = {
   },
   "pic-etapas47": (mapa) => {
     let html = "";
-    GRADOS_VIVO.forEach((g) => {
+    GRADOS_CON_GENERAL_VIVO.forEach((g) => {
       const v = (k) => valorVivo(mapa, `pic:${g}:${k}`);
       const partes = [
         ["Etapa 4 — Aportación a la comunidad", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa4Aportacion, v("etapa4:aportacion"))],
@@ -16947,7 +16946,7 @@ async function aplicarPICActualizado2026() {
 const ETAPAS_PIC = [
   { n: 0, t: "Introducción y contexto", claves: ["portada"] },
   { n: 1, t: "Lectura de la realidad", claves: ["etapa1"] },
-  { n: 2, t: "Situación problemática", claves: ["G:etapa2:principal", "G:seleccion", "general:seleccion"] },
+  { n: 2, t: "Situación problemática", claves: ["G:etapa2:principal", "G:seleccion"] },
   { n: 3, t: "Horizontes de expectativas", claves: ["G:etapa3:principal"] },
   { n: 4, t: "Actividades para la solución", claves: ["G:etapa4:aportacion", "G:etapa4:propuestas", "G:etapa4:cadaunoletoca"] },
   { n: 5, t: "Localización de información", claves: ["G:etapa5:secuencia", "etapa5:cronograma"] },
@@ -16972,7 +16971,7 @@ function PasosPIC({ etapa, setEtapa }) {
     if (!datos) return null;
     let total = 0, listos = 0;
     e.claves.forEach((c) => {
-      const lista = c.startsWith("G:") ? ["1", "2", "3"].map((g) => g + ":" + c.slice(2)) : [c];
+      const lista = c.startsWith("G:") ? ["general", "1", "2", "3"].map((g) => g + ":" + c.slice(2)) : [c];
       lista.forEach((k) => { total++; const v = k in datos ? datos[k] : prePIC("pic:" + k); if (tieneContenidoPIC(v)) listos++; });
     });
     return { total, listos };
@@ -16991,14 +16990,64 @@ function PasosPIC({ etapa, setEtapa }) {
         {ETAPAS_PIC.map((e) => {
           const a = avance(e); const lista = a && a.listos === a.total; const activa = etapa === e.n;
           return (
-            <button key={e.n} onClick={() => setEtapa(e.n)} className={`chip-grado ${activa ? "activo" : ""}`} style={{ fontSize: "0.72rem", textAlign: "left", lineHeight: 1.2 }} title={a ? `${a.listos} de ${a.total} apartados con contenido (los 3 grados)` : ""}>
+            <button key={e.n} onClick={() => setEtapa(e.n)} className={`chip-grado ${activa ? "activo" : ""}`} style={{ fontSize: "0.72rem", textAlign: "left", lineHeight: 1.2 }} title={a ? `${a.listos} de ${a.total} apartados con contenido (General + los 3 grados)` : ""}>
               <b>{e.n === 0 ? "📘" : lista ? "✓" : e.n}</b> {e.t}{a && !lista ? <span style={{ opacity: 0.6 }}> · {a.listos}/{a.total}</span> : null}
             </button>
           );
         })}
         <button onClick={() => setEtapa("final")} className={`chip-grado ${etapa === "final" ? "activo" : ""}`} style={{ fontSize: "0.72rem", fontWeight: 700 }}>📄 Documento final</button>
       </div>
-      {etapa !== "final" && <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.6rem", marginBottom: 0 }}>{etapa === 0 ? "Introducción y contexto" : `Etapa ${etapa} de 7`} · lo que escriba se guarda solo y pasa al documento final automáticamente. Las etapas 2 a 7 se llenan por grado (1°, 2° y 3°).</p>}
+      {etapa !== "final" && <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.6rem", marginBottom: 0 }}>{etapa === 0 ? "Introducción y contexto" : `Etapa ${etapa} de 7`} · lo que escriba se guarda solo y pasa al documento final automáticamente. Las etapas 2 a 7 se llenan en General (la escuela) y por grupo (1° A, 2° A y 3° A).</p>}
+    </div>
+  );
+}
+
+// En la pestaña "General" del PIC: lo que ya capturó cada grado en esta etapa, para integrarlo.
+const CLAVES_ETAPA_PIC = {
+  2: [["etapa2:principal", "etapa2Principal"], ["seleccion", "picSeleccion"]],
+  3: [["etapa3:principal", "etapa3Principal"]],
+  4: [["etapa4:aportacion", "etapa4Aportacion"], ["etapa4:propuestas", "etapa4Propuestas"], ["etapa4:cadaunoletoca", "etapa4CadaUno"]],
+  5: [["etapa5:secuencia", "etapa5Secuencia"]],
+  6: [["etapa6:infomano", "etapa6InfoMano"]],
+  7: [["etapa7:integrar", "etapa7Integrar"]],
+};
+function ResumenGradosPIC({ etapa }) {
+  const [datos, setDatos] = useState(null);
+  const [abierto, setAbierto] = useState(true);
+  useEffect(() => {
+    let vivo = true;
+    listarStorageObjeto("pic:").then((d) => { if (vivo) setDatos(d || {}); });
+    const quitar = escucharDatosVivos((k, v) => { if (String(k).startsWith("pic:")) setDatos((p) => ({ ...(p || {}), [String(k).slice(4)]: v })); });
+    return () => { vivo = false; quitar(); };
+  }, []);
+  const claves = CLAVES_ETAPA_PIC[etapa] || [];
+  if (!claves.length) return null;
+  const texto = (g) => claves.map(([k, c]) => {
+    const v = datos && (("" + g + ":" + k) in datos ? datos[g + ":" + k] : prePIC("pic:" + g + ":" + k));
+    return (CAMPOS_CAPTURA_PLANEACION[c] || []).map((f) => (v && v[f.key] && String(v[f.key]).trim() ? { e: limpiarEtiquetaVivo(f.etiqueta), t: String(v[f.key]) } : null)).filter(Boolean);
+  }).flat();
+  return (
+    <div className="card" style={{ borderColor: "var(--verde, #2e7d32)", background: "rgba(46,125,50,0.05)" }}>
+      <button onClick={() => setAbierto(!abierto)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", width: "100%", textAlign: "left" }}>
+        <div className="font-display" style={{ fontWeight: 700, fontSize: "0.88rem" }}>{abierto ? "▾" : "▸"} Lo que capturó cada grado en esta etapa (para integrarlo en lo General)</div>
+      </button>
+      {abierto && (
+        <div className="grid gap-2 mt-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+          {["1", "2", "3"].map((g) => {
+            const items = datos ? texto(g) : null;
+            return (
+              <div key={g} style={{ border: "1px solid var(--linea)", borderRadius: "8px", padding: "0.55rem", background: "#fff", maxHeight: "260px", overflowY: "auto" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.8rem", marginBottom: "0.3rem" }}>{g}° A</div>
+                {!items && <div className="text-sm" style={{ opacity: 0.6 }}>Cargando…</div>}
+                {items && !items.length && <div className="text-sm" style={{ opacity: 0.6 }}>Sin capturar todavía.</div>}
+                {items && items.map((it, i) => (
+                  <div key={i} style={{ fontSize: "0.74rem", marginBottom: "0.35rem" }}><b style={{ opacity: 0.75 }}>{it.e}:</b> {it.t.length > 260 ? it.t.slice(0, 260) + "…" : it.t}</div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -17044,7 +17093,10 @@ function AvisoDocumentoVivo({ documento, botones }) {
 
 function ProgramaAnaliticoPIC({ onStamp }) {
   const [subTab, setSubTab] = useState("etapas");
-  const [grado, setGrado] = useState("1");
+  const [grado, setGrado] = useState("general");
+  // "General" solo existe en PIC paso a paso; en las demás pestañas se usa un grado.
+  useEffect(() => { if (subTab !== "etapas" && grado === "general") setGrado("1"); }, [subTab]);
+  const etqGrado = grado === "general" ? "General (los tres grados)" : `${grado}° A`;
   const [imprimiendo, setImprimiendo] = useState(false);
   const [datosImpresion, setDatosImpresion] = useState(null);
   const [cualDocumento, setCualDocumento] = useState("pa");
@@ -17207,19 +17259,20 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           </>)}
           {etapaPIC >= 2 && (<>
           <div className="flex gap-2 flex-wrap" style={{ marginTop: "0.25rem" }}>
-            {["1", "2", "3"].map((g) => (
-              <button key={g} onClick={() => setGrado(g)} className={`chip-grado ${grado === g ? "activo" : ""}`}>
-                {g}° grado
+            {["general", "1", "2", "3"].map((g) => (
+              <button key={g} onClick={() => setGrado(g)} className={`chip-grado ${grado === g ? "activo" : ""}`} style={g === "general" ? { fontWeight: 800 } : undefined}>
+                {g === "general" ? "General" : `${g}° A`}
               </button>
             ))}
           </div>
-          <p className="text-sm" style={{ opacity: 0.55, marginTop: "-0.6rem" }}>Elige el grado — controla tanto la problemática principal (abajo) como la secundaria opcional (más abajo).</p>
+          {grado === "general" && <ResumenGradosPIC etapa={etapaPIC} />}
+          <p className="text-sm" style={{ opacity: 0.55, marginTop: "-0.6rem" }}><b>General</b> = la escuela completa (integra los tres grados) · <b>1° A, 2° A, 3° A</b> = cada grupo. En el documento final va primero lo General y después cada grado.</p>
           </>)}
 
           {etapaPIC === 2 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
-              Etapa 2 — Situación problemática <span style={{ opacity: 0.5, fontWeight: 400 }}>· "¡Ese es el problema!" — proyecto principal · {grado}° grado</span>
+              Etapa 2 — Situación problemática <span style={{ opacity: 0.5, fontWeight: 400 }}>· "¡Ese es el problema!" — proyecto principal · {etqGrado}</span>
             </div>
             <p className="text-sm" style={{ opacity: 0.6 }}>
               Con base en la Etapa 1 y en los resultados del EIA Fase 6 de este grado (ver tabla arriba), el colectivo reconoce la situación problemática académica y las causas que la provocan, la redacta en un solo párrafo —clara, contextualizada y que no anticipe una solución única— y la valida con los 7 criterios siguientes.
@@ -17243,7 +17296,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa2-principal-${grado}`}
             claveStorage={`pic:${grado}:etapa2:principal`}
-            titulo={`Etapa 2 — Construcción y validación de la problemática principal · ${grado}° grado`}
+            titulo={`Etapa 2 — Construcción y validación de la problemática principal · ${etqGrado}`}
             ayuda="Problemática académica basada en los resultados reales del EIA Fase 6 de este grado (ver tabla arriba)."
             onStamp={onStamp}
             
@@ -17253,29 +17306,19 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`sel-e2-${grado}`}
             claveStorage={`pic:${grado}:seleccion`}
-            titulo={`Selección y planteamiento del problema · ${grado}° grado`}
-            ayuda="Cómo se vive la problemática en este grado. Es el mismo apartado de la pestaña “PIC” (lo que escriba aquí también aparece allá)."
+            titulo={`Selección y planteamiento del problema · ${etqGrado}`}
+            ayuda={grado === "general" ? "Planteamiento común de la escuela (los tres grados). Viene con una propuesta: corríjala o reescríbala." : "Cómo se vive la problemática en este grado. Es el mismo apartado de la pestaña “PIC” (lo que escriba aquí también aparece allá)."}
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.picSeleccion}
           />
 
-          <div className="card" style={{ borderColor: "var(--verde, #2e7d32)", background: "rgba(46,125,50,0.06)" }}>
-            <div className="font-display" style={{ fontWeight: 700, fontSize: "0.88rem" }}>General — los tres grados (1° A, 2° A y 3° A)</div>
-            <p className="text-sm" style={{ opacity: 0.75, marginTop: "0.25rem", marginBottom: 0 }}>Este apartado es uno solo para toda la escuela (no cambia con el grado elegido arriba). Integra lo de cada grado en un planteamiento común del PIC. Viene con una propuesta: corríjala o reescríbala.</p>
-          </div>
-          <FormularioAutoguardado
-            key="sel-e2-general"
-            claveStorage="pic:general:seleccion"
-            titulo="Selección y planteamiento del problema · General (los tres grados)"
-            onStamp={onStamp}
-            campos={CAMPOS_CAPTURA_PLANEACION.picSeleccion}
-          />
+
 
           </>)}
           {etapaPIC === 3 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
-              Etapa 3 — Horizontes de expectativas <span style={{ opacity: 0.5, fontWeight: 400 }}>· "¡Una propuesta de solución!" — proyecto principal · {grado}° grado</span>
+              Etapa 3 — Horizontes de expectativas <span style={{ opacity: 0.5, fontWeight: 400 }}>· "¡Una propuesta de solución!" — proyecto principal · {etqGrado}</span>
             </div>
             <p className="text-sm" style={{ opacity: 0.6 }}>
               Propongan una forma de solucionar la problemática académica de este grado (ver Etapa 2 arriba), a partir de sus saberes personales y comunitarios.
@@ -17285,7 +17328,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa3-principal-${grado}`}
             claveStorage={`pic:${grado}:etapa3:principal`}
-            titulo={`Etapa 3 — Posible acción con lo aprendido · ${grado}° grado`}
+            titulo={`Etapa 3 — Posible acción con lo aprendido · ${etqGrado}`}
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.etapa3Principal}
           />
@@ -17294,7 +17337,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           {etapaPIC === 2 && (<>
           <div className="card" style={{ borderColor: "var(--borde)", opacity: 0.85 }}>
             <p className="text-sm" style={{ opacity: 0.65 }}>
-              Lo de aquí abajo (diagnóstico de basura/salud) queda como <b>trabajo secundario y opcional</b> para {grado}° grado — el proyecto principal de este ciclo es el académico de arriba, basado en el EIA. Solo se usa si el grado decide trabajar, además, una problemática comunitaria propia.
+              Lo de aquí abajo (diagnóstico de basura/salud) queda como <b>trabajo secundario y opcional</b> para {etqGrado} — el proyecto principal de este ciclo es el académico de arriba, basado en el EIA. Solo se usa si el grado decide trabajar, además, una problemática comunitaria propia.
             </p>
           </div>
 
@@ -17305,7 +17348,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa2-${grado}`}
             claveStorage={`pic:${grado}:etapa2`}
-            titulo={`Problemática secundaria (opcional) · ${grado}° grado`}
+            titulo={`Problemática secundaria (opcional) · ${etqGrado}`}
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.etapa2Secundaria}
           />
@@ -17315,7 +17358,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa3-${grado}`}
             claveStorage={`pic:${grado}:etapa3`}
-            titulo={`Posible acción con lo aprendido (secundaria, opcional) · ${grado}° grado`}
+            titulo={`Posible acción con lo aprendido (secundaria, opcional) · ${etqGrado}`}
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.etapa3Secundaria}
           />
@@ -17335,17 +17378,18 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           </div>
 
           <div className="flex gap-2 flex-wrap">
-            {["1", "2", "3"].map((g) => (
-              <button key={g} onClick={() => setGrado(g)} className={`chip-grado ${grado === g ? "activo" : ""}`}>
-                {g}° grado
+            {["general", "1", "2", "3"].map((g) => (
+              <button key={g} onClick={() => setGrado(g)} className={`chip-grado ${grado === g ? "activo" : ""}`} style={g === "general" ? { fontWeight: 800 } : undefined}>
+                {g === "general" ? "General" : `${g}° A`}
               </button>
             ))}
           </div>
+          {grado === "general" && <ResumenGradosPIC etapa={etapaPIC} />}
 
           {etapaPIC === 4 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
-              Etapa 4 — Actividades para la solución <span style={{ opacity: 0.5, fontWeight: 400 }}>· {grado}° grado</span>
+              Etapa 4 — Actividades para la solución <span style={{ opacity: 0.5, fontWeight: 400 }}>· {etqGrado}</span>
             </div>
             <p className="text-sm" style={{ opacity: 0.6 }}>
               Se definen las aportaciones a la comunidad y las propuestas para el bien común, por territorio (Aula → Escuela → Comunidad).
@@ -17355,7 +17399,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa4-aportacion-${grado}`}
             claveStorage={`pic:${grado}:etapa4:aportacion`}
-            titulo={`Aportación a la comunidad · ${grado}° grado`}
+            titulo={`Aportación a la comunidad · ${etqGrado}`}
             ayuda="Por territorio: la problemática acordada, por qué se decidió, y qué situaciones contribuyen a ella."
             onStamp={onStamp}
             
@@ -17365,7 +17409,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa4-propuestas-${grado}`}
             claveStorage={`pic:${grado}:etapa4:propuestas`}
-            titulo={`Propuestas para el bien común · ${grado}° grado`}
+            titulo={`Propuestas para el bien común · ${etqGrado}`}
             ayuda="Igual que arriba, agregando el horizonte de expectativas por territorio."
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.etapa4Propuestas}
@@ -17374,7 +17418,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa4-cadaunoletoca-${grado}`}
             claveStorage={`pic:${grado}:etapa4:cadaunoletoca`}
-            titulo={`A cada uno lo que le toca hacer · ${grado}° grado`}
+            titulo={`A cada uno lo que le toca hacer · ${etqGrado}`}
             ayuda="Por territorio: ideas generales de lo que se busca obtener."
             onStamp={onStamp}
             
@@ -17385,7 +17429,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           {etapaPIC === 5 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
-              Etapa 5 — Localización de información <span style={{ opacity: 0.5, fontWeight: 400 }}>· {grado}° grado</span>
+              Etapa 5 — Localización de información <span style={{ opacity: 0.5, fontWeight: 400 }}>· {etqGrado}</span>
             </div>
             <p className="text-sm" style={{ opacity: 0.6 }}>
               Se define la secuencia de actividades (qué, cómo y cuándo) para localizar información, elaborar las propuestas y presentar las alternativas de solución.
@@ -17395,7 +17439,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa5-secuencia-${grado}`}
             claveStorage={`pic:${grado}:etapa5:secuencia`}
-            titulo={`Definir una secuencia de actividades · ${grado}° grado`}
+            titulo={`Definir una secuencia de actividades · ${etqGrado}`}
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.etapa5Secuencia}
           />
@@ -17412,7 +17456,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           {etapaPIC === 6 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
-              Etapa 6 — Elaboración de alternativas <span style={{ opacity: 0.5, fontWeight: 400 }}>· {grado}° grado</span>
+              Etapa 6 — Elaboración de alternativas <span style={{ opacity: 0.5, fontWeight: 400 }}>· {etqGrado}</span>
             </div>
             <p className="text-sm" style={{ opacity: 0.6 }}>
               Con la información ya localizada, se da seguimiento al avance de la propuesta de solución, territorio por territorio.
@@ -17422,7 +17466,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa6-infomano-${grado}`}
             claveStorage={`pic:${grado}:etapa6:infomano`}
-            titulo={`Con la información en la mano · ${grado}° grado`}
+            titulo={`Con la información en la mano · ${etqGrado}`}
             ayuda="Por territorio: nuestros proyectos, acciones específicas y localización de fuentes de consulta."
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.etapa6InfoMano}
@@ -17431,7 +17475,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa6-seguimiento-${grado}`}
             claveStorage={`pic:${grado}:etapa6:seguimiento`}
-            titulo={`Todos en la misma tarea — seguimiento de avance · ${grado}° grado`}
+            titulo={`Todos en la misma tarea — seguimiento de avance · ${etqGrado}`}
             ayuda="Avance de la propuesta de solución y de las acciones con la comunidad, registrando contratiempos y su solución."
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.etapa6Seguimiento}
@@ -17441,7 +17485,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           {etapaPIC === 7 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
-              Etapa 7 — Presentación <span style={{ opacity: 0.5, fontWeight: 400 }}>· {grado}° grado</span>
+              Etapa 7 — Presentación <span style={{ opacity: 0.5, fontWeight: 400 }}>· {etqGrado}</span>
             </div>
             <p className="text-sm" style={{ opacity: 0.6 }}>
               Se integran las piezas de la propuesta de solución, por territorio, antes de presentarla a la comunidad.
@@ -17451,7 +17495,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa7-integrar-${grado}`}
             claveStorage={`pic:${grado}:etapa7:integrar`}
-            titulo={`La hora de integrar las piezas · ${grado}° grado`}
+            titulo={`La hora de integrar las piezas · ${etqGrado}`}
             ayuda="Por territorio: nuestros proyectos, propuesta de solución, acciones específicas y avance."
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.etapa7Integrar}
