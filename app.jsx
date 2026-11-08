@@ -15304,193 +15304,16 @@ contestar entre 3 y 4 alumnos, a identificar y aplicar antes de
 cerrar el diagnóstico definitivo de este PIC.</i></font></p>
 <!--FIN:pic-contexto-->
 <!--VIVO:pic-etapa1-->
-<h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Problemática</b></font></h1>
-<p style="line-height: 100%; margin-bottom: 0.08in">Los resultados
-oficiales del EIA de Fase 6 (Ejercicios Integradores del
-Aprendizaje, SiRVER) muestran un rezago académico distinto en cada
-grado de la Telesecundaria &quot;Amado Nervo&quot;: en 1er grado,
-Lenguajes es el campo formativo más débil (75.0% de los alumnos en
-nivel &quot;Requiere apoyo&quot;, comprensión y redacción); en 2° y
-3er grado, es Saberes y Pensamiento Científico (75.0% y 58.3% en
-&quot;Requiere apoyo&quot;, razonamiento lógico-matemático). Esta es
-la problemática principal del PIC de este ciclo, una por grado.</p>
-<p style="line-height: 100%; margin-bottom: 0.08in">De manera
-secundaria y opcional, según el Diagnóstico Integral 2026, lo que
-los propios alumnos identifican como los problemas más urgentes de
-su comunidad (de estas cinco, el colectivo ya descartó Agua,
-Alumbrado y Calles como candidatas para el PIC; quedan Manejo de
-basura y Servicios de salud, a elegir por grado):</p>
-<table width="613" cellpadding="4" cellspacing="0">
-	<col width="218"/>
-	<col width="99"/>
-	<col width="85"/>
-	<col width="85"/>
-	<col width="84"/>
-	<tr>
-		<td width="218" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>Problemática identificada</b></font></p>
-		</td>
-		<td width="99" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>Total (n=28)</b></font></p>
-		</td>
-		<td width="85" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>1° A</b></font></p>
-		</td>
-		<td width="85" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>2° A</b></font></p>
-		</td>
-		<td width="84" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>3° A</b></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="218" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Agua /
-			escasez de agua</span></font></p>
-		</td>
-		<td width="99" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">10</span></font></p>
-		</td>
-		<td width="85" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">1</span></font></p>
-		</td>
-		<td width="85" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">2</span></font></p>
-		</td>
-		<td width="84" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">7</span></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="218" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Manejo de
-			basura y residuos</span></font></p>
-		</td>
-		<td width="99" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">10</span></font></p>
-		</td>
-		<td width="85" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">3</span></font></p>
-		</td>
-		<td width="85" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">4</span></font></p>
-		</td>
-		<td width="84" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">3</span></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="218" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Alumbrado
-			público / electricidad</span></font></p>
-		</td>
-		<td width="99" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">4</span></font></p>
-		</td>
-		<td width="85" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">1</span></font></p>
-		</td>
-		<td width="85" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">0</span></font></p>
-		</td>
-		<td width="84" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">3</span></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="218" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Calles /
-			infraestructura vial</span></font></p>
-		</td>
-		<td width="99" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">2</span></font></p>
-		</td>
-		<td width="85" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">1</span></font></p>
-		</td>
-		<td width="85" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">0</span></font></p>
-		</td>
-		<td width="84" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">1</span></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="218" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Servicios
-			de salud</span></font></p>
-		</td>
-		<td width="99" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">1</span></font></p>
-		</td>
-		<td width="85" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">0</span></font></p>
-		</td>
-		<td width="85" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">1</span></font></p>
-		</td>
-		<td width="84" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">0</span></font></p>
-		</td>
-	</tr>
-</table>
-<p style="line-height: 100%; margin-bottom: 0.08in"><i>Propuesta del
-colectivo docente: la problemática académica (Lenguajes o Saberes y
-Pensamiento Científico, según el EIA de Fase 6) es el eje principal
-de cada grado; de manera secundaria y opcional, los alumnos pueden
-aplicar lo aprendido para documentar y comunicar, en su comunidad,
-el manejo de la basura y los servicios de salud.</i></p>
 <!--VIVO:pic-etapas23-->
-<h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Propuesta
-para el bien común</b></font></h1>
-<!--INI:pic-bien-comun-->
-<!--VIVO:pic-bien-comun-->
-<!--FIN:pic-bien-comun-->
-<h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Cada
-uno lo que le toca hacer</b></font></h1>
-<!--INI:pic-cada-uno-->
-<!--VIVO:pic-cada-uno-->
-<!--FIN:pic-cada-uno-->
+<!--VIVO:pic-etapas47-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Cronograma</b></font></h1>
 <!--VIVO:pic-cronograma-->
-<h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Evaluación
-y seguimiento</b></font></h1>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Registro de
-	participación en clase (aula).</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Revisión de
-	cuadernos y glosarios personales.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Retroalimentación
-	grupal e individual.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Cuestionario
-	de seguimiento sobre avances en el campo formativo priorizado
-	(comprensión lectora/redacción o matemáticas, según el grado), con
-	base en el EIA de Fase 6.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Registro de
-	comentarios y sugerencias de la comunidad en la presentación final.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Revisión
-	del impacto del material publicado (mural, volantes) en la
-	comunidad.</p></li>
-</ul>
-<p style="line-height: 100%; margin-bottom: 0.14in"><br/>
-<br/>
-
-</p>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>Cierre:</b></p>
-<p style="line-height: 100%; margin-bottom: 0.08in"><i>Cuando una
-escuela identifica con claridad en qué campo necesita avanzar cada
-grado, y organiza su trabajo alrededor de esa necesidad real, no
-solo mejora un resultado en una prueba: fortalece las bases con las
-que sus alumnos seguirán aprendiendo el resto de su vida escolar.
-Ese es el sentido de este PIC: convertir el diagnóstico del EIA de
-Fase 6 en un proyecto concreto, por grado, al servicio de
-Xoyatla.</i></p>
-<p style="line-height: 100%; margin-bottom: 0in"><br/>
-
-</p>
-<!--VIVO:pic-etapas47-->
 <!--VIVO:pic-plan567-->
+<h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Evaluación y seguimiento</b></font></h1>
+<!--VIVO:pic-evaluacion-->
 <!--VIVO:pic-recursos-->
+<h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Cierre</b></font></h1>
+<!--VIVO:pic-cierre-->
 <h1 class="western" style="margin-top: 0in; margin-bottom: 0.1in; page-break-before: always">
 <font color="#7a1f1f"><b>Validación colegiada</b></font></h1>
 <p style="line-height: 100%; margin-bottom: 0.08in">Este PIC fue
@@ -15655,14 +15478,33 @@ function valorVivo(mapa, clave) {
 
 const envolverVivo = (id, html) => `<div id="vivo-${id}" class="bloque-vivo">${html}</div>`;
 
+const EVALUACION_PIC_PROPUESTA = {
+  instrumentos: "- Reevaluación al cierre de cada trimestre con reactivos del Examen Diagnóstico y del EIA Fase 6, comparada con el punto de partida de cada grado.\n- Registro de los “15 minutos de cálculo” y del avance individual de cada alumno.\n- Lista de cotejo del PIC y rúbricas de los productos por grado (recetario, mercadito, planos y maqueta).\n- Revisión de cuadernos y del cuadernillo de práctica en casa firmado por la familia.\n- Registro de acuerdos y avances en las asambleas intergrados.\n- Comentarios de familias y comunidad en la Feria Matemática Comunitaria.",
+  cierre: "Cuando la escuela identifica con claridad qué necesitan aprender sus alumnos y organiza su trabajo alrededor de esa necesidad real, no solo mejora un resultado en una prueba: fortalece las bases con las que seguirán aprendiendo toda su vida. Ese es el sentido de este PIC: convertir el diagnóstico de las operaciones básicas en un proyecto común de 1°, 2° y 3° grado, al servicio de Xoyatla.",
+};
 const GENERADORES_VIVO = {
+  "pic-evaluacion": (mapa) => {
+    const v = valorVivo(mapa, "pic:evaluacionDifusion") || {};
+    let html = "";
+    if (hayValorVivo(v.instrumentos)) html += h3Vivo("Instrumentos de evaluación y seguimiento") + textoAParrafosHTML(v.instrumentos);
+    if (hayValorVivo(v.criterios)) html += h3Vivo("Criterios de evaluación") + textoAParrafosHTML(v.criterios);
+    if (hayValorVivo(v.comoPresentar)) html += h3Vivo("Difusión: presentación a la comunidad") + textoAParrafosHTML(v.comoPresentar);
+    return html || pendienteVivo("Pendiente: capture la evaluación en PIC paso a paso → 📅 Cronograma.");
+  },
+  "pic-cierre": (mapa) => {
+    const v = valorVivo(mapa, "pic:evaluacionDifusion") || {};
+    return hayValorVivo(v.cierre) ? `<div style="font-style: italic">${textoAParrafosHTML(v.cierre)}</div>` : "";
+  },
   "pic-cronograma": (mapa) => {
     const v = valorVivo(mapa, "pic:cronograma:etapas") || {};
     const filas = FILAS_CRONOGRAMA_PIC.map((f) => [f.etapa, v[f.id + "_accion"], v[f.id + "_trimestre"], v[f.id + "_fechas"], v[f.id + "_recursos"], v[f.id + "_responsable"]])
       .filter((r) => r.slice(1).some((x) => hayValorVivo(x)));
     if (!filas.length) return pendienteVivo("Pendiente: capture el cronograma en PIC paso a paso → 📅 Cronograma.");
+    /* la tabla por grado de la Etapa 5 se agrega abajo */
+    const crono = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa5Cronograma, valorVivo(mapa, "pic:etapa5:cronograma"));
     return `<p style="line-height: 100%; margin-bottom: 0.08in">Etapas del PIC dentro del ciclo escolar 2026-2027, con las asambleas intergrados y la presentación final.</p>`
-      + tablaVivo(["Etapa", "Acción", "Trimestre", "Fechas / asambleas", "Recursos", "Responsable"], filas);
+      + tablaVivo(["Etapa", "Acción", "Trimestre", "Fechas / asambleas", "Recursos", "Responsable"], filas)
+      + (crono ? h2Vivo("Cronograma de actividades para cada presentación (por grado)") + crono : "");
   },
   // Resumen de la escuela (General): objetivo y metas de la Etapa 3 + horizonte por territorio de la Etapa 4.
   "pic-bien-comun": (mapa) => {
@@ -15692,7 +15534,7 @@ const GENERADORES_VIVO = {
       + (cuerpo || pendienteVivo("Pendiente de capturar en la pestaña \"PIC — Etapas 1-3\"."));
   },
   "pic-etapas23": (mapa) => {
-    let html = h1Vivo("Situación problemática y propuesta de solución (Etapas 2 y 3)");
+    let html = h1Vivo("Etapas 2 y 3 — Situación problemática y horizonte de expectativas");
     GRADOS_CON_GENERAL_VIVO.forEach((g) => {
       const sel = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picSeleccion, valorVivo(mapa, `pic:${g}:seleccion`));
       const e2 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Principal, valorVivo(mapa, `pic:${g}:etapa2:principal`));
@@ -15719,22 +15561,13 @@ const GENERADORES_VIVO = {
         ["Etapa 6 — Con la información en la mano", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa6InfoMano, v("etapa6:infomano"))],
         ["Etapa 6 — Todos en la misma tarea (seguimiento)", htmlSeguimientoVivo(v("etapa6:seguimiento"))],
         ["Etapa 7 — La hora de integrar las piezas", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa7Integrar, v("etapa7:integrar"))],
-        ["Fase 3 — Planeación de la propuesta", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picPlaneacion, v("planeacion"))],
       ].filter(([, h]) => h);
       html += h2Vivo(NOMBRE_GRADO_VIVO[g]);
       html += partes.length
         ? partes.map(([t, h]) => h3Vivo(t) + h).join("")
         : pendienteVivo("Pendiente de capturar en la pestaña \"PIC — Etapas 4-7\".");
     });
-    const crono = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa5Cronograma, valorVivo(mapa, "pic:etapa5:cronograma"));
-    if (crono) html += h2Vivo("Cronograma de actividades para cada presentación") + crono;
-    const fases = FASES_CRONOGRAMA_PIC
-      .map((f) => ({ ...f, ...valorVivo(mapa, `pic:cronograma:${f.slug}`) }))
-      .filter((f) => hayValorVivo(f.actividad) || hayValorVivo(f.periodo) || hayValorVivo(f.responsable));
-    if (fases.length) html += h2Vivo("Cronograma por fase") + tablaVivo(["Fase", "Actividad principal", "Periodo", "Responsable"], fases.map((f) => [f.nombre, f.actividad, f.periodo, f.responsable]));
-    const ev = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picEvaluacion, valorVivo(mapa, "pic:evaluacionDifusion"));
-    if (ev) html += h2Vivo("Evaluación y difusión") + ev;
-    return h1Vivo("Desarrollo del proyecto por Etapas (4 a 7)") + html;
+    return h1Vivo("Etapas 4 a 7 — Actividades, localización, alternativas y presentación") + html;
   },
   "pa-plano2": (mapa, obs) => {
     let html = h2Vivo("Contenidos contextualizados por grado y campo formativo");
@@ -16226,8 +16059,10 @@ const CAMPOS_CAPTURA_PLANEACION = {
       { key: "responsable", etiqueta: "Responsable", tipo: "texto" },
     ],
   picEvaluacion: [
-    { key: "comoPresentar", etiqueta: "¿Cómo se presentará el resultado a la comunidad?", tipo: "area", filas: 3 },
+    { key: "instrumentos", etiqueta: "Instrumentos de evaluación y seguimiento (uno por renglón, empiece con - )", tipo: "area", filas: 7 },
     { key: "criterios", etiqueta: "Criterios de evaluación", tipo: "area", filas: 3 },
+    { key: "comoPresentar", etiqueta: "¿Cómo se presentará el resultado a la comunidad? (difusión)", tipo: "area", filas: 3 },
+    { key: "cierre", etiqueta: "Cierre del documento (reflexión final del colectivo)", tipo: "area", filas: 4 },
   ],
 };
 
@@ -16546,7 +16381,7 @@ const SELECCION_GENERAL_PIC = {
   aQuienAfecta: "A las y los alumnos de los tres grados y a sus familias, que usan las operaciones en el comercio, el campo y la producción local; también a la comunidad de Xoyatla, porque las y los jóvenes necesitan estas habilidades para continuar sus estudios o trabajar.",
   preguntaGuia: "¿Cómo podemos usar las operaciones básicas para resolver problemas reales de nuestra casa y de nuestra comunidad?",
 };
-function prePIC(clave) { if (clave === "pic:portada") return portadaPorDefectoPIC(); if (clave === "pic:propuesta") return porDefectoRegionPIC("pic:propuesta"); if (clave === "pic:cronograma:etapas") return CRONOGRAMA_PIC_PROPUESTA; if (clave === "pic:general:seleccion") return SELECCION_GENERAL_PIC; if (!__prePIC) __prePIC = prellenadoPICActualizado(); return __prePIC[clave] || null; }
+function prePIC(clave) { if (clave === "pic:portada") return portadaPorDefectoPIC(); if (clave === "pic:propuesta") return porDefectoRegionPIC("pic:propuesta"); if (clave === "pic:cronograma:etapas") return CRONOGRAMA_PIC_PROPUESTA; if (clave === "pic:evaluacionDifusion") return EVALUACION_PIC_PROPUESTA; if (clave === "pic:general:seleccion") return SELECCION_GENERAL_PIC; if (!__prePIC) __prePIC = prellenadoPICActualizado(); return __prePIC[clave] || null; }
 
 // Introducción, comunidad y contexto escolar del PIC: se pueden reescribir desde
 // "PIC paso a paso → Introducción y contexto". Si no se han cambiado, el documento
@@ -16725,10 +16560,10 @@ function PasosPIC({ etapa, setEtapa }) {
             </button>
           );
         })}
-        <button onClick={() => setEtapa(8)} className={`chip-grado ${etapa === 8 ? "activo" : ""}`} style={{ fontSize: "0.72rem", fontWeight: 700 }}>📅 Cronograma</button>
+        <button onClick={() => setEtapa(8)} className={`chip-grado ${etapa === 8 ? "activo" : ""}`} style={{ fontSize: "0.72rem", fontWeight: 700 }}>📅 Cronograma y evaluación</button>
         <button onClick={() => setEtapa("final")} className={`chip-grado ${etapa === "final" ? "activo" : ""}`} style={{ fontSize: "0.72rem", fontWeight: 700 }}>📄 Documento final</button>
       </div>
-      {etapa !== "final" && <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.6rem", marginBottom: 0 }}>{etapa === 0 ? "Introducción y contexto" : etapa === 8 ? "Cronograma de todo el proyecto" : `Etapa ${etapa} de 7`} · lo que escriba se guarda solo y pasa al documento final automáticamente. Las etapas 2 a 7 se llenan en General (la escuela) y por grupo (1° A, 2° A y 3° A).</p>}
+      {etapa !== "final" && <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.6rem", marginBottom: 0 }}>{etapa === 0 ? "Introducción y contexto" : etapa === 8 ? "Cronograma, evaluación y cierre" : `Etapa ${etapa} de 7`} · lo que escriba se guarda solo y pasa al documento final automáticamente. Las etapas 2 a 7 se llenan en General (la escuela) y por grupo (1° A, 2° A y 3° A).</p>}
     </div>
   );
 }
@@ -16840,7 +16675,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
     { id: "etapas", label: "★ PIC paso a paso (Etapas 1 a 7)" },
     { id: "analisis", label: "Resultados y análisis" },
     { id: "analitico", label: "Programa Analítico" },
-    { id: "pic", label: "PIC" },
+    { id: "pic", label: "PIC (formato anterior)" },
     { id: "recursos", label: "Proyectos y videos SEP" },
     { id: "plan567", label: "PIC actualizado · Etapas 5-7" },
     { id: "cotejo", label: "Lista de cotejo (revisión)" },
@@ -17117,10 +16952,6 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           </div>
           {grado === "general" && <ResumenGradosPIC etapa={etapaPIC} />}
 
-          {etapaPIC === 4 && grado === "general" && (
-            <FormularioAutoguardado key="pic-propuesta" claveStorage="pic:propuesta" titulo="Documento final — Propuesta para el bien común y Cada uno lo que le toca hacer" onStamp={onStamp} campos={CAMPOS_PROPUESTA_PIC}
-              ayuda="Opcional. Si los deja vacíos, estas dos secciones del documento final se arman solas con el objetivo y las metas de la Etapa 3 y con las propuestas y “A cada uno lo que le toca” de esta Etapa 4 (General). Escriba aquí solo si quiere un texto distinto." />
-          )}
           {etapaPIC === 4 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
@@ -17240,6 +17071,10 @@ function ProgramaAnaliticoPIC({ onStamp }) {
       )}
 
       {subTab === "etapas" && etapaPIC === 8 && <CronogramaPIC onStamp={onStamp} />}
+      {subTab === "etapas" && etapaPIC === 8 && (
+        <FormularioAutoguardado key="pic-evaluacion" claveStorage="pic:evaluacionDifusion" titulo="Evaluación, difusión y cierre del PIC" onStamp={onStamp} campos={CAMPOS_CAPTURA_PLANEACION.picEvaluacion}
+          ayuda="Aparece en el documento final en “Evaluación y seguimiento” y en “Cierre”. Viene con una propuesta: corríjala o reescríbala." />
+      )}
       {subTab === "etapas" && etapaPIC === 0 && (
         <div className="flex flex-col gap-3">
           <AvisoDocumentoVivo documento="PIC 2026-2027" botones={[["Ver cómo queda en el documento final", () => setEtapaPIC("final")]]} />
@@ -17250,7 +17085,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
       {subTab === "etapas" && etapaPIC !== "final" && (
         <div className="flex justify-between gap-2 flex-wrap">
           <button className="btn-secundario" disabled={etapaPIC === 0} onClick={() => { setEtapaPIC(etapaPIC - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>← Etapa anterior</button>
-          <button className="btn-primario" onClick={() => { setEtapaPIC(etapaPIC === 8 ? "final" : etapaPIC + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{etapaPIC === 8 ? "Ver documento final →" : etapaPIC === 7 ? "Siguiente: Cronograma →" : `Siguiente: Etapa ${etapaPIC + 1} →`}</button>
+          <button className="btn-primario" onClick={() => { setEtapaPIC(etapaPIC === 8 ? "final" : etapaPIC + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{etapaPIC === 8 ? "Ver documento final →" : etapaPIC === 7 ? "Siguiente: Cronograma y evaluación →" : `Siguiente: Etapa ${etapaPIC + 1} →`}</button>
         </div>
       )}
 
