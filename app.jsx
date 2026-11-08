@@ -25251,6 +25251,36 @@ function Copiloto({ alumnos, pestana, usuario }) {
   const [usarPantalla, setUsarPantalla] = useState(false);
   const [verConfig, setVerConfig] = useState(false);
   const [avisoCopilot, setAvisoCopilot] = useState("");
+  // Memoria permanente (en la Hoja de la escuela): notas fijas e historial de conversaciones
+  const [vista, setVista] = useState("chat"); // chat | notas | historial
+  const [notas, setNotas] = useState("");
+  const [notasGuardadas, setNotasGuardadas] = useState("");
+  const [estadoNotas, setEstadoNotas] = useState("");
+  const [convId, setConvId] = useState(() => { try { return sessionStorage.getItem("copiloto:convId") || ""; } catch (e) { return ""; } });
+  const [historial, setHistorial] = useState(null);
+  const [borrandoId, setBorrandoId] = useState("");
+  useEffect(() => { getStorage("ia:notas", "").then((n) => { setNotas(n || ""); setNotasGuardadas(n || ""); }); }, []);
+  useEffect(() => { try { sessionStorage.setItem("copiloto:convId", convId); } catch (e) {} }, [convId]);
+  const guardarNotas = async () => {
+    setEstadoNotas("Guardando…");
+    const ok = await setStorage("ia:notas", notas.slice(0, 8000));
+    if (ok !== false) { setNotasGuardadas(notas); setEstadoNotas("✓ Guardado. La IA lo tomará en cuenta siempre, en todos sus dispositivos."); }
+    else setEstadoNotas("No se pudo guardar. Revise su internet.");
+  };
+  const cargarHistorial = async () => {
+    setHistorial(null);
+    const d = await listarStorageObjeto("ia:conv:");
+    setHistorial(Object.values(d || {}).filter((c) => c && c.id && Array.isArray(c.mensajes)).sort((a, b) => String(b.fecha).localeCompare(String(a.fecha))));
+  };
+  const guardarConversacion = (id, msgs) => {
+    // Cada celda de la Hoja admite ~50,000 caracteres: se guardan los mensajes más recientes que quepan.
+    let lista = msgs.slice(-30).map((m) => ({ rol: m.rol, texto: String(m.texto).slice(0, 8000) }));
+    const primera = (msgs.find((m) => m.rol === "yo") || {}).texto || "Conversación";
+    let reg = { id, titulo: primera.slice(0, 70), fecha: new Date().toISOString(), mensajes: lista };
+    while (JSON.stringify(reg).length > 45000 && reg.mensajes.length > 2) reg = { ...reg, mensajes: reg.mensajes.slice(2) };
+    setStorage("ia:conv:" + id, reg);
+  };
+  const nuevaConversacion = () => { setMensajes([]); setConvId(""); setVista("chat"); };
   const fin = useRef(null);
   useEffect(() => { document.body.classList.toggle("copiloto-abierto", abierto); return () => document.body.classList.remove("copiloto-abierto"); }, [abierto]);
   useEffect(() => { try { sessionStorage.setItem("copiloto:mensajes", JSON.stringify(mensajes.slice(-30))); } catch (e) {} if (fin.current) fin.current.scrollIntoView({ block: "end" }); }, [mensajes, abierto]);
@@ -25279,6 +25309,7 @@ function Copiloto({ alumnos, pestana, usuario }) {
       "Problemática del PIC: bajo dominio de las operaciones básicas (suma, resta, multiplicación, división, fracciones y decimales).",
       `Matrícula actual: ${porGrado}. Usuario: ${usuario}. Pestaña abierta en la app: ${pestana}. Fecha de hoy: ${new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`,
       "Reglas: responde siempre en español de México, claro y sencillo, sin tecnicismos. No inventes datos oficiales, fechas, folios ni nombres; si falta un dato, déjalo como ____ o pregunta. Para documentos oficiales usa redacción formal. No pidas ni repitas CURP, teléfonos ni domicilios. Respuestas concisas, listas para copiar.",
+      notasGuardadas.trim() ? "Notas permanentes del director (tómalas siempre en cuenta):\n" + notasGuardadas.trim() : "",
       pantalla ? "Contenido que el director tiene en pantalla:\n\"\"\"\n" + pantalla + "\n\"\"\"" : "",
     ].filter(Boolean).join("\n");
   };
@@ -25291,7 +25322,9 @@ function Copiloto({ alumnos, pestana, usuario }) {
     try {
       const r = await fetch(liga, { method: "POST", body: JSON.stringify({ sistema: sistema(), mensajes: nuevos.map((m) => ({ rol: m.rol === "yo" ? "usuario" : "ia", texto: m.texto })) }) });
       const d = await r.json();
-      setMensajes([...nuevos, { rol: "ia", texto: d.ok ? d.texto : "⚠ " + (d.error || "No hubo respuesta.") + (/quota|RESOURCE_EXHAUSTED|429/i.test(d.error || "") ? "\n(Se alcanzó el límite gratuito por ahora; intente en unos minutos.)" : "") }]);
+      const completos = [...nuevos, { rol: "ia", texto: d.ok ? d.texto : "⚠ " + (d.error || "No hubo respuesta.") + (/quota|RESOURCE_EXHAUSTED|429/i.test(d.error || "") ? "\n(Se alcanzó el límite gratuito por ahora; intente en unos minutos.)" : "") }];
+      setMensajes(completos);
+      if (d.ok) { const id = convId || (Date.now().toString(36) + Math.random().toString(36).slice(2, 6)); if (!convId) setConvId(id); guardarConversacion(id, completos); }
     } catch (e) {
       setMensajes([...nuevos, { rol: "ia", texto: "⚠ No se pudo conectar con el Copiloto. Revise su internet." }]);
     }
@@ -25325,7 +25358,10 @@ function Copiloto({ alumnos, pestana, usuario }) {
           <div style={{ background: "var(--azul-profundo)", color: "#fff", padding: "0.6rem 0.8rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
             <div><div style={{ fontWeight: 700 }}>✨ Amado Nervo IA</div><div style={{ fontSize: "0.65rem", opacity: 0.75 }}>{liga ? "Respuestas aquí con Google Gemini" : "Con Microsoft Copilot"} · revise siempre lo que propone</div></div>
             <div className="flex gap-1">
-              {liga && mensajes.length > 0 && <button onClick={() => setMensajes([])} style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: "6px", padding: "0.25rem 0.5rem", fontSize: "0.7rem", cursor: "pointer" }}>Nueva conversación</button>}
+              {liga && [["notas", "📝 Notas"], ["historial", "🕘 Historial"]].map(([v, t]) => (
+                <button key={v} onClick={() => { setVista(vista === v ? "chat" : v); if (v === "historial" && vista !== v) cargarHistorial(); }} style={{ background: vista === v ? "#fff" : "rgba(255,255,255,0.15)", color: vista === v ? "var(--azul-profundo)" : "#fff", border: "none", borderRadius: "6px", padding: "0.25rem 0.45rem", fontSize: "0.68rem", cursor: "pointer" }}>{t}</button>
+              ))}
+              {liga && <button onClick={nuevaConversacion} title="Nueva conversación" style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: "6px", padding: "0.25rem 0.45rem", fontSize: "0.68rem", cursor: "pointer" }}>＋ Nueva</button>}
               <button onClick={() => setAbierto(false)} style={{ background: "transparent", color: "#fff", border: "none", cursor: "pointer" }}><X size={18} /></button>
             </div>
           </div>
@@ -25363,12 +25399,45 @@ function Copiloto({ alumnos, pestana, usuario }) {
               {estadoLiga && <p style={{ marginTop: "0.5rem", color: estadoLiga === "Probando…" ? "inherit" : "#b00020" }}>{estadoLiga}</p>}
               <p style={{ marginTop: "0.6rem", opacity: 0.65, fontSize: "0.72rem" }}>La clave queda guardada solo en su script de Google, no en esta página. Esta liga se guarda en este dispositivo (en cada computadora o celular se pega una vez).</p>
             </div>
+          ) : vista === "notas" ? (
+            <div style={{ flex: 1, overflowY: "auto", padding: "0.8rem", display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.8rem" }}>
+              <div style={{ fontWeight: 700 }}>📝 Notas para la IA (memoria permanente)</div>
+              <p style={{ margin: 0, opacity: 0.75 }}>Escriba datos que la IA debe saber siempre. Se guardan en la Hoja de la escuela y sirven en todos sus dispositivos. Un dato por renglón.</p>
+              <textarea className="campo" rows={10} style={{ fontSize: "0.8rem" }} value={notas} onChange={(e) => { setNotas(e.target.value); setEstadoNotas(""); }}
+                placeholder={"Ejemplos:\nLas reuniones de padres son el primer viernes de cada mes.\nFirmo los oficios como Director Comisionado.\nEl comité de padres lo preside la Sra. ____."} />
+              <div className="flex gap-2 items-center flex-wrap">
+                <button className="btn-primario" onClick={guardarNotas} disabled={notas === notasGuardadas}>Guardar notas</button>
+                <button className="btn-secundario" onClick={() => setVista("chat")}>Volver al chat</button>
+              </div>
+              {estadoNotas && <div style={{ fontSize: "0.74rem" }}>{estadoNotas}</div>}
+              <p style={{ margin: 0, fontSize: "0.68rem", opacity: 0.6 }}>No escriba CURP, teléfonos, domicilios ni datos de alumnos: estas notas se envían a Google cada vez que pregunta.</p>
+            </div>
+          ) : vista === "historial" ? (
+            <div style={{ flex: 1, overflowY: "auto", padding: "0.8rem", display: "flex", flexDirection: "column", gap: "0.45rem", fontSize: "0.8rem" }}>
+              <div style={{ fontWeight: 700 }}>🕘 Conversaciones guardadas</div>
+              {historial === null && <div style={{ opacity: 0.6 }}>Cargando…</div>}
+              {historial && historial.length === 0 && <div style={{ opacity: 0.6 }}>Todavía no hay conversaciones guardadas. Se guardan solas al recibir cada respuesta.</div>}
+              {historial && historial.map((c) => (
+                <div key={c.id} style={{ border: "1px solid var(--linea)", borderRadius: "8px", padding: "0.45rem 0.6rem", background: c.id === convId ? "rgba(31,78,121,0.08)" : "#fff" }}>
+                  <button onClick={() => { setMensajes(c.mensajes); setConvId(c.id); setVista("chat"); }} style={{ background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", width: "100%" }}>
+                    <div style={{ fontWeight: 600 }}>{c.titulo}</div>
+                    <div style={{ fontSize: "0.68rem", opacity: 0.6 }}>{new Date(c.fecha).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {c.mensajes.length} mensajes</div>
+                  </button>
+                  <div style={{ marginTop: "0.25rem" }}>
+                    {borrandoId === c.id
+                      ? <span style={{ fontSize: "0.7rem" }}>¿Borrar? <a href="#" onClick={async (e) => { e.preventDefault(); await borrarStorage("ia:conv:" + c.id); if (c.id === convId) nuevaConversacion(); setBorrandoId(""); cargarHistorial(); }}>Sí, borrar</a> · <a href="#" onClick={(e) => { e.preventDefault(); setBorrandoId(""); }}>No</a></span>
+                      : <a href="#" style={{ fontSize: "0.7rem", opacity: 0.7 }} onClick={(e) => { e.preventDefault(); setBorrandoId(c.id); }}>Borrar</a>}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <>
               <div style={{ flex: 1, overflowY: "auto", padding: "0.7rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {mensajes.length === 0 && (
                   <div style={{ fontSize: "0.78rem" }}>
                     <p style={{ opacity: 0.7, marginBottom: "0.5rem" }}>¿En qué le ayudo? Puede escribir lo que necesite o elegir una idea:</p>
+                    {notasGuardadas.trim() && <p style={{ fontSize: "0.68rem", opacity: 0.6, marginBottom: "0.5rem" }}>📝 Tiene notas guardadas: la IA ya las conoce.</p>}
                     <div className="flex flex-col gap-1.5">
                       {SUGERENCIAS_COPILOTO.map(([t, q]) => (
                         <button key={t} className="btn-secundario" style={{ fontSize: "0.75rem", justifyContent: "flex-start", textAlign: "left" }}
