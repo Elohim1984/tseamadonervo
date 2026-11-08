@@ -14,7 +14,8 @@
  *
  * La clave NUNCA va en la página ni en GitHub: solo vive aquí, en las propiedades del script.
  */
-var MODELOS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+// Se prueba en este orden; si Google retira un modelo, se usa el siguiente.
+var MODELOS = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-flash-lite-latest"];
 
 function doGet() {
   return salida({ ok: true, servicio: "copiloto", listo: !!PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY") });
