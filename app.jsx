@@ -15452,251 +15452,7 @@ uno lo que le toca hacer</b></font></h1>
 <!--VIVO:pic-cada-uno-->
 <!--FIN:pic-cada-uno-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Cronograma</b></font></h1>
-<p style="line-height: 100%; margin-bottom: 0.08in">Etapas dentro del
-ciclo escolar 2026-2027 (31 de agosto de 2026 al 9 de julio de 2027).
-Fechas exactas de corte a definir por el colectivo con base en el
-calendario oficial y las sesiones de CTE.</p>
-<table width="627" cellpadding="4" cellspacing="0">
-	<col width="35"/>
-	<col width="136"/>
-	<col width="80"/>
-	<col width="80"/>
-	<col width="80"/>
-	<col width="67"/>
-	<col width="91"/>
-	<tr>
-		<td width="35" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>Etapa</b></font></p>
-		</td>
-		<td width="136" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>Acción</b></font></p>
-		</td>
-		<td width="80" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>T1</b></font></p>
-		</td>
-		<td width="80" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>T2</b></font></p>
-		</td>
-		<td width="80" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>T3</b></font></p>
-		</td>
-		<td width="67" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>Recursos</b></font></p>
-		</td>
-		<td width="91" bgcolor="#7a1f1f" style="background: #7a1f1f; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#ffffff"><b>Responsable</b></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="35" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">1</span></font></p>
-		</td>
-		<td width="136" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">¿Qué
-			haremos? (planeación)</span></font></p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">X</span></font></p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="67" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">EIA de
-			Fase 6, examen diagnóstico, Diagnóstico Integral 2026</span></font></p>
-		</td>
-		<td width="91" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Docentes</span></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="35" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">2</span></font></p>
-		</td>
-		<td width="136" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Diagnóstico
-			y repaso del campo formativo priorizado (1a mitad Trim. 1)</span></font></p>
-		</td>
-		<td width="80" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">X</span></font></p>
-		</td>
-		<td width="80" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="80" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="67" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Resultados
-			del EIA Fase 6 y examen diagnóstico</span></font></p>
-		</td>
-		<td width="91" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Docentes y
-			alumnos</span></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="35" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">3</span></font></p>
-		</td>
-		<td width="136" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Aplicación
-			de lo aprendido, con vínculo opcional a basura/salud (2a mitad
-			Trim. 1)</span></font></p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">X</span></font></p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="67" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Diagnóstico
-			Integral, encuestas, vocabulario comunitario</span></font></p>
-		</td>
-		<td width="91" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Docentes,
-			alumnos, familias</span></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="35" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">4</span></font></p>
-		</td>
-		<td width="136" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Elaboración
-			de materiales de difusión bilingües</span></font></p>
-		</td>
-		<td width="80" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="80" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">X</span></font></p>
-		</td>
-		<td width="80" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="67" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Cartulina,
-			materiales impresos</span></font></p>
-		</td>
-		<td width="91" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Alumnos y
-			docentes</span></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="35" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">5</span></font></p>
-		</td>
-		<td width="136" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Ensayo y
-			ajuste con la comunidad</span></font></p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">X</span></font></p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="67" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Retroalimentación
-			de padres/comunidad</span></font></p>
-		</td>
-		<td width="91" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Docentes,
-			alumnos, padres de familia</span></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="35" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">6</span></font></p>
-		</td>
-		<td width="136" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Presentación
-			del producto (feria o evento comunitario)</span></font></p>
-		</td>
-		<td width="80" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="80" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="80" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">X</span></font></p>
-		</td>
-		<td width="67" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Materiales
-			finales, espacio comunitario</span></font></p>
-		</td>
-		<td width="91" bgcolor="#f2f2f2" style="background: #f2f2f2; border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Docentes,
-			aprendientes, padres de familia</span></font></p>
-		</td>
-	</tr>
-	<tr>
-		<td width="35" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">7</span></font></p>
-		</td>
-		<td width="136" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Evaluación
-			y cierre del PIC</span></font></p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<br/>
-
-			</p>
-		</td>
-		<td width="80" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="center">
-			<font color="#000000"><span style="font-weight: normal">X</span></font></p>
-		</td>
-		<td width="67" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Registros,
-			evidencias</span></font></p>
-		</td>
-		<td width="91" style="border: 1px solid #000000; padding: 0.04in 0.07in"><p align="left">
-			<font color="#000000"><span style="font-weight: normal">Docentes</span></font></p>
-		</td>
-	</tr>
-</table>
+<!--VIVO:pic-cronograma-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Evaluación
 y seguimiento</b></font></h1>
 <ul>
@@ -15900,6 +15656,14 @@ function valorVivo(mapa, clave) {
 const envolverVivo = (id, html) => `<div id="vivo-${id}" class="bloque-vivo">${html}</div>`;
 
 const GENERADORES_VIVO = {
+  "pic-cronograma": (mapa) => {
+    const v = valorVivo(mapa, "pic:cronograma:etapas") || {};
+    const filas = FILAS_CRONOGRAMA_PIC.map((f) => [f.etapa, v[f.id + "_accion"], v[f.id + "_trimestre"], v[f.id + "_fechas"], v[f.id + "_recursos"], v[f.id + "_responsable"]])
+      .filter((r) => r.slice(1).some((x) => hayValorVivo(x)));
+    if (!filas.length) return pendienteVivo("Pendiente: capture el cronograma en PIC paso a paso → 📅 Cronograma.");
+    return `<p style="line-height: 100%; margin-bottom: 0.08in">Etapas del PIC dentro del ciclo escolar 2026-2027, con las asambleas intergrados y la presentación final.</p>`
+      + tablaVivo(["Etapa", "Acción", "Trimestre", "Fechas / asambleas", "Recursos", "Responsable"], filas);
+  },
   // Resumen de la escuela (General): objetivo y metas de la Etapa 3 + horizonte por territorio de la Etapa 4.
   "pic-bien-comun": (mapa) => {
     const e3 = valorVivo(mapa, "pic:general:etapa3:principal") || {};
@@ -16782,7 +16546,7 @@ const SELECCION_GENERAL_PIC = {
   aQuienAfecta: "A las y los alumnos de los tres grados y a sus familias, que usan las operaciones en el comercio, el campo y la producción local; también a la comunidad de Xoyatla, porque las y los jóvenes necesitan estas habilidades para continuar sus estudios o trabajar.",
   preguntaGuia: "¿Cómo podemos usar las operaciones básicas para resolver problemas reales de nuestra casa y de nuestra comunidad?",
 };
-function prePIC(clave) { if (clave === "pic:portada") return portadaPorDefectoPIC(); if (clave === "pic:propuesta") return porDefectoRegionPIC("pic:propuesta"); if (clave === "pic:general:seleccion") return SELECCION_GENERAL_PIC; if (!__prePIC) __prePIC = prellenadoPICActualizado(); return __prePIC[clave] || null; }
+function prePIC(clave) { if (clave === "pic:portada") return portadaPorDefectoPIC(); if (clave === "pic:propuesta") return porDefectoRegionPIC("pic:propuesta"); if (clave === "pic:cronograma:etapas") return CRONOGRAMA_PIC_PROPUESTA; if (clave === "pic:general:seleccion") return SELECCION_GENERAL_PIC; if (!__prePIC) __prePIC = prellenadoPICActualizado(); return __prePIC[clave] || null; }
 
 // Introducción, comunidad y contexto escolar del PIC: se pueden reescribir desde
 // "PIC paso a paso → Introducción y contexto". Si no se han cambiado, el documento
@@ -16845,6 +16609,69 @@ async function aplicarPICActualizado2026() {
   return res;
 }
 
+// Cronograma general del PIC (una fila por etapa). Se guarda en pic:cronograma:etapas.
+const FILAS_CRONOGRAMA_PIC = [
+  { id: "e1", etapa: "1. Lectura de la realidad" },
+  { id: "e2", etapa: "2. Situación problemática" },
+  { id: "e3", etapa: "3. Horizonte de expectativas" },
+  { id: "e4", etapa: "4. Actividades para la solución" },
+  { id: "e5", etapa: "5. Localización de información" },
+  { id: "e6", etapa: "6. Elaboración de alternativas" },
+  { id: "e7", etapa: "7. Presentación" },
+  { id: "ev", etapa: "Seguimiento y evaluación" },
+];
+const TRIMESTRES_CRONOGRAMA_PIC = ["", "T1", "T1–T2", "T2", "T2–T3", "T3", "Todo el ciclo", "Cierre (julio)"];
+const CRONOGRAMA_PIC_PROPUESTA = {
+  e1_accion: "Lectura de la realidad escolar y comunitaria con los diagnósticos (Examen Diagnóstico, EIA Fase 6, Diagnóstico Integral).", e1_trimestre: "T1", e1_fechas: "Semana de inicio (agosto–septiembre de 2026)", e1_recursos: "Resultados de los diagnósticos, registros del colectivo", e1_responsable: "Colectivo docente",
+  e2_accion: "Construir y validar la situación problemática: bajo dominio de las operaciones básicas (General y por grado).", e2_trimestre: "T1", e2_fechas: "Septiembre–octubre de 2026", e2_recursos: "Datos por grado, criterios de validación", e2_responsable: "Docentes de 1° A y de 2°–3° A",
+  e3_accion: "Definir punto de partida, horizonte de expectativas (objetivo) y metas, y acordarlos en asamblea.", e3_trimestre: "T1", e3_fechas: "Noviembre de 2026 · asamblea intergrados 20 nov", e3_recursos: "Diagnóstico por grado, guía de redacción de objetivos", e3_responsable: "Docentes, alumnos y familias",
+  e4_accion: "Planear las actividades por territorio (Aula, Escuela, Comunidad) y asignar responsables.", e4_trimestre: "T1", e4_fechas: "Noviembre–diciembre de 2026", e4_recursos: "Tablas integradoras del PIC", e4_responsable: "Colectivo docente",
+  e5_accion: "Localizar información en los libros de proyectos y con las familias (banco de problemas); “15 minutos de cálculo” diarios.", e5_trimestre: "T1–T2", e5_fechas: "Noviembre 2026 a marzo 2027 · asambleas 22 ene y 19 feb · presentación de la etapa 19 mar", e5_recursos: "Libros de proyectos, fichas de registro, entrevistas", e5_responsable: "Docentes y alumnos",
+  e6_accion: "Elaborar los productos por grado (recetario, mercadito, planos y maqueta) y los juegos del rincón matemático; tutoría 3° A → 1° A.", e6_trimestre: "T3", e6_fechas: "Abril–junio de 2027 · asambleas 23 abr y 21 may · presentación de la etapa 18 jun", e6_recursos: "Material concreto, dinero didáctico, cuadrículas, cartulinas", e6_responsable: "Docentes, alumnos y familias",
+  e7_accion: "Feria Matemática Comunitaria “Las matemáticas de todos los días” con stands por grado.", e7_trimestre: "Cierre (julio)", e7_fechas: "Semana de cierre del ciclo (julio de 2027; fecha por confirmar)", e7_recursos: "Productos finales, espacio escolar, invitaciones (voceo y recados)", e7_responsable: "Docentes, alumnos, familias y comunidad",
+  ev_accion: "Reevaluación trimestral con reactivos del diagnóstico y lista de cotejo del PIC; registro de avances en asambleas.", ev_trimestre: "Todo el ciclo", ev_fechas: "Al cierre de cada trimestre", ev_recursos: "Reactivos del diagnóstico, lista de cotejo, registros", ev_responsable: "Colectivo docente",
+};
+function CronogramaPIC({ onStamp }) {
+  const [v, setV] = useState(null);
+  const [estado, setEstado] = useState("");
+  const timer = useRef(null);
+  useEffect(() => { getStorage("pic:cronograma:etapas", null).then((d) => setV(d && Object.keys(d).length ? d : { ...CRONOGRAMA_PIC_PROPUESTA })); }, []);
+  const cambiar = (k, x) => {
+    const nuevo = { ...v, [k]: x };
+    setV(nuevo); avisarDatoVivo("pic:cronograma:etapas", nuevo); setEstado("Guardando…");
+    clearTimeout(timer.current);
+    timer.current = setTimeout(async () => { const ok = await setStorage("pic:cronograma:etapas", nuevo); setEstado(ok === false ? "No se pudo guardar. Revise su internet." : "✓ Guardado"); }, 1500);
+  };
+  if (!v) return <div className="card"><p className="text-sm" style={{ opacity: 0.6 }}>Cargando cronograma…</p></div>;
+  const celda = { border: "1px solid var(--linea)", padding: "4px", verticalAlign: "top" };
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between flex-wrap gap-2" style={{ marginBottom: "0.4rem" }}>
+        <div className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>📅 Cronograma del PIC 2026-2027</div>
+        <span className="text-sm" style={{ opacity: 0.7 }}>{estado}</span>
+      </div>
+      <p className="text-sm" style={{ opacity: 0.7, marginTop: 0 }}>Una fila por etapa. Viene con una propuesta según las asambleas intergrados; corrija lo que necesite. Se guarda solo y aparece en el documento final, en la sección “Cronograma”.</p>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem", minWidth: "760px" }}>
+          <thead><tr>{["Etapa", "Acción", "Trimestre", "Fechas / asambleas", "Recursos", "Responsable"].map((h) => <th key={h} style={{ ...celda, background: "var(--azul-profundo)", color: "#fff", textAlign: "left" }}>{h}</th>)}</tr></thead>
+          <tbody>
+            {FILAS_CRONOGRAMA_PIC.map((f) => (
+              <tr key={f.id}>
+                <td style={{ ...celda, fontWeight: 700, width: "120px" }}>{f.etapa}</td>
+                <td style={celda}><textarea className="campo" rows={3} style={{ fontSize: "0.76rem" }} value={v[f.id + "_accion"] || ""} onChange={(e) => cambiar(f.id + "_accion", e.target.value)} /></td>
+                <td style={{ ...celda, width: "110px" }}><select className="campo" style={{ fontSize: "0.76rem" }} value={v[f.id + "_trimestre"] || ""} onChange={(e) => cambiar(f.id + "_trimestre", e.target.value)}>{TRIMESTRES_CRONOGRAMA_PIC.map((t) => <option key={t} value={t}>{t || "—"}</option>)}</select></td>
+                <td style={celda}><textarea className="campo" rows={3} style={{ fontSize: "0.76rem" }} value={v[f.id + "_fechas"] || ""} onChange={(e) => cambiar(f.id + "_fechas", e.target.value)} /></td>
+                <td style={celda}><textarea className="campo" rows={3} style={{ fontSize: "0.76rem" }} value={v[f.id + "_recursos"] || ""} onChange={(e) => cambiar(f.id + "_recursos", e.target.value)} /></td>
+                <td style={celda}><textarea className="campo" rows={3} style={{ fontSize: "0.76rem" }} value={v[f.id + "_responsable"] || ""} onChange={(e) => cambiar(f.id + "_responsable", e.target.value)} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // Barra de pasos del PIC: una etapa a la vez y, al final, el documento armado solo.
 const ETAPAS_PIC = [
   { n: 0, t: "Introducción y contexto", claves: ["portada"] },
@@ -16898,9 +16725,10 @@ function PasosPIC({ etapa, setEtapa }) {
             </button>
           );
         })}
+        <button onClick={() => setEtapa(8)} className={`chip-grado ${etapa === 8 ? "activo" : ""}`} style={{ fontSize: "0.72rem", fontWeight: 700 }}>📅 Cronograma</button>
         <button onClick={() => setEtapa("final")} className={`chip-grado ${etapa === "final" ? "activo" : ""}`} style={{ fontSize: "0.72rem", fontWeight: 700 }}>📄 Documento final</button>
       </div>
-      {etapa !== "final" && <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.6rem", marginBottom: 0 }}>{etapa === 0 ? "Introducción y contexto" : `Etapa ${etapa} de 7`} · lo que escriba se guarda solo y pasa al documento final automáticamente. Las etapas 2 a 7 se llenan en General (la escuela) y por grupo (1° A, 2° A y 3° A).</p>}
+      {etapa !== "final" && <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.6rem", marginBottom: 0 }}>{etapa === 0 ? "Introducción y contexto" : etapa === 8 ? "Cronograma de todo el proyecto" : `Etapa ${etapa} de 7`} · lo que escriba se guarda solo y pasa al documento final automáticamente. Las etapas 2 a 7 se llenan en General (la escuela) y por grupo (1° A, 2° A y 3° A).</p>}
     </div>
   );
 }
@@ -17411,6 +17239,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
         </div>
       )}
 
+      {subTab === "etapas" && etapaPIC === 8 && <CronogramaPIC onStamp={onStamp} />}
       {subTab === "etapas" && etapaPIC === 0 && (
         <div className="flex flex-col gap-3">
           <AvisoDocumentoVivo documento="PIC 2026-2027" botones={[["Ver cómo queda en el documento final", () => setEtapaPIC("final")]]} />
@@ -17421,7 +17250,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
       {subTab === "etapas" && etapaPIC !== "final" && (
         <div className="flex justify-between gap-2 flex-wrap">
           <button className="btn-secundario" disabled={etapaPIC === 0} onClick={() => { setEtapaPIC(etapaPIC - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>← Etapa anterior</button>
-          <button className="btn-primario" onClick={() => { setEtapaPIC(etapaPIC === 7 ? "final" : etapaPIC + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{etapaPIC === 7 ? "Ver documento final →" : `Siguiente: Etapa ${etapaPIC + 1} →`}</button>
+          <button className="btn-primario" onClick={() => { setEtapaPIC(etapaPIC === 8 ? "final" : etapaPIC + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{etapaPIC === 8 ? "Ver documento final →" : etapaPIC === 7 ? "Siguiente: Cronograma →" : `Siguiente: Etapa ${etapaPIC + 1} →`}</button>
         </div>
       )}
 
