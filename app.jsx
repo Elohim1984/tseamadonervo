@@ -15238,6 +15238,7 @@ académico — basado en los resultados del EIA de Fase 6</i></font></font></p>
 </p>
 <h1 class="western" style="margin-top: 0in; margin-bottom: 0.1in; page-break-before: always">
 <font color="#7a1f1f"><b>Introducción</b></font></h1>
+<!--INI:pic-intro-->
 <p style="line-height: 100%; margin-bottom: 0.08in">El ciclo escolar
 2025-2026, la comunidad escolar de la Telesecundaria &quot;Amado
 Nervo&quot; desarrolló un Proyecto de Integración Comunitaria
@@ -15259,7 +15260,9 @@ servicios de salud identificadas en el Diagnóstico Integral 2026 —
 aplicando lo aprendido en su campo formativo priorizado a la
 documentación y comunicación de esas problemáticas reales de su
 comunidad.</p>
+<!--FIN:pic-intro-->
 <h2 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#b8860b"><b>Xoyatla</b></font></h2>
+<!--INI:pic-comunidad-->
 <p style="line-height: 100%; margin-bottom: 0.08in">La localidad de
 Xoyatla está situada en el municipio de Tepeojuma, Puebla. Cuenta
 con 745 habitantes y es el pueblo más poblado en la posición número
@@ -15277,8 +15280,10 @@ hombres emigra a Estados Unidos en busca de mejores condiciones de
 vida — la migración es, según encuestas previas a la comunidad,
 su principal problemática, y ha reducido la matrícula de las
 escuelas.</p>
+<!--FIN:pic-comunidad-->
 <h2 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#b8860b"><b>Contexto
 escolar (actualizado, ciclo 2026-2027)</b></font></h2>
+<!--INI:pic-contexto-->
 <p style="line-height: 100%; margin-bottom: 0.08in">La &quot;Amado Nervo&quot; es una institución bidocente:</p>
 <ul>
 	<li><p style="line-height: 100%; margin-bottom: 0.04in">Neftalid
@@ -15297,6 +15302,7 @@ Diagnóstico Integral aplicado en agosto-septiembre de 2026 recibió
 28-29 respuestas de los 32 alumnos inscritos — quedan pendientes de
 contestar entre 3 y 4 alumnos, a identificar y aplicar antes de
 cerrar el diagnóstico definitivo de este PIC.</i></font></p>
+<!--FIN:pic-contexto-->
 <!--VIVO:pic-etapa1-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Problemática</b></font></h1>
 <p style="line-height: 100%; margin-bottom: 0.08in">Los resultados
@@ -16246,6 +16252,13 @@ function descargarDocumentoWord(html, nombre) {
 
 // Sustituye las marcas <!--VIVO:...--> del documento por lo capturado.
 function componerDocumentoVivo(htmlBase, mapa, obs) {
+  const portada = (mapa || {})["pic:portada"] || {};
+  htmlBase = htmlBase.replace(/<!--INI:([a-z-]+)-->([\s\S]*?)<!--FIN:\1-->/g, (m, id, original) => {
+    const campo = REGIONES_PORTADA_PIC[id];
+    const v = campo ? String(portada[campo] || "").trim() : "";
+    if (!v || v === (portadaPorDefectoPIC()[campo] || "").trim()) return original;
+    return envolverVivo(id, textoAParrafosHTML(v));
+  });
   return htmlBase.replace(/<!--VIVO:([a-z0-9-]+)-->/g, (m, id) => {
     const gen = GENERADORES_VIVO[id];
     if (!gen) return "";
@@ -16871,7 +16884,41 @@ function htmlPlan567PIC() {
 
 let __prePIC = null;
 // Prellenado vigente de una clave pic:… (o null si no tiene).
-function prePIC(clave) { if (!__prePIC) __prePIC = prellenadoPICActualizado(); return __prePIC[clave] || null; }
+function prePIC(clave) { if (clave === "pic:portada") return portadaPorDefectoPIC(); if (!__prePIC) __prePIC = prellenadoPICActualizado(); return __prePIC[clave] || null; }
+
+// Introducción, comunidad y contexto escolar del PIC: se pueden reescribir desde
+// "PIC paso a paso → Introducción y contexto". Si no se han cambiado, el documento
+// usa el texto original (marcado con <!--INI:...--> / <!--FIN:...-->).
+const CAMPOS_PORTADA_PIC = [
+  { key: "intro", etiqueta: "Introducción", tipo: "area", filas: 9 },
+  { key: "comunidad", etiqueta: "Xoyatla (la comunidad)", tipo: "area", filas: 8 },
+  { key: "contexto", etiqueta: "Contexto escolar (ciclo 2026-2027)", tipo: "area", filas: 8 },
+];
+const REGIONES_PORTADA_PIC = { "pic-intro": "intro", "pic-comunidad": "comunidad", "pic-contexto": "contexto" };
+function htmlATextoPlano(html) {
+  return String(html).replace(/\s*\n\s*/g, " ").replace(/<li[^>]*>/gi, "\n- ").replace(/<\/p>|<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
+    .split("\n").map((l) => l.trim()).filter((l) => l && l !== "-").join("\n");
+}
+let __portadaPIC = null;
+function portadaPorDefectoPIC() {
+  if (__portadaPIC) return __portadaPIC;
+  const r = {};
+  Object.entries(REGIONES_PORTADA_PIC).forEach(([id, campo]) => {
+    const m = DOCUMENTO_COMPLETO_PIC_HTML.match(new RegExp("<!--INI:" + id + "-->([\\s\\S]*?)<!--FIN:" + id + "-->"));
+    r[campo] = m ? htmlATextoPlano(m[1]) : "";
+  });
+  return (__portadaPIC = r);
+}
+function textoAParrafosHTML(t) {
+  const esc = (x) => x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const lineas = String(t).split("\n").map((l) => l.trim()).filter(Boolean);
+  let html = "", lista = [];
+  const cerrar = () => { if (lista.length) { html += "<ul>" + lista.map((x) => `<li><p style="line-height: 100%; margin-bottom: 0.04in">${esc(x)}</p></li>`).join("") + "</ul>"; lista = []; } };
+  lineas.forEach((l) => { if (/^[•\-\*]\s+/.test(l)) lista.push(l.replace(/^[•\-\*]\s+/, "")); else { cerrar(); html += `<p style="line-height: 100%; margin-bottom: 0.08in">${esc(l)}</p>`; } });
+  cerrar();
+  return html;
+}
 
 // Escribe en la Hoja el PIC actualizado (respalda antes lo que hubiera).
 async function aplicarPICActualizado2026() {
@@ -16889,6 +16936,7 @@ async function aplicarPICActualizado2026() {
 
 // Barra de pasos del PIC: una etapa a la vez y, al final, el documento armado solo.
 const ETAPAS_PIC = [
+  { n: 0, t: "Introducción y contexto", claves: ["portada"] },
   { n: 1, t: "Lectura de la realidad", claves: ["etapa1"] },
   { n: 2, t: "Situación problemática", claves: ["G:etapa2:principal"] },
   { n: 3, t: "Horizontes de expectativas", claves: ["G:etapa3:principal"] },
@@ -16920,7 +16968,7 @@ function PasosPIC({ etapa, setEtapa }) {
     });
     return { total, listos };
   };
-  const completas = ETAPAS_PIC.filter((e) => { const a = avance(e); return a && a.listos === a.total; }).length;
+  const completas = ETAPAS_PIC.filter((e) => e.n > 0).filter((e) => { const a = avance(e); return a && a.listos === a.total; }).length;
   return (
     <div className="card" style={{ padding: "0.8rem" }}>
       <div className="flex items-center justify-between flex-wrap gap-2" style={{ marginBottom: "0.6rem" }}>
@@ -16935,13 +16983,13 @@ function PasosPIC({ etapa, setEtapa }) {
           const a = avance(e); const lista = a && a.listos === a.total; const activa = etapa === e.n;
           return (
             <button key={e.n} onClick={() => setEtapa(e.n)} className={`chip-grado ${activa ? "activo" : ""}`} style={{ fontSize: "0.72rem", textAlign: "left", lineHeight: 1.2 }} title={a ? `${a.listos} de ${a.total} apartados con contenido (los 3 grados)` : ""}>
-              <b>{lista ? "✓" : e.n}</b> {e.t}{a && !lista ? <span style={{ opacity: 0.6 }}> · {a.listos}/{a.total}</span> : null}
+              <b>{e.n === 0 ? "📘" : lista ? "✓" : e.n}</b> {e.t}{a && !lista ? <span style={{ opacity: 0.6 }}> · {a.listos}/{a.total}</span> : null}
             </button>
           );
         })}
         <button onClick={() => setEtapa("final")} className={`chip-grado ${etapa === "final" ? "activo" : ""}`} style={{ fontSize: "0.72rem", fontWeight: 700 }}>📄 Documento final</button>
       </div>
-      {etapa !== "final" && <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.6rem", marginBottom: 0 }}>Etapa {etapa} de 7 · lo que escriba se guarda solo y pasa al documento final automáticamente. Las etapas 2 a 7 se llenan por grado (1°, 2° y 3°).</p>}
+      {etapa !== "final" && <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.6rem", marginBottom: 0 }}>{etapa === 0 ? "Introducción y contexto" : `Etapa ${etapa} de 7`} · lo que escriba se guarda solo y pasa al documento final automáticamente. Las etapas 2 a 7 se llenan por grado (1°, 2° y 3°).</p>}
     </div>
   );
 }
@@ -16994,7 +17042,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
   const [irA, setIrA] = useState(null);
   const verEnDocumento = (doc, seccion) => { setCualDocumento(doc); setSubTab("analisis"); setIrA(seccion); };
 
-  const [etapaPIC, setEtapaPICState] = useState(() => { try { const v = localStorage.getItem("pic:etapaActiva"); return v === "final" ? "final" : (Number(v) || 1); } catch (e) { return 1; } });
+  const [etapaPIC, setEtapaPICState] = useState(() => { try { const v = localStorage.getItem("pic:etapaActiva"); return v === "final" ? "final" : (v !== null && v !== "" && !isNaN(Number(v)) ? Number(v) : 1); } catch (e) { return 1; } });
   const setEtapaPIC = (v) => { setEtapaPICState(v); try { localStorage.setItem("pic:etapaActiva", String(v)); } catch (e) {} if (v === "final") setCualDocumento("pic"); };
   const SUBTABS = [
     { id: "etapas", label: "★ PIC paso a paso (Etapas 1 a 7)" },
@@ -17072,7 +17120,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
       {subTab === "recursos" && <PanelRecursosSEP onVer={() => verEnDocumento("pic", "pic-recursos")} />}
       {subTab === "analisis" && <AnalisisResultadosEmbebido cual={cualDocumento} setCual={setCualDocumento} irA={irA} setIrA={setIrA} />}
 
-      {subTab === "etapas" && etapaPIC <= 3 && (
+      {subTab === "etapas" && etapaPIC >= 1 && etapaPIC <= 3 && (
         <div className="flex flex-col gap-4">
           <AvisoDocumentoVivo documento="PIC 2026-2027" botones={[
             ["Ver Etapa 1 en el PIC", () => verEnDocumento("pic", "pic-etapa1")],
@@ -17382,9 +17430,16 @@ function ProgramaAnaliticoPIC({ onStamp }) {
         </div>
       )}
 
+      {subTab === "etapas" && etapaPIC === 0 && (
+        <div className="flex flex-col gap-3">
+          <AvisoDocumentoVivo documento="PIC 2026-2027" botones={[["Ver cómo queda en el documento final", () => setEtapaPIC("final")]]} />
+          <FormularioAutoguardado key="pic-portada" claveStorage="pic:portada" titulo="Introducción y contexto del PIC" onStamp={onStamp} campos={CAMPOS_PORTADA_PIC}
+            ayuda="Aquí puede cambiar la Introducción, la descripción de Xoyatla y el Contexto escolar del documento final. Viene con el texto actual: corríjalo o reescríbalo. Para hacer una lista, empiece cada renglón con un guion y un espacio (- )." />
+        </div>
+      )}
       {subTab === "etapas" && etapaPIC !== "final" && (
         <div className="flex justify-between gap-2 flex-wrap">
-          <button className="btn-secundario" disabled={etapaPIC === 1} onClick={() => { setEtapaPIC(etapaPIC - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>← Etapa anterior</button>
+          <button className="btn-secundario" disabled={etapaPIC === 0} onClick={() => { setEtapaPIC(etapaPIC - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>← Etapa anterior</button>
           <button className="btn-primario" onClick={() => { setEtapaPIC(etapaPIC === 7 ? "final" : etapaPIC + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{etapaPIC === 7 ? "Ver documento final →" : `Siguiente: Etapa ${etapaPIC + 1} →`}</button>
         </div>
       )}
