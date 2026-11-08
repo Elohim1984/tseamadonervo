@@ -16040,14 +16040,18 @@ const GENERADORES_VIVO = {
       + (cuerpo || pendienteVivo("Pendiente de capturar en la pestaña \"PIC — Etapas 1-3\"."));
   },
   "pic-etapas23": (mapa) => {
-    let html = h1Vivo("Situación problemática y propuesta de solución por grado (Etapas 2 y 3)");
+    let html = h1Vivo("Situación problemática y propuesta de solución (Etapas 2 y 3)");
+    const gen = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picSeleccion, valorVivo(mapa, "pic:general:seleccion"));
+    html += h2Vivo("Planteamiento general — los tres grados") + (gen || pendienteVivo("Pendiente de capturar en PIC paso a paso → Etapa 2 → General."));
     GRADOS_VIVO.forEach((g) => {
+      const sel = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picSeleccion, valorVivo(mapa, `pic:${g}:seleccion`));
       const e2 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Principal, valorVivo(mapa, `pic:${g}:etapa2:principal`));
       const e3 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa3Principal, valorVivo(mapa, `pic:${g}:etapa3:principal`));
       const s2 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Secundaria, valorVivo(mapa, `pic:${g}:etapa2`));
       const s3 = htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa3Secundaria, valorVivo(mapa, `pic:${g}:etapa3`));
       html += h2Vivo(NOMBRE_GRADO_VIVO[g]);
       html += h3Vivo("Etapa 2 — Situación problemática") + (e2 ? e2.replace(h3Vivo(limpiarEtiquetaVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Principal[0].etiqueta)), "") : pendienteVivo("Pendiente de capturar."));
+      if (sel) html += h3Vivo("Selección y planteamiento del problema") + sel;
       html += h3Vivo("Etapa 3 — Posible acción con lo aprendido") + (e3 ? e3.replace(/^<p[^>]*><b>[^<]*<\/b><\/p>/, "") : pendienteVivo("Pendiente de capturar."));
       if (s2 || s3) html += h3Vivo("Problemática secundaria (opcional)") + s2 + s3;
     });
@@ -16065,7 +16069,6 @@ const GENERADORES_VIVO = {
         ["Etapa 6 — Con la información en la mano", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa6InfoMano, v("etapa6:infomano"))],
         ["Etapa 6 — Todos en la misma tarea (seguimiento)", htmlSeguimientoVivo(v("etapa6:seguimiento"))],
         ["Etapa 7 — La hora de integrar las piezas", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.etapa7Integrar, v("etapa7:integrar"))],
-        ["Fase 2 — Selección y planteamiento del problema", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picSeleccion, v("seleccion"))],
         ["Fase 3 — Planeación de la propuesta", htmlCamposVivo(CAMPOS_CAPTURA_PLANEACION.picPlaneacion, v("planeacion"))],
       ].filter(([, h]) => h);
       html += h2Vivo(NOMBRE_GRADO_VIVO[g]);
@@ -16884,7 +16887,13 @@ function htmlPlan567PIC() {
 
 let __prePIC = null;
 // Prellenado vigente de una clave pic:… (o null si no tiene).
-function prePIC(clave) { if (clave === "pic:portada") return portadaPorDefectoPIC(); if (!__prePIC) __prePIC = prellenadoPICActualizado(); return __prePIC[clave] || null; }
+const SELECCION_GENERAL_PIC = {
+  problema: "Bajo dominio de las operaciones básicas (suma, resta, multiplicación, división, fracciones y decimales) en las y los alumnos de 1°, 2° y 3° grado, que limita la resolución de problemas de la vida cotidiana y el avance en los campos formativos, sobre todo en Saberes y Pensamiento Científico.",
+  porQue: "Es el rezago común que muestran los tres grados en los diagnósticos del ciclo (EIA Fase 6 y examen diagnóstico). Afecta el aprendizaje en todos los campos formativos y puede atenderse con estrategias compartidas en el aula, la escuela y la comunidad. Las problemáticas de basura y salud quedan como trabajo secundario y opcional.",
+  aQuienAfecta: "A las y los alumnos de los tres grados y a sus familias, que usan las operaciones en el comercio, el campo y la producción local; también a la comunidad de Xoyatla, porque las y los jóvenes necesitan estas habilidades para continuar sus estudios o trabajar.",
+  preguntaGuia: "¿Cómo podemos usar las operaciones básicas para resolver problemas reales de nuestra casa y de nuestra comunidad?",
+};
+function prePIC(clave) { if (clave === "pic:portada") return portadaPorDefectoPIC(); if (clave === "pic:general:seleccion") return SELECCION_GENERAL_PIC; if (!__prePIC) __prePIC = prellenadoPICActualizado(); return __prePIC[clave] || null; }
 
 // Introducción, comunidad y contexto escolar del PIC: se pueden reescribir desde
 // "PIC paso a paso → Introducción y contexto". Si no se han cambiado, el documento
@@ -16938,7 +16947,7 @@ async function aplicarPICActualizado2026() {
 const ETAPAS_PIC = [
   { n: 0, t: "Introducción y contexto", claves: ["portada"] },
   { n: 1, t: "Lectura de la realidad", claves: ["etapa1"] },
-  { n: 2, t: "Situación problemática", claves: ["G:etapa2:principal"] },
+  { n: 2, t: "Situación problemática", claves: ["G:etapa2:principal", "G:seleccion", "general:seleccion"] },
   { n: 3, t: "Horizontes de expectativas", claves: ["G:etapa3:principal"] },
   { n: 4, t: "Actividades para la solución", claves: ["G:etapa4:aportacion", "G:etapa4:propuestas", "G:etapa4:cadaunoletoca"] },
   { n: 5, t: "Localización de información", claves: ["G:etapa5:secuencia", "etapa5:cronograma"] },
@@ -17239,6 +17248,27 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             onStamp={onStamp}
             
             campos={CAMPOS_CAPTURA_PLANEACION.etapa2Principal}
+          />
+
+          <FormularioAutoguardado
+            key={`sel-e2-${grado}`}
+            claveStorage={`pic:${grado}:seleccion`}
+            titulo={`Selección y planteamiento del problema · ${grado}° grado`}
+            ayuda="Cómo se vive la problemática en este grado. Es el mismo apartado de la pestaña “PIC” (lo que escriba aquí también aparece allá)."
+            onStamp={onStamp}
+            campos={CAMPOS_CAPTURA_PLANEACION.picSeleccion}
+          />
+
+          <div className="card" style={{ borderColor: "var(--verde, #2e7d32)", background: "rgba(46,125,50,0.06)" }}>
+            <div className="font-display" style={{ fontWeight: 700, fontSize: "0.88rem" }}>General — los tres grados (1° A, 2° A y 3° A)</div>
+            <p className="text-sm" style={{ opacity: 0.75, marginTop: "0.25rem", marginBottom: 0 }}>Este apartado es uno solo para toda la escuela (no cambia con el grado elegido arriba). Integra lo de cada grado en un planteamiento común del PIC. Viene con una propuesta: corríjala o reescríbala.</p>
+          </div>
+          <FormularioAutoguardado
+            key="sel-e2-general"
+            claveStorage="pic:general:seleccion"
+            titulo="Selección y planteamiento del problema · General (los tres grados)"
+            onStamp={onStamp}
+            campos={CAMPOS_CAPTURA_PLANEACION.picSeleccion}
           />
 
           </>)}
