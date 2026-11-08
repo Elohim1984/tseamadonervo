@@ -15444,148 +15444,12 @@ el manejo de la basura y los servicios de salud.</i></p>
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Propuesta
 para el bien común</b></font></h1>
 <!--INI:pic-bien-comun-->
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>OBJETIVO
-GENERAL</b></p>
-<p style="line-height: 100%; margin-bottom: 0.08in">Fortalecer, en
-cada grado, el campo formativo identificado como más débil por el
-EIA de Fase 6 (Lenguajes en 1°; Saberes y Pensamiento Científico en
-2° y 3°), aplicando lo aprendido, de manera secundaria y opcional, a
-la documentación y comunicación de problemáticas reales de la
-comunidad (manejo de basura y servicios de salud).</p>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>OBJETIVOS
-ESPECÍFICOS</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">1° grado:
-	fortalecer la comprensión lectora y la redacción (identificación de
-	ideas clave, síntesis de información en textos discontinuos), con
-	apoyo de los contenidos del Programa Analítico.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">2° grado:
-	fortalecer el razonamiento lógico-matemático (operaciones básicas,
-	nociones de estadística) aplicado a situaciones reales, con apoyo
-	de los contenidos del Programa Analítico.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">3° grado:
-	fortalecer el razonamiento lógico-matemático (resolución de
-	problemas con operaciones combinadas) aplicado a situaciones reales,
-	con apoyo de los contenidos del Programa Analítico.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Los tres
-	grados, de manera secundaria y opcional: documentar y comunicar a la
-	comunidad avances sobre manejo de basura y servicios de salud —
-	carteles, infografías o una presentación comunitaria.</p></li>
-</ul>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>META</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Que el 100%
-	de los alumnos de cada grado avance de nivel en su campo formativo
-	priorizado durante la primera mitad del Trimestre 1 (diagnóstico y
-	repaso).</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Que el 100%
-	de los alumnos de cada grado produzca al menos un producto
-	(organizador gráfico, infografía o resolución de problemas) sobre su
-	problemática académica durante la segunda mitad del Trimestre 1.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">De manera
-	secundaria y opcional, elaborar al menos un material de difusión
-	comunitaria sobre manejo de basura o servicios de salud.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Presentar
-	los avances a la comunidad de Xoyatla (evento, feria o exposición)
-	durante el ciclo escolar.</p></li>
-</ul>
+<!--VIVO:pic-bien-comun-->
 <!--FIN:pic-bien-comun-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Cada
 uno lo que le toca hacer</b></font></h1>
 <!--INI:pic-cada-uno-->
-<p style="line-height: 100%; margin-bottom: 0.08in">Para la
-implementación y avance del PIC se establecen actividades para los 3
-territorios: Comunidad, Escuela y Aula.</p>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>Comunidad</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Exalumnos o
-	personas de la comunidad con buen desempeño académico asesoran a
-	alumnos y docentes.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Padres de
-	familia apoyan en casa el repaso de lectura/redacción o de
-	operaciones matemáticas, según el grado.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Presentación
-	pública de los avances y materiales (feria, asamblea o evento
-	comunitario).</p></li>
-</ul>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>Escuela</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Presentación
-	de avances a preescolar y primaria, igual que en el ciclo anterior.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Elaboración
-	de materiales lúdicos (memorama, lotería) con el vocabulario y
-	ejercicios del campo formativo priorizado en cada grado.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Espacio
-	permanente en la escuela (mural o rincón de lectura/matemáticas) que
-	incorpore los avances.</p></li>
-</ul>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>Aula — por
-grado</b></p>
-<h2 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#b8860b"><b>1°
-grado — Neftalid Bladimir Ortán Aguilar</b></font></h2>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>Primera mitad
-del Trimestre 1 — Diagnóstico:</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Revisión de
-	los resultados del examen diagnóstico y del EIA de Fase 6 en
-	Lenguajes, identificando a los alumnos con mayor rezago en
-	comprensión lectora.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Lectura
-	guiada con organizadores gráficos para identificar ideas clave de un
-	texto.</p></li>
-</ul>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>Segunda mitad
-del Trimestre 1 — Aplicación (con vínculo opcional a basura/salud):</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Síntesis de
-	información en textos discontinuos (organizadores, infografías).</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">De manera
-	opcional, aplicar lo aprendido a una infografía sobre manejo de
-	basura o servicios de salud en la comunidad.</p></li>
-</ul>
-<h2 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#b8860b"><b>2°
-grado — Salvador Olvera Barrera</b></font></h2>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>Primera mitad
-del Trimestre 1 — Diagnóstico:</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Revisión de
-	los resultados del examen diagnóstico y del EIA de Fase 6 en Saberes
-	y Pensamiento Científico, identificando el rezago en operaciones
-	básicas y estadística.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Repaso
-	guiado de operaciones básicas aplicadas a situaciones cotidianas.</p></li>
-</ul>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>Segunda mitad
-del Trimestre 1 — Aplicación (con vínculo opcional a basura/salud):</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Resolución
-	de problemas con operaciones y nociones de estadística aplicados a
-	situaciones reales.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">De manera
-	opcional, aplicar lo aprendido a un conteo o gráfica sencilla sobre
-	manejo de basura o servicios de salud en la comunidad.</p></li>
-</ul>
-<h2 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#b8860b"><b>3°
-grado — Salvador Olvera Barrera</b></font></h2>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>Primera mitad
-del Trimestre 1 — Diagnóstico:</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Revisión de
-	los resultados del examen diagnóstico y del EIA de Fase 6 en Saberes
-	y Pensamiento Científico, identificando el rezago en razonamiento
-	lógico-matemático.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Repaso
-	guiado de resolución de problemas con operaciones combinadas.</p></li>
-</ul>
-<p style="line-height: 100%; margin-bottom: 0.08in"><b>Segunda mitad
-del Trimestre 1 — Aplicación (con vínculo opcional a basura/salud):</b></p>
-<ul>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">Resolución
-	de problemas más complejos, con interpretación de resultados.</p></li>
-	<li><p style="line-height: 100%; margin-bottom: 0.04in">De manera
-	opcional, aplicar lo aprendido a un análisis de datos (encuesta o
-	conteo) sobre manejo de basura o servicios de salud en la comunidad.</p></li>
-</ul>
+<!--VIVO:pic-cada-uno-->
 <!--FIN:pic-cada-uno-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Cronograma</b></font></h1>
 <p style="line-height: 100%; margin-bottom: 0.08in">Etapas dentro del
@@ -16036,6 +15900,25 @@ function valorVivo(mapa, clave) {
 const envolverVivo = (id, html) => `<div id="vivo-${id}" class="bloque-vivo">${html}</div>`;
 
 const GENERADORES_VIVO = {
+  // Resumen de la escuela (General): objetivo y metas de la Etapa 3 + horizonte por territorio de la Etapa 4.
+  "pic-bien-comun": (mapa) => {
+    const e3 = valorVivo(mapa, "pic:general:etapa3:principal") || {};
+    const pr = valorVivo(mapa, "pic:general:etapa4:propuestas") || {};
+    const p = (t) => (t && String(t).trim() ? textoAParrafosHTML(String(t)) : "");
+    let html = "";
+    if (e3.horizonte) html += h3Vivo("Objetivo (horizonte de expectativas)") + p(e3.horizonte);
+    if (e3.alcances) html += h3Vivo("Alcances y metas") + p(e3.alcances);
+    const terr = [["Aula", pr.aulaHorizonte], ["Escuela", pr.escuelaHorizonte], ["Comunidad", pr.comunidadHorizonte]].filter(([, t]) => t && String(t).trim());
+    if (terr.length) html += h3Vivo("Horizonte por territorio") + terr.map(([t, x]) => `<p style="line-height: 100%; margin-bottom: 0.08in"><b>${t}:</b> ${String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`).join("");
+    return html || pendienteVivo("Pendiente: capture el horizonte en Etapa 3 y las propuestas en Etapa 4 (pestaña General).");
+  },
+  "pic-cada-uno": (mapa) => {
+    const c = valorVivo(mapa, "pic:general:etapa4:cadaunoletoca") || {};
+    const terr = [["Aula", c.aulaIdeas], ["Escuela", c.escuelaIdeas], ["Comunidad", c.comunidadIdeas]].filter(([, t]) => t && String(t).trim());
+    if (!terr.length) return pendienteVivo("Pendiente: capture “A cada uno lo que le toca hacer” en Etapa 4 (pestaña General).");
+    return `<p style="line-height: 100%; margin-bottom: 0.08in">Para la implementación y avance del PIC se establecen actividades para los 3 territorios (el detalle de cada grado está en las Etapas 4 a 7).</p>`
+      + terr.map(([t, x]) => `<p style="line-height: 100%; margin-bottom: 0.08in"><b>${t}</b></p>` + textoAParrafosHTML(String(x))).join("");
+  },
   "pic-recursos": () => htmlRecursosSEPPIC(),
   "pic-plan567": () => htmlPlan567PIC(),
   "pic-etapa1": (mapa) => {
@@ -16055,7 +15938,7 @@ const GENERADORES_VIVO = {
       html += h2Vivo(NOMBRE_GRADO_VIVO[g]);
       if (sel) html += h3Vivo("Selección y planteamiento del problema") + sel;
       html += h3Vivo("Etapa 2 — Situación problemática") + (e2 ? e2.replace(h3Vivo(limpiarEtiquetaVivo(CAMPOS_CAPTURA_PLANEACION.etapa2Principal[0].etiqueta)), "") : pendienteVivo("Pendiente de capturar."));
-      html += h3Vivo("Etapa 3 — Posible acción con lo aprendido") + (e3 ? e3.replace(/^<p[^>]*><b>[^<]*<\/b><\/p>/, "") : pendienteVivo("Pendiente de capturar."));
+      html += h3Vivo("Etapa 3 — Horizonte de expectativas") + (e3 || pendienteVivo("Pendiente de capturar."));
       if (s2 || s3) html += h3Vivo("Problemática secundaria (opcional)") + s2 + s3;
     });
     return html;
@@ -16434,7 +16317,10 @@ const CAMPOS_CAPTURA_PLANEACION = {
     { key: "reflexionFinal", etiqueta: "Reflexión final — ¿Qué diferencia encuentras entre identificar un problema y problematizar una situación para convertirla en una oportunidad de aprendizaje?", tipo: "area", filas: 3 },
   ],
   etapa3Principal: [
+    { key: "puntoPartida", etiqueta: "Punto de partida — conocimientos previos, experiencias y necesidades de las y los alumnos (datos del diagnóstico)", tipo: "area", filas: 4 },
+    { key: "horizonte", etiqueta: "Horizonte de expectativas (objetivo) — inicia con verbo en infinitivo y responde ¿qué se pretende?, ¿para qué? y ¿cómo se realizará?", tipo: "area", filas: 4 },
     { key: "posibleAccion", etiqueta: "¿Qué podrían hacer las y los estudiantes con la información y los aprendizajes construidos?", tipo: "area", filas: 4 },
+    { key: "alcances", etiqueta: "Alcances y metas — qué se espera lograr y cómo se medirá (por trimestre y al cierre)", tipo: "area", filas: 5 },
   ],
   etapa2Secundaria: [
     { key: "planteamientoFinal", etiqueta: "Planteamiento final de la situación problemática (un solo párrafo, claro y contextualizado, sin anticipar una solución única)", tipo: "area", filas: 4, placeholder: "En (contexto) se observa que (situación problemática), lo cual afecta (impacto)." },
@@ -17345,7 +17231,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           <FormularioAutoguardado
             key={`etapa3-principal-${grado}`}
             claveStorage={`pic:${grado}:etapa3:principal`}
-            titulo={`Etapa 3 — Posible acción con lo aprendido · ${etqGrado}`}
+            titulo={`Etapa 3 — Horizonte de expectativas · ${etqGrado}`}
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.etapa3Principal}
           />
@@ -17405,7 +17291,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
 
           {etapaPIC === 4 && grado === "general" && (
             <FormularioAutoguardado key="pic-propuesta" claveStorage="pic:propuesta" titulo="Documento final — Propuesta para el bien común y Cada uno lo que le toca hacer" onStamp={onStamp} campos={CAMPOS_PROPUESTA_PIC}
-              ayuda="Estas dos secciones del documento final son texto general de la escuela. Viene con el texto actual: corríjalo o reescríbalo. Para listas, empiece cada renglón con un guion y un espacio (- )." />
+              ayuda="Opcional. Si los deja vacíos, estas dos secciones del documento final se arman solas con el objetivo y las metas de la Etapa 3 y con las propuestas y “A cada uno lo que le toca” de esta Etapa 4 (General). Escriba aquí solo si quiere un texto distinto." />
           )}
           {etapaPIC === 4 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
