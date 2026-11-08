@@ -25228,6 +25228,7 @@ function App() {
 // La clave de la IA vive solo en el Apps Script del director (herramientas/copiloto-apps-script.gs),
 // nunca en esta página. Aquí solo se guarda, por dispositivo, la liga /exec de ese script.
 const CLAVE_LIGA_IA = "controlEscolarLigaIA";
+const LIGA_COPILOT_M365 = "https://m365.cloud.microsoft/chat";
 const SUGERENCIAS_COPILOTO = [
   ["Aviso para padres", "Redacta un aviso breve y respetuoso para madres, padres y tutores sobre: "],
   ["Oficio a Supervisión", "Redacta un oficio formal dirigido a la Supervisión Escolar Zona 052 sobre: "],
@@ -25248,6 +25249,8 @@ function Copiloto({ alumnos, pestana, usuario }) {
   const [entrada, setEntrada] = useState("");
   const [cargando, setCargando] = useState(false);
   const [usarPantalla, setUsarPantalla] = useState(false);
+  const [verConfig, setVerConfig] = useState(false);
+  const [avisoCopilot, setAvisoCopilot] = useState("");
   const fin = useRef(null);
   useEffect(() => { document.body.classList.toggle("copiloto-abierto", abierto); return () => document.body.classList.remove("copiloto-abierto"); }, [abierto]);
   useEffect(() => { try { sessionStorage.setItem("copiloto:mensajes", JSON.stringify(mensajes.slice(-30))); } catch (e) {} if (fin.current) fin.current.scrollIntoView({ block: "end" }); }, [mensajes, abierto]);
@@ -25262,7 +25265,7 @@ function Copiloto({ alumnos, pestana, usuario }) {
         if (!r.listo) { setEstadoLiga("El script responde, pero falta la clave GEMINI_API_KEY en sus propiedades (paso 4)."); return; }
         try { localStorage.setItem(CLAVE_LIGA_IA, l); } catch (e) {}
         setLiga(l); setEstadoLiga("");
-      } else setEstadoLiga("Esa liga no es la del Copiloto (¿pegó la de la Hoja de la escuela?).");
+      } else setEstadoLiga("Esa liga no es la de la IA (¿pegó la de la Hoja de la escuela?).");
     } catch (e) { setEstadoLiga("No se pudo conectar. Revise que el acceso sea 'Cualquier usuario'."); }
   };
 
@@ -25271,7 +25274,7 @@ function Copiloto({ alumnos, pestana, usuario }) {
     let pantalla = "";
     if (usarPantalla) { const m = document.querySelector("main"); pantalla = m ? m.innerText.replace(/\n{3,}/g, "\n\n").slice(0, 12000) : ""; }
     return [
-      "Eres el Copiloto de la Telesecundaria \"Amado Nervo\" (CCT 21ETV0473W, turno matutino, Xoyatla, Tepeojuma, Puebla, Zona Escolar 052, Sector 11). Ayudas al director en tareas administrativas y pedagógicas.",
+      "Eres Amado Nervo IA, el asistente de la Telesecundaria \"Amado Nervo\" (CCT 21ETV0473W, turno matutino, Xoyatla, Tepeojuma, Puebla, Zona Escolar 052, Sector 11). Ayudas al director en tareas administrativas y pedagógicas.",
       "Escuela bidocente: solo hay 3 grados con un grupo cada uno (1° A, 2° A y 3° A). Director con grupo: Neftalid Bladimir Ortán Aguilar (1° A). Docente de 2° A y 3° A: Salvador Olvera Barrera. Ciclo escolar 2026-2027, Nueva Escuela Mexicana (NEM), Plan de Estudio 2022, Fase 6.",
       "Problemática del PIC: bajo dominio de las operaciones básicas (suma, resta, multiplicación, división, fracciones y decimales).",
       `Matrícula actual: ${porGrado}. Usuario: ${usuario}. Pestaña abierta en la app: ${pestana}. Fecha de hoy: ${new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`,
@@ -25296,37 +25299,67 @@ function Copiloto({ alumnos, pestana, usuario }) {
   };
 
   const copiar = (t) => { try { navigator.clipboard.writeText(t); } catch (e) {} };
+  // Microsoft Copilot no permite meterse dentro de otra página: se copia la pregunta con el contexto
+  // de la escuela y se abre Copilot en otra pestaña para pegarla.
+  const preguntarCopilot = async (texto) => {
+    const t = String(texto ?? entrada).trim();
+    const completo = sistema() + "\n\n" + (t ? "Mi solicitud: " + t : "Mi solicitud: (escríbala aquí)");
+    let ok = false;
+    try { await navigator.clipboard.writeText(completo); ok = true; } catch (e) {
+      try { const ta = document.createElement("textarea"); ta.value = completo; document.body.appendChild(ta); ta.select(); ok = document.execCommand("copy"); ta.remove(); } catch (x) {}
+    }
+    window.open(LIGA_COPILOT_M365, "_blank", "noopener");
+    setAvisoCopilot(ok ? "✓ Se copió su pregunta con los datos de la escuela y se abrió Microsoft Copilot en otra pestaña. Ahí pegue (Ctrl+V, o en celular: mantener presionado → Pegar) y presione Enter." : "Se abrió Microsoft Copilot. No se pudo copiar solo: copie su pregunta y péguela allá.");
+  };
 
   return (
     <>
       {!abierto && (
-        <button onClick={() => setAbierto(true)} className="no-imprimir" title="Copiloto IA"
+        <button onClick={() => setAbierto(true)} className="no-imprimir" title="Amado Nervo IA"
           style={{ position: "fixed", left: "16px", bottom: "16px", zIndex: 60, background: "var(--azul-profundo)", color: "#fff", border: "2px solid rgba(255,255,255,0.8)", borderRadius: "999px", padding: "0.6rem 1rem", fontWeight: 700, fontSize: "0.85rem", boxShadow: "0 6px 18px rgba(0,0,0,0.3)", cursor: "pointer" }}>
-          ✨ Copiloto
+          ✨ Amado Nervo IA
         </button>
       )}
       {abierto && (
         <div className="no-imprimir" style={{ position: "fixed", left: "12px", bottom: "12px", zIndex: 60, width: "min(420px, calc(100vw - 24px))", height: "min(620px, calc(100vh - 24px))", background: "var(--papel)", border: "1px solid var(--linea)", borderRadius: "14px", boxShadow: "0 16px 40px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <div style={{ background: "var(--azul-profundo)", color: "#fff", padding: "0.6rem 0.8rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
-            <div><div style={{ fontWeight: 700 }}>✨ Copiloto IA</div><div style={{ fontSize: "0.65rem", opacity: 0.75 }}>Con Google Gemini · revise siempre lo que propone</div></div>
+            <div><div style={{ fontWeight: 700 }}>✨ Amado Nervo IA</div><div style={{ fontSize: "0.65rem", opacity: 0.75 }}>{liga ? "Respuestas aquí con Google Gemini" : "Con Microsoft Copilot"} · revise siempre lo que propone</div></div>
             <div className="flex gap-1">
               {liga && mensajes.length > 0 && <button onClick={() => setMensajes([])} style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: "6px", padding: "0.25rem 0.5rem", fontSize: "0.7rem", cursor: "pointer" }}>Nueva conversación</button>}
               <button onClick={() => setAbierto(false)} style={{ background: "transparent", color: "#fff", border: "none", cursor: "pointer" }}><X size={18} /></button>
             </div>
           </div>
-          {!liga ? (
+          {!liga && !verConfig ? (
+            <div style={{ padding: "0.8rem", overflowY: "auto", fontSize: "0.8rem", lineHeight: 1.5, display: "flex", flexDirection: "column", gap: "0.55rem", flex: 1 }}>
+              <p style={{ margin: 0, opacity: 0.75 }}>Escriba lo que necesita (o elija una idea). Al presionar el botón se abre <b>Microsoft Copilot</b> con su pregunta ya copiada junto con los datos de la escuela; solo pegue y envíe.</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {SUGERENCIAS_COPILOTO.map(([t, q]) => (
+                  <button key={t} className="chip-grado" style={{ fontSize: "0.7rem" }} onClick={() => { if (t === "Mejorar lo de pantalla") setUsarPantalla(true); setEntrada(q); }}>{t}</button>
+                ))}
+              </div>
+              <textarea className="campo" rows={5} style={{ fontSize: "0.82rem" }} placeholder="Ejemplo: Redacta un aviso para padres sobre la reunión del viernes…" value={entrada} onChange={(e) => setEntrada(e.target.value)} />
+              <label style={{ display: "flex", gap: "0.35rem", alignItems: "flex-start", fontSize: "0.7rem", opacity: 0.8 }}>
+                <input type="checkbox" checked={usarPantalla} onChange={(e) => setUsarPantalla(e.target.checked)} style={{ marginTop: "2px" }} />
+                <span>Incluir lo que tengo en pantalla ({pestana}). Úselo con documentos (PIC, oficios), no con fichas de alumnos.</span>
+              </label>
+              <button className="btn-primario" onClick={() => preguntarCopilot()} style={{ justifyContent: "center" }}>Preguntar en Microsoft Copilot ↗</button>
+              {avisoCopilot && <div style={{ fontSize: "0.74rem", background: "rgba(46,125,50,0.1)", border: "1px solid rgba(46,125,50,0.35)", borderRadius: "8px", padding: "0.5rem" }}>{avisoCopilot}</div>}
+              <div style={{ fontSize: "0.65rem", opacity: 0.6, marginTop: "auto" }}>No escriba CURP, teléfonos ni datos personales. · <a href="#" onClick={(e) => { e.preventDefault(); setVerConfig(true); }}>Opcional: recibir respuestas aquí mismo (Gemini)</a></div>
+            </div>
+          ) : !liga ? (
             <div style={{ padding: "0.9rem", overflowY: "auto", fontSize: "0.8rem", lineHeight: 1.5 }}>
-              <p style={{ fontWeight: 700, marginBottom: "0.4rem" }}>Activar el Copiloto (una sola vez, gratis)</p>
+              <p style={{ marginBottom: "0.4rem" }}><a href="#" onClick={(e) => { e.preventDefault(); setVerConfig(false); }}>← Volver a Microsoft Copilot</a></p>
+              <p style={{ fontWeight: 700, marginBottom: "0.4rem" }}>Respuestas dentro de la app (opcional, gratis, una sola vez)</p>
               <ol style={{ paddingLeft: "1.1rem", margin: 0 }}>
                 <li>Entre a <b>aistudio.google.com/apikey</b> con la cuenta de la escuela y presione <b>Crear clave de API</b>. Cópiela.</li>
                 <li>Entre a <b>script.google.com</b> → <b>Nuevo proyecto</b> y llámelo "Copiloto Amado Nervo".</li>
-                <li>Borre lo que trae y pegue el código del Copiloto (se lo da Claude, o está en GitHub en <i>herramientas/copiloto-apps-script.gs</i>). Guarde.</li>
+                <li>Borre lo que trae y pegue el código del Copiloto (está en GitHub en <i>herramientas/copiloto-apps-script.gs</i>). Guarde.</li>
                 <li>Engrane <b>Configuración del proyecto</b> → <b>Propiedades del script</b> → Agregar: <b>GEMINI_API_KEY</b> = su clave.</li>
                 <li><b>Implementar</b> → <b>Nueva implementación</b> → <b>Aplicación web</b> · Ejecutar como: <b>Yo</b> · Acceso: <b>Cualquier usuario</b>. Autorice.</li>
                 <li>Copie la liga que termina en <b>/exec</b> y péguela aquí:</li>
               </ol>
               <input className="campo mt-2" placeholder="https://script.google.com/macros/s/..../exec" value={ligaNueva} onChange={(e) => setLigaNueva(e.target.value)} />
-              <button className="btn-primario mt-2" onClick={probarLiga}>Conectar Copiloto</button>
+              <button className="btn-primario mt-2" onClick={probarLiga}>Conectar</button>
               {estadoLiga && <p style={{ marginTop: "0.5rem", color: estadoLiga === "Probando…" ? "inherit" : "#b00020" }}>{estadoLiga}</p>}
               <p style={{ marginTop: "0.6rem", opacity: 0.65, fontSize: "0.72rem" }}>La clave queda guardada solo en su script de Google, no en esta página. Esta liga se guarda en este dispositivo (en cada computadora o celular se pega una vez).</p>
             </div>
@@ -25363,7 +25396,7 @@ function Copiloto({ alumnos, pestana, usuario }) {
                     onChange={(e) => setEntrada(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }} />
                   <button className="btn-primario" onClick={() => enviar()} disabled={cargando || !entrada.trim()} style={{ alignSelf: "stretch" }}>Enviar</button>
                 </div>
-                <div style={{ fontSize: "0.62rem", opacity: 0.55, marginTop: "0.3rem" }}>No escriba CURP, teléfonos ni datos personales. <a href="#" onClick={(e) => { e.preventDefault(); try { localStorage.removeItem(CLAVE_LIGA_IA); } catch (x) {} setLiga(""); }}>Cambiar liga</a></div>
+                <div style={{ fontSize: "0.62rem", opacity: 0.55, marginTop: "0.3rem" }}>No escriba CURP, teléfonos ni datos personales. · <a href="#" onClick={(e) => { e.preventDefault(); preguntarCopilot(); }}>Abrir en Microsoft Copilot ↗</a> · <a href="#" onClick={(e) => { e.preventDefault(); try { localStorage.removeItem(CLAVE_LIGA_IA); } catch (x) {} setLiga(""); }}>Cambiar liga</a></div>
               </div>
             </>
           )}
