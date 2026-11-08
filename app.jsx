@@ -16887,6 +16887,65 @@ async function aplicarPICActualizado2026() {
   return res;
 }
 
+// Barra de pasos del PIC: una etapa a la vez y, al final, el documento armado solo.
+const ETAPAS_PIC = [
+  { n: 1, t: "Lectura de la realidad", claves: ["etapa1"] },
+  { n: 2, t: "Situación problemática", claves: ["G:etapa2:principal"] },
+  { n: 3, t: "Horizontes de expectativas", claves: ["G:etapa3:principal"] },
+  { n: 4, t: "Actividades para la solución", claves: ["G:etapa4:aportacion", "G:etapa4:propuestas", "G:etapa4:cadaunoletoca"] },
+  { n: 5, t: "Localización de información", claves: ["G:etapa5:secuencia", "etapa5:cronograma"] },
+  { n: 6, t: "Elaboración de alternativas", claves: ["G:etapa6:infomano", "G:etapa6:seguimiento"] },
+  { n: 7, t: "Presentación", claves: ["G:etapa7:integrar"] },
+];
+const tieneContenidoPIC = (v) => {
+  if (v == null) return false;
+  if (typeof v === "string") return v.trim().length > 0;
+  if (typeof v === "object") return Object.values(v).some((x) => tieneContenidoPIC(x));
+  return true;
+};
+function PasosPIC({ etapa, setEtapa }) {
+  const [datos, setDatos] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    listarStorageObjeto("pic:").then((d) => { if (vivo) setDatos(d || {}); });
+    const quitar = escucharDatosVivos((k, v) => { if (String(k).startsWith("pic:")) setDatos((prev) => ({ ...(prev || {}), [String(k).slice(4)]: v })); });
+    return () => { vivo = false; quitar(); };
+  }, []);
+  const avance = (e) => {
+    if (!datos) return null;
+    let total = 0, listos = 0;
+    e.claves.forEach((c) => {
+      const lista = c.startsWith("G:") ? ["1", "2", "3"].map((g) => g + ":" + c.slice(2)) : [c];
+      lista.forEach((k) => { total++; const v = k in datos ? datos[k] : prePIC("pic:" + k); if (tieneContenidoPIC(v)) listos++; });
+    });
+    return { total, listos };
+  };
+  const completas = ETAPAS_PIC.filter((e) => { const a = avance(e); return a && a.listos === a.total; }).length;
+  return (
+    <div className="card" style={{ padding: "0.8rem" }}>
+      <div className="flex items-center justify-between flex-wrap gap-2" style={{ marginBottom: "0.6rem" }}>
+        <div className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>PIC paso a paso</div>
+        <div className="text-sm" style={{ opacity: 0.7 }}>{datos ? `${completas} de 7 etapas completas` : "Revisando avance…"}</div>
+      </div>
+      <div style={{ height: "6px", background: "var(--linea)", borderRadius: "4px", overflow: "hidden", marginBottom: "0.7rem" }}>
+        <div style={{ width: `${(completas / 7) * 100}%`, height: "100%", background: "var(--verde, #2e7d32)", transition: "width .3s" }} />
+      </div>
+      <div className="flex gap-1.5 flex-wrap">
+        {ETAPAS_PIC.map((e) => {
+          const a = avance(e); const lista = a && a.listos === a.total; const activa = etapa === e.n;
+          return (
+            <button key={e.n} onClick={() => setEtapa(e.n)} className={`chip-grado ${activa ? "activo" : ""}`} style={{ fontSize: "0.72rem", textAlign: "left", lineHeight: 1.2 }} title={a ? `${a.listos} de ${a.total} apartados con contenido (los 3 grados)` : ""}>
+              <b>{lista ? "✓" : e.n}</b> {e.t}{a && !lista ? <span style={{ opacity: 0.6 }}> · {a.listos}/{a.total}</span> : null}
+            </button>
+          );
+        })}
+        <button onClick={() => setEtapa("final")} className={`chip-grado ${etapa === "final" ? "activo" : ""}`} style={{ fontSize: "0.72rem", fontWeight: 700 }}>📄 Documento final</button>
+      </div>
+      {etapa !== "final" && <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.6rem", marginBottom: 0 }}>Etapa {etapa} de 7 · lo que escriba se guarda solo y pasa al documento final automáticamente. Las etapas 2 a 7 se llenan por grado (1°, 2° y 3°).</p>}
+    </div>
+  );
+}
+
 function PanelPlan567({ onVer }) {
   const [estado, setEstado] = useState(""); const [conf, setConf] = useState(false);
   const aplicar = async () => { setEstado("Guardando en tu Hoja…"); const r = await aplicarPICActualizado2026(); const bien = r.filter((x) => x.startsWith("✓")).length; setEstado(`✓ Listo: ${bien} de ${r.length} apartados guardados (con respaldo). Ya se ven en las pestañas y en el documento del PIC.`); setConf(false); };
@@ -16927,7 +16986,7 @@ function AvisoDocumentoVivo({ documento, botones }) {
 }
 
 function ProgramaAnaliticoPIC({ onStamp }) {
-  const [subTab, setSubTab] = useState("analisis");
+  const [subTab, setSubTab] = useState("etapas");
   const [grado, setGrado] = useState("1");
   const [imprimiendo, setImprimiendo] = useState(false);
   const [datosImpresion, setDatosImpresion] = useState(null);
@@ -16935,10 +16994,11 @@ function ProgramaAnaliticoPIC({ onStamp }) {
   const [irA, setIrA] = useState(null);
   const verEnDocumento = (doc, seccion) => { setCualDocumento(doc); setSubTab("analisis"); setIrA(seccion); };
 
+  const [etapaPIC, setEtapaPICState] = useState(() => { try { const v = localStorage.getItem("pic:etapaActiva"); return v === "final" ? "final" : (Number(v) || 1); } catch (e) { return 1; } });
+  const setEtapaPIC = (v) => { setEtapaPICState(v); try { localStorage.setItem("pic:etapaActiva", String(v)); } catch (e) {} if (v === "final") setCualDocumento("pic"); };
   const SUBTABS = [
+    { id: "etapas", label: "★ PIC paso a paso (Etapas 1 a 7)" },
     { id: "analisis", label: "Resultados y análisis" },
-    { id: "etapas123", label: "PIC — Etapas 1-3" },
-    { id: "etapas47", label: "PIC — Etapas 4-7" },
     { id: "analitico", label: "Programa Analítico" },
     { id: "pic", label: "PIC" },
     { id: "recursos", label: "Proyectos y videos SEP" },
@@ -16988,12 +17048,31 @@ function ProgramaAnaliticoPIC({ onStamp }) {
         ))}
       </div>
 
+      {subTab === "etapas" && <PasosPIC etapa={etapaPIC} setEtapa={setEtapaPIC} />}
+      {subTab === "etapas" && etapaPIC === 5 && (
+        <div className="card" style={{ borderColor: "var(--verde, #2e7d32)" }}>
+          <div className="text-sm" style={{ marginBottom: "0.4rem" }}>Para la Etapa 5 también le sirven:</div>
+          <div className="flex gap-2 flex-wrap">
+            <button className="btn-secundario" style={{ fontSize: "0.75rem" }} onClick={() => setSubTab("plan567")}>Plan actualizado de Etapas 5-7 (asambleas y feria)</button>
+            <button className="btn-secundario" style={{ fontSize: "0.75rem" }} onClick={() => setSubTab("recursos")}>Proyectos y videos SEP</button>
+          </div>
+        </div>
+      )}
+      {subTab === "etapas" && etapaPIC === "final" && (
+        <div className="flex flex-col gap-3">
+          <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
+            <div className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Documento final del PIC 2026-2027</div>
+            <p className="text-sm" style={{ opacity: 0.75, marginTop: "0.3rem" }}>Se arma solo con lo que se captura en cada etapa. Si cambia algo en una etapa, aquí se actualiza al instante. Desde aquí lo descarga en Word (para editar) o lo imprime / guarda como PDF para presentarlo.</p>
+          </div>
+          <AnalisisResultadosEmbebido cual={cualDocumento} setCual={setCualDocumento} irA={irA} setIrA={setIrA} />
+        </div>
+      )}
       {subTab === "plan567" && <PanelPlan567 onVer={() => verEnDocumento("pic", "pic-plan567")} />}
       {subTab === "cotejo" && <ListaCotejoPIC onStamp={onStamp} />}
       {subTab === "recursos" && <PanelRecursosSEP onVer={() => verEnDocumento("pic", "pic-recursos")} />}
       {subTab === "analisis" && <AnalisisResultadosEmbebido cual={cualDocumento} setCual={setCualDocumento} irA={irA} setIrA={setIrA} />}
 
-      {subTab === "etapas123" && (
+      {subTab === "etapas" && etapaPIC <= 3 && (
         <div className="flex flex-col gap-4">
           <AvisoDocumentoVivo documento="PIC 2026-2027" botones={[
             ["Ver Etapa 1 en el PIC", () => verEnDocumento("pic", "pic-etapa1")],
@@ -17005,6 +17084,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             </p>
           </div>
 
+          {etapaPIC === 1 && (<>
           <div className="card">
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
               Etapa 1 — Lectura de la realidad y de la vida cotidiana <span style={{ opacity: 0.5, fontWeight: 400 }}>· "¿Qué haremos?"</span>
@@ -17063,8 +17143,12 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             campos={CAMPOS_CAPTURA_PLANEACION.etapa1}
           />
 
+          </>)}
+          {etapaPIC === 2 && (<>
           <TablaEIAFase6Ref />
 
+          </>)}
+          {etapaPIC >= 2 && (<>
           <div className="flex gap-2 flex-wrap" style={{ marginTop: "0.25rem" }}>
             {["1", "2", "3"].map((g) => (
               <button key={g} onClick={() => setGrado(g)} className={`chip-grado ${grado === g ? "activo" : ""}`}>
@@ -17073,7 +17157,9 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             ))}
           </div>
           <p className="text-sm" style={{ opacity: 0.55, marginTop: "-0.6rem" }}>Elige el grado — controla tanto la problemática principal (abajo) como la secundaria opcional (más abajo).</p>
+          </>)}
 
+          {etapaPIC === 2 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
               Etapa 2 — Situación problemática <span style={{ opacity: 0.5, fontWeight: 400 }}>· "¡Ese es el problema!" — proyecto principal · {grado}° grado</span>
@@ -17107,6 +17193,8 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             campos={CAMPOS_CAPTURA_PLANEACION.etapa2Principal}
           />
 
+          </>)}
+          {etapaPIC === 3 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
               Etapa 3 — Horizontes de expectativas <span style={{ opacity: 0.5, fontWeight: 400 }}>· "¡Una propuesta de solución!" — proyecto principal · {grado}° grado</span>
@@ -17124,6 +17212,8 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             campos={CAMPOS_CAPTURA_PLANEACION.etapa3Principal}
           />
 
+          </>)}
+          {etapaPIC === 2 && (<>
           <div className="card" style={{ borderColor: "var(--borde)", opacity: 0.85 }}>
             <p className="text-sm" style={{ opacity: 0.65 }}>
               Lo de aquí abajo (diagnóstico de basura/salud) queda como <b>trabajo secundario y opcional</b> para {grado}° grado — el proyecto principal de este ciclo es el académico de arriba, basado en el EIA. Solo se usa si el grado decide trabajar, además, una problemática comunitaria propia.
@@ -17142,6 +17232,8 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             campos={CAMPOS_CAPTURA_PLANEACION.etapa2Secundaria}
           />
 
+          </>)}
+          {etapaPIC === 3 && (<>
           <FormularioAutoguardado
             key={`etapa3-${grado}`}
             claveStorage={`pic:${grado}:etapa3`}
@@ -17149,10 +17241,11 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.etapa3Secundaria}
           />
+          </>)}
         </div>
       )}
 
-      {subTab === "etapas47" && (
+      {subTab === "etapas" && etapaPIC >= 4 && etapaPIC <= 7 && (
         <div className="flex flex-col gap-4">
           <AvisoDocumentoVivo documento="PIC 2026-2027" botones={[
             ["Ver Etapas 4 a 7 en el PIC", () => verEnDocumento("pic", "pic-etapas47")],
@@ -17171,6 +17264,7 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             ))}
           </div>
 
+          {etapaPIC === 4 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
               Etapa 4 — Actividades para la solución <span style={{ opacity: 0.5, fontWeight: 400 }}>· {grado}° grado</span>
@@ -17209,6 +17303,8 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             campos={CAMPOS_CAPTURA_PLANEACION.etapa4CadaUno}
           />
 
+          </>)}
+          {etapaPIC === 5 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
               Etapa 5 — Localización de información <span style={{ opacity: 0.5, fontWeight: 400 }}>· {grado}° grado</span>
@@ -17234,6 +17330,8 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             campos={CAMPOS_CAPTURA_PLANEACION.etapa5Cronograma}
           />
 
+          </>)}
+          {etapaPIC === 6 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
               Etapa 6 — Elaboración de alternativas <span style={{ opacity: 0.5, fontWeight: 400 }}>· {grado}° grado</span>
@@ -17261,6 +17359,8 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             campos={CAMPOS_CAPTURA_PLANEACION.etapa6Seguimiento}
           />
 
+          </>)}
+          {etapaPIC === 7 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
               Etapa 7 — Presentación <span style={{ opacity: 0.5, fontWeight: 400 }}>· {grado}° grado</span>
@@ -17278,6 +17378,14 @@ function ProgramaAnaliticoPIC({ onStamp }) {
             onStamp={onStamp}
             campos={CAMPOS_CAPTURA_PLANEACION.etapa7Integrar}
           />
+          </>)}
+        </div>
+      )}
+
+      {subTab === "etapas" && etapaPIC !== "final" && (
+        <div className="flex justify-between gap-2 flex-wrap">
+          <button className="btn-secundario" disabled={etapaPIC === 1} onClick={() => { setEtapaPIC(etapaPIC - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>← Etapa anterior</button>
+          <button className="btn-primario" onClick={() => { setEtapaPIC(etapaPIC === 7 ? "final" : etapaPIC + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{etapaPIC === 7 ? "Ver documento final →" : `Siguiente: Etapa ${etapaPIC + 1} →`}</button>
         </div>
       )}
 
