@@ -25547,32 +25547,8 @@ function Copiloto({ alumnos, pestana, usuario }) {
 /* ---------- Adornos de temporada (cambian solos según la fecha) ---------- */
 // Cada tema: desde/hasta en formato MM-DD (inclusive). El primero que coincida con la fecha de hoy se usa.
 // Para ver uno antes de tiempo: agregar ?tema=<id> a la dirección (ej. ?tema=navidad).
-const TEMAS_TEMPORADA = [
-  { id: "anionuevo", desde: "12-31", hasta: "01-02", iconos: ["🎆", "🥂", "🎉", "✨", "🕛"], mensaje: () => `¡Feliz Año Nuevo ${new Date().getMonth() === 11 ? new Date().getFullYear() + 1 : new Date().getFullYear()}!`, cae: ["✨", "🎊"] },
-  { id: "reyes", desde: "01-03", hasta: "01-06", iconos: ["👑", "🐪", "🎁", "⭐", "🍞"], mensaje: () => "¡Feliz Día de Reyes!", cae: ["⭐"] },
-  { id: "navidad", desde: "12-01", hasta: "12-30", iconos: ["🎄", "🦌", "🎁", "⛄", "🎅", "🔔", "🕯️"], mensaje: () => "¡Feliz Navidad y felices fiestas!", cae: ["❄️", "❄", "✻"] },
-  { id: "guadalupe", desde: "12-11", hasta: "12-12", iconos: ["🌹", "🕯️", "🌹"], mensaje: () => "12 de diciembre · Día de la Virgen de Guadalupe", cae: ["🌹"] },
-  { id: "muertos", desde: "10-28", hasta: "11-02", iconos: ["💀", "🌼", "🕯️", "🍞", "🌼"], mensaje: () => "Día de Muertos · tradición que nos une", cae: ["🌼"] },
-  { id: "revolucion", desde: "11-18", hasta: "11-20", iconos: ["🇲🇽", "🥁", "🎺"], mensaje: () => "20 de noviembre · Aniversario de la Revolución Mexicana", cae: [] },
-  { id: "amor", desde: "02-13", hasta: "02-14", iconos: ["💌", "🤝", "💛"], mensaje: () => "Día del Amor y la Amistad", cae: ["💛"] },
-  { id: "bandera", desde: "02-24", hasta: "02-24", iconos: ["🇲🇽"], mensaje: () => "24 de febrero · Día de la Bandera", cae: [] },
-  { id: "primavera", desde: "03-20", hasta: "03-21", iconos: ["🌸", "🌼", "🦋"], mensaje: () => "¡Bienvenida la primavera!", cae: ["🌸"] },
-  { id: "nino", desde: "04-29", hasta: "04-30", iconos: ["🎈", "🪁", "🧸", "🎈"], mensaje: () => "¡Feliz Día de la Niña y del Niño!", cae: ["🎈"] },
-  { id: "mama", desde: "05-09", hasta: "05-10", iconos: ["💐", "🌷", "💐"], mensaje: () => "¡Feliz Día de las Madres!", cae: ["🌷"] },
-  { id: "maestro", desde: "05-14", hasta: "05-15", iconos: ["🍎", "📚", "✏️"], mensaje: () => "¡Feliz Día de la Maestra y del Maestro!", cae: [] },
-  { id: "papa", desde: "06-15", hasta: "06-21", iconos: ["👔", "🛠️", "💙"], mensaje: () => "¡Feliz Día del Padre!", cae: [], soloTercerDomingo: true },
-  { id: "fin", desde: "07-10", hasta: "07-17", iconos: ["🎓", "🏅", "🎉"], mensaje: () => "¡Felicidades por un ciclo escolar más!", cae: ["🎉"] },
-  { id: "patrias", desde: "09-13", hasta: "09-16", iconos: ["🇲🇽", "🌶️", "🎺", "🇲🇽"], mensaje: () => "¡Viva México! · Fiestas Patrias", cae: [] },
-];
-function temaDeHoy() {
-  try { const q = new URLSearchParams(location.search).get("tema"); if (q) return TEMAS_TEMPORADA.find((t) => t.id === q) || null; } catch (e) {}
-  const h = new Date(); const md = String(h.getMonth() + 1).padStart(2, "0") + "-" + String(h.getDate()).padStart(2, "0");
-  const dentro = (t) => (t.desde <= t.hasta ? md >= t.desde && md <= t.hasta : md >= t.desde || md <= t.hasta);
-  // los temas de un solo día o muy cortos ganan a los largos (ej. 12 de diciembre dentro de Navidad)
-  const candidatos = TEMAS_TEMPORADA.filter(dentro).filter((t) => !t.soloTercerDomingo || (h.getDay() === 0 && h.getDate() >= 15 && h.getDate() <= 21));
-  candidatos.sort((a, b) => (a.id === "navidad") - (b.id === "navidad"));
-  return candidatos[0] || null;
-}
+// Las fechas y adornos viven en index.html (window.temaDeHoyAN), así el portal y Control Escolar usan la misma lista.
+function temaDeHoy() { try { return window.temaDeHoyAN ? window.temaDeHoyAN() : null; } catch (e) { return null; } }
 function AdornoTemporada() {
   const [tema] = useState(temaDeHoy);
   const [oculto, setOculto] = useState(() => { try { return tema && localStorage.getItem("adorno:oculto") === tema.id + new Date().getFullYear(); } catch (e) { return false; } });
