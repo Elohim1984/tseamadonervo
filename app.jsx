@@ -15443,6 +15443,7 @@ el manejo de la basura y los servicios de salud.</i></p>
 <!--VIVO:pic-etapas23-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Propuesta
 para el bien común</b></font></h1>
+<!--INI:pic-bien-comun-->
 <p style="line-height: 100%; margin-bottom: 0.08in"><b>OBJETIVO
 GENERAL</b></p>
 <p style="line-height: 100%; margin-bottom: 0.08in">Fortalecer, en
@@ -15488,8 +15489,10 @@ ESPECÍFICOS</b></p>
 	los avances a la comunidad de Xoyatla (evento, feria o exposición)
 	durante el ciclo escolar.</p></li>
 </ul>
+<!--FIN:pic-bien-comun-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Cada
 uno lo que le toca hacer</b></font></h1>
+<!--INI:pic-cada-uno-->
 <p style="line-height: 100%; margin-bottom: 0.08in">Para la
 implementación y avance del PIC se establecen actividades para los 3
 territorios: Comunidad, Escuela y Aula.</p>
@@ -15583,6 +15586,7 @@ del Trimestre 1 — Aplicación (con vínculo opcional a basura/salud):</b></p>
 	opcional, aplicar lo aprendido a un análisis de datos (encuesta o
 	conteo) sobre manejo de basura o servicios de salud en la comunidad.</p></li>
 </ul>
+<!--FIN:pic-cada-uno-->
 <h1 class="western" style="margin-top: 0.21in; margin-bottom: 0.1in"><font color="#7a1f1f"><b>Cronograma</b></font></h1>
 <p style="line-height: 100%; margin-bottom: 0.08in">Etapas dentro del
 ciclo escolar 2026-2027 (31 de agosto de 2026 al 9 de julio de 2027).
@@ -16254,11 +16258,11 @@ function descargarDocumentoWord(html, nombre) {
 
 // Sustituye las marcas <!--VIVO:...--> del documento por lo capturado.
 function componerDocumentoVivo(htmlBase, mapa, obs) {
-  const portada = (mapa || {})["pic:portada"] || {};
   htmlBase = htmlBase.replace(/<!--INI:([a-z-]+)-->([\s\S]*?)<!--FIN:\1-->/g, (m, id, original) => {
-    const campo = REGIONES_PORTADA_PIC[id];
-    const v = campo ? String(portada[campo] || "").trim() : "";
-    if (!v || v === (portadaPorDefectoPIC()[campo] || "").trim()) return original;
+    const reg = REGIONES_PORTADA_PIC[id];
+    if (!reg) return original;
+    const v = String(((mapa || {})[reg[0]] || {})[reg[1]] || "").trim();
+    if (!v || v === (textosRegionPIC()[id] || "").trim()) return original;
     return envolverVivo(id, textoAParrafosHTML(v));
   });
   return htmlBase.replace(/<!--VIVO:([a-z0-9-]+)-->/g, (m, id) => {
@@ -16892,7 +16896,7 @@ const SELECCION_GENERAL_PIC = {
   aQuienAfecta: "A las y los alumnos de los tres grados y a sus familias, que usan las operaciones en el comercio, el campo y la producción local; también a la comunidad de Xoyatla, porque las y los jóvenes necesitan estas habilidades para continuar sus estudios o trabajar.",
   preguntaGuia: "¿Cómo podemos usar las operaciones básicas para resolver problemas reales de nuestra casa y de nuestra comunidad?",
 };
-function prePIC(clave) { if (clave === "pic:portada") return portadaPorDefectoPIC(); if (clave === "pic:general:seleccion") return SELECCION_GENERAL_PIC; if (!__prePIC) __prePIC = prellenadoPICActualizado(); return __prePIC[clave] || null; }
+function prePIC(clave) { if (clave === "pic:portada") return portadaPorDefectoPIC(); if (clave === "pic:propuesta") return porDefectoRegionPIC("pic:propuesta"); if (clave === "pic:general:seleccion") return SELECCION_GENERAL_PIC; if (!__prePIC) __prePIC = prellenadoPICActualizado(); return __prePIC[clave] || null; }
 
 // Introducción, comunidad y contexto escolar del PIC: se pueden reescribir desde
 // "PIC paso a paso → Introducción y contexto". Si no se han cambiado, el documento
@@ -16902,22 +16906,35 @@ const CAMPOS_PORTADA_PIC = [
   { key: "comunidad", etiqueta: "Xoyatla (la comunidad)", tipo: "area", filas: 8 },
   { key: "contexto", etiqueta: "Contexto escolar (ciclo 2026-2027)", tipo: "area", filas: 8 },
 ];
-const REGIONES_PORTADA_PIC = { "pic-intro": "intro", "pic-comunidad": "comunidad", "pic-contexto": "contexto" };
+const REGIONES_PORTADA_PIC = {
+  "pic-intro": ["pic:portada", "intro"], "pic-comunidad": ["pic:portada", "comunidad"], "pic-contexto": ["pic:portada", "contexto"],
+  "pic-bien-comun": ["pic:propuesta", "bienComun"], "pic-cada-uno": ["pic:propuesta", "cadaUno"],
+};
+const CAMPOS_PROPUESTA_PIC = [
+  { key: "bienComun", etiqueta: "Propuesta para el bien común (objetivo general, objetivos específicos y metas)", tipo: "area", filas: 14 },
+  { key: "cadaUno", etiqueta: "Cada uno lo que le toca hacer (Comunidad, Escuela y Aula por grado)", tipo: "area", filas: 16 },
+];
 function htmlATextoPlano(html) {
   return String(html).replace(/\s*\n\s*/g, " ").replace(/<li[^>]*>/gi, "\n- ").replace(/<\/p>|<br\s*\/?>/gi, "\n")
     .replace(/<[^>]+>/g, "").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
     .split("\n").map((l) => l.trim()).filter((l) => l && l !== "-").join("\n");
 }
-let __portadaPIC = null;
-function portadaPorDefectoPIC() {
-  if (__portadaPIC) return __portadaPIC;
+let __textosRegionPIC = null;
+function textosRegionPIC() {
+  if (__textosRegionPIC) return __textosRegionPIC;
   const r = {};
-  Object.entries(REGIONES_PORTADA_PIC).forEach(([id, campo]) => {
+  Object.keys(REGIONES_PORTADA_PIC).forEach((id) => {
     const m = DOCUMENTO_COMPLETO_PIC_HTML.match(new RegExp("<!--INI:" + id + "-->([\\s\\S]*?)<!--FIN:" + id + "-->"));
-    r[campo] = m ? htmlATextoPlano(m[1]) : "";
+    r[id] = m ? htmlATextoPlano(m[1]) : "";
   });
-  return (__portadaPIC = r);
+  return (__textosRegionPIC = r);
 }
+function porDefectoRegionPIC(clave) {
+  const r = {};
+  Object.entries(REGIONES_PORTADA_PIC).forEach(([id, [k, campo]]) => { if (k === clave) r[campo] = textosRegionPIC()[id]; });
+  return r;
+}
+function portadaPorDefectoPIC() { return porDefectoRegionPIC("pic:portada"); }
 function textoAParrafosHTML(t) {
   const esc = (x) => x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const lineas = String(t).split("\n").map((l) => l.trim()).filter(Boolean);
@@ -17386,6 +17403,10 @@ function ProgramaAnaliticoPIC({ onStamp }) {
           </div>
           {grado === "general" && <ResumenGradosPIC etapa={etapaPIC} />}
 
+          {etapaPIC === 4 && grado === "general" && (
+            <FormularioAutoguardado key="pic-propuesta" claveStorage="pic:propuesta" titulo="Documento final — Propuesta para el bien común y Cada uno lo que le toca hacer" onStamp={onStamp} campos={CAMPOS_PROPUESTA_PIC}
+              ayuda="Estas dos secciones del documento final son texto general de la escuela. Viene con el texto actual: corríjalo o reescríbalo. Para listas, empiece cada renglón con un guion y un espacio (- )." />
+          )}
           {etapaPIC === 4 && (<>
           <div className="card" style={{ borderColor: "var(--azul)", background: "rgba(31,78,121,0.06)" }}>
             <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.88rem" }}>
