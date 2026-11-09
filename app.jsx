@@ -18154,9 +18154,17 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
   // bimestres viene calculado de los bimestres anteriores.
   const arrastre = bimestre === "1" ? (Number(saldoInicialUno) || 0) : arrastreCargado;
 
+  // Orden automático (pedido del director): primero TODOS los ingresos y
+  // después todos los egresos, sin importar en qué orden se capturaron.
+  // Dentro de cada grupo se respeta el orden de captura. El saldo corre ya
+  // en este orden, así que pantalla, vista previa y PDF salen iguales.
+  const filasOrdenadas = [
+    ...filas.filter((f) => Number(f.ingreso) > 0),
+    ...filas.filter((f) => !(Number(f.ingreso) > 0)),
+  ];
   const conSaldo = (() => {
     let acumulado = arrastre || 0;
-    return filas.map((f) => {
+    return filasOrdenadas.map((f) => {
       acumulado += (Number(f.ingreso) || 0) - (Number(f.egreso) || 0);
       return { ...f, saldo: acumulado };
     });
