@@ -3267,6 +3267,7 @@ const ACCESOS_AGENDA = [
   [/deportiv|juegos/i, "deportes", "Juegos deportivos"],
   [/corte de caja|informe bimestral|APF/i, "cortecaja", "Corte de Caja"],
   [/recibo|voceo/i, "recibos", "Recibos"],
+  [/solicitud de apoyo|agradecimiento|oficio a la presidencia/i, "oficios", "Solicitudes y agradecimientos"],
   [/911|estad[ií]stica/i, "estadistica911", "Estadística 911.5"],
   [/PIC|integraci[oó]n comunitaria|lectura|academia/i, "pic", "Programa Analítico y PIC"],
   [/REPASE|participaci[oó]n escolar|consejo de participaci/i, "consejo", "REPASE"],
@@ -5491,6 +5492,421 @@ const PLANTILLAS_RECIBO = [
   { id: "otro", nombre: "Otro concepto", valores: {
     concepto: "", detalle: "", recibe: "Mtro. Neftalid Bladimir Ortán Aguilar", cargoRecibe: "Director comisionado", cargoEntrega: "Tesorera", cargoVobo: "Presidenta" } },
 ];
+
+/* ---------- Solicitudes y agradecimientos (oficios) · 9 nov 2026 ----------
+   Pestaña en Gestión escolar para los oficios que se hacen cada mes a las
+   autoridades (Presidente Municipal de Tepeojuma, Presidente Auxiliar de
+   Xoyatla…). Se elige tipo (solicitud / agradecimiento), destinatario,
+   plantilla, firmas, y sale el oficio con el MISMO membrete del formato del
+   director (escudo, encabezado, marca de agua TS y pie con teléfono): en Word
+   se usa su propio .docx como plantilla (assets/oficios/Plantilla_oficio.docx,
+   solo encabezado y pie, sin datos personales) y para imprimir/PDF una vista
+   igual en pantalla. Cada oficio se guarda en la Hoja como "oficio:<id>" con
+   folio consecutivo y estado; el directorio en "oficios:directorio". Los
+   nombres de la Mesa Directiva se toman de apf:mesaDirectiva (no van en el
+   código). */
+const Mail = crearIcono('<rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22 6 12 13 2 6"/>');
+const DIRECTOR_OFICIO = { nombre: "NEFTALID BLADIMIR ORTÁN AGUILAR", cargo: "DIRECTOR COMISIONADO" };
+const CICLO_OFICIO = "2026-2027";
+const DIRECTORIO_OFICIOS_INICIAL = [
+  { id: "pm-tepeojuma", nombre: "C. GUSTAVO LEONCIO SÁNCHEZ MARTIÑÓN", cargo: "PRESIDENTE MUNICIPAL", lugar: "DE TEPEOJUMA, PUE." },
+  { id: "pa-xoyatla", nombre: "C. JORGE ARTURO BARRIENTOS AMADOR", cargo: "PRESIDENTE AUXILIAR 2025-2028", lugar: "XOYATLA, TEPEOJUMA, PUE." },
+];
+const CARGOS_APF_OFICIO = [
+  { key: "presidente", cargo: "Presidenta" }, { key: "vicepresidente", cargo: "Vicepresidenta" },
+  { key: "secretario", cargo: "Secretaria" }, { key: "tesorero", cargo: "Tesorera" },
+  { key: "vocal1", cargo: "Primer Vocal" }, { key: "vocal2", cargo: "Segundo Vocal" },
+  { key: "vocal3", cargo: "Tercer Vocal" }, { key: "vocal4", cargo: "Cuarto Vocal" },
+  { key: "vocal5", cargo: "Quinto Vocal" }, { key: "vocal6", cargo: "Sexto Vocal" },
+];
+const MESES_OFICIO = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+const montoOficio = (m) => (m ? `$${fmtMonto(m)} (${montoConLetra(m)})` : "$______");
+const PLANTILLAS_OFICIO = [
+  { id: "telefono", nombre: "📞 Teléfono e internet (mensual)", conMes: true, conMonto: true,
+    sol: (o) => `su apoyo económico por ${montoOficio(o.monto)} para pagar el teléfono e internet de la escuela correspondiente al mes de ${o.mes || "______"}, para que nuestros alumnos sigan apoyándose en su aprendizaje`,
+    agr: (o) => `el apoyo económico por ${montoOficio(o.monto)} para el pago del teléfono e internet de la escuela correspondiente al mes de ${o.mes || "______"}` },
+  { id: "transporte", nombre: "🚌 Transporte", ej: "trasladar a los alumnos a los Juegos Deportivos Escolares los días 18 y 19 de noviembre de 2026",
+    sol: (o) => `su apoyo con transporte para ${o.detalle || "______"}`, agr: (o) => `su apoyo con el transporte para ${o.detalle || "______"}` },
+  { id: "deportivo", nombre: "🏆 Evento deportivo", ej: "la participación de nuestros alumnos en los Juegos Deportivos Escolares (hidratación, uniformes, premiación)",
+    sol: (o) => `su apoyo para ${o.detalle || "______"}`, agr: (o) => `su apoyo para ${o.detalle || "______"}` },
+  { id: "material", nombre: "🛠 Material / mantenimiento", ej: "pintura para dos aulas y material de limpieza",
+    sol: (o) => `su apoyo con ${o.detalle || "______"}`, agr: (o) => `su apoyo con ${o.detalle || "______"}` },
+  { id: "civico", nombre: "🎉 Evento cívico", ej: "el desfile del 20 de noviembre (sonido y templete)",
+    sol: (o) => `su apoyo para ${o.detalle || "______"}`, agr: (o) => `su apoyo para ${o.detalle || "______"}` },
+  { id: "libre", nombre: "✏️ Libre", ej: "escriba aquí qué se solicita o qué se agradece",
+    sol: (o) => o.detalle || "______", agr: (o) => o.detalle || "______" },
+];
+const plantillaOficio = (id) => PLANTILLAS_OFICIO.find((p) => p.id === id) || PLANTILLAS_OFICIO[0];
+const mesActualOficio = (iso) => { const [y, m] = String(iso || hoyISO()).split("-").map(Number); return `${MESES_OFICIO[(m || 1) - 1]} DE ${y}`; };
+const folioOficio = (o) => `${o.folio || "___"}/${CICLO_OFICIO}`;
+const fechaOficio = (iso) => (iso ? `XOYATLA, TEPEOJUMA, PUEBLA, A ${fechaLarga(iso).replace(/^(\d) /, "0$1 ").toUpperCase()}` : "");
+
+function firmantesDeOficio(o, mesa) {
+  const apf = CARGOS_APF_OFICIO.filter((c) => (o.firmantesAPF || []).includes(c.key) && (mesa || {})[c.key])
+    .map((c) => ({ nombre: nombrePropio(mesa[c.key]), cargo: c.cargo }));
+  const extras = (o.extras || []).filter((e) => (e.nombre || "").trim()).map((e) => ({ nombre: e.nombre.trim(), cargo: (e.cargo || "").trim() }));
+  return [...apf, ...extras];
+}
+
+function textosOficio(o, mesa) {
+  const conAPF = firmantesDeOficio(o, mesa).length > 0;
+  const p = plantillaOficio(o.plantilla);
+  const esc = `de la Escuela Telesecundaria "Amado Nervo", C.C.T. 21ETV0473W, de la comunidad de Xoyatla, Tepeojuma, Pue.`;
+  const quien = conAPF
+    ? `Los que suscriben, C. ${DIRECTOR_OFICIO.nombre}, Director Comisionado, y el Comité de la Asociación de Padres de Familia ${esc}, por medio de la presente y de la manera más atenta y respetuosa nos dirigimos a usted para`
+    : `El que suscribe, C. ${DIRECTOR_OFICIO.nombre}, Director Comisionado ${esc}, por medio de la presente y de la manera más atenta y respetuosa me dirijo a usted para`;
+  const auto = o.tipo === "agradecimiento" ? `${quien} agradecerle ${p.agr(o)}.` : `${quien} solicitar ${p.sol(o)}.`;
+  const cuerpo = (o.cuerpoManual || "").trim() || auto;
+  const despedida = o.tipo === "agradecimiento"
+    ? `Sin más por el momento, ${conAPF ? "nos despedimos" : "me despido"} de usted agradeciendo su valioso apoyo.`
+    : `Agradeciendo de antemano su atención y esperando pronta respuesta favorable, ${conAPF ? "nos despedimos" : "me despido"} de usted.`;
+  return { cuerpo, auto, despedida };
+}
+
+function OficioHoja({ o, directorio, mesa }) {
+  const dest = (directorio || []).find((d) => d.id === o.destinatarioId) || {};
+  const ccp = (directorio || []).filter((d) => (o.ccpIds || []).includes(d.id) && d.id !== o.destinatarioId);
+  const firm = firmantesDeOficio(o, mesa);
+  const { cuerpo, despedida } = textosOficio(o, mesa);
+  const linea = { borderTop: "1px solid #000", paddingTop: "2px" };
+  return (
+    <div className="hoja-oficio" style={{ background: "#fff", color: "#000", width: "100%", maxWidth: "8.5in", minHeight: "10.4in", margin: "0 auto", padding: "0.45in 0.6in 0.4in", boxSizing: "border-box", fontFamily: "Arial, Helvetica, sans-serif", fontSize: "10.5pt", position: "relative", display: "flex", flexDirection: "column" }}>
+      <img src="assets/oficios/marca_agua_ts.jpg" alt="" style={{ position: "absolute", left: "12%", top: "18%", width: "76%", opacity: 0.09, pointerEvents: "none" }} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative" }}>
+        <img src={ESCUDO_ESCUELA} alt="" style={{ width: "0.85in" }} />
+        <div style={{ textAlign: "right", fontWeight: 700, fontSize: "9.5pt", lineHeight: 1.45 }}>
+          ESC. TSE. "AMADO NERVO"<br />C.C.T.: 21ETV0473W<br />XOYATLA, TEPEOJUMA, PUEBLA<br />CICLO ESCOLAR 2026 - 2027
+          <div style={{ marginTop: "0.18in" }}>OFICIO No. {folioOficio(o)}<br />ASUNTO: <u>{o.tipo === "agradecimiento" ? "AGRADECIMIENTO" : "SOLICITUD"}</u></div>
+        </div>
+      </div>
+      <div style={{ position: "relative", flex: 1 }}>
+        <div style={{ fontWeight: 700, marginTop: "0.3in", lineHeight: 1.6 }}>
+          {dest.nombre || "______________________"}<br />{dest.cargo}<br />{dest.lugar}<br /><span style={{ letterSpacing: "0.25em" }}>PRESENTE</span>
+        </div>
+        <p style={{ marginTop: "0.25in", lineHeight: 1.8, textAlign: "justify", whiteSpace: "pre-wrap" }}>{cuerpo}</p>
+        <p style={{ lineHeight: 1.8, textAlign: "justify" }}>{despedida}</p>
+        <div style={{ textAlign: "center", marginTop: "0.25in", lineHeight: 1.6 }}><span style={{ letterSpacing: "0.3em" }}>ATENTAMENTE</span><br />{fechaOficio(o.fecha)}</div>
+        {o.conDirector !== false && (
+          <div style={{ textAlign: "center", margin: "0.55in auto 0", width: "3.3in", ...linea, fontWeight: 700 }}>
+            {DIRECTOR_OFICIO.nombre}<div style={{ fontWeight: 400 }}>{DIRECTOR_OFICIO.cargo}</div>
+          </div>
+        )}
+        {firm.length > 0 && (
+          <>
+            <div style={{ textAlign: "center", fontWeight: 700, fontSize: "9.5pt", marginTop: "0.25in" }}>Vo. Bo. MESA DIRECTIVA DE LA ASOCIACIÓN DE PADRES DE FAMILIA</div>
+            <div style={{ display: "grid", gridTemplateColumns: firm.length === 1 ? "1fr" : "1fr 1fr", gap: "0 0.5in", fontSize: "9pt", textAlign: "center", width: firm.length === 1 ? "3.3in" : "100%", margin: "0 auto" }}>
+              {firm.map((f, i) => <div key={i} style={{ marginTop: firm.length > 6 ? "0.3in" : "0.4in", ...linea }}>{f.nombre}<br />{f.cargo}</div>)}
+            </div>
+          </>
+        )}
+        {ccp.length > 0 && <div style={{ fontSize: "8.5pt", marginTop: "0.2in" }}>c.c.p. {ccp.map((d) => `${nombrePropio(d.nombre)}, ${nombrePropio(d.cargo)}`).join("; ")}. · Archivo</div>}
+      </div>
+      <div style={{ textAlign: "center", fontSize: "8.5pt", color: "#333", marginTop: "0.2in", position: "relative" }}>Xoyatla, Tepeojuma Puebla, Tel. 2444419381, C.P. 74390</div>
+    </div>
+  );
+}
+
+// --- Word: se rellena el .docx plantilla (mismo membrete del director) ---
+let promesaJSZip = null;
+function cargarJSZip() {
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  if (!promesaJSZip) promesaJSZip = new Promise((ok, mal) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+    s.onload = () => ok(window.JSZip); s.onerror = () => { promesaJSZip = null; mal(new Error("No se pudo cargar JSZip")); };
+    document.head.appendChild(s);
+  });
+  return promesaJSZip;
+}
+const xmlEsc = (t) => String(t || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function wRun(t, { b, u, sz = 21, esp } = {}) {
+  return `<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>${b ? "<w:b/>" : ""}${u ? '<w:u w:val="single"/>' : ""}${esp ? `<w:spacing w:val="${esp}"/>` : ""}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr><w:t xml:space="preserve">${xmlEsc(t)}</w:t></w:r>`;
+}
+function wPar(runs, { jc = "left", antes = 0, despues = 0, linea = 240, borde, ind } = {}) {
+  return `<w:p><w:pPr>${borde ? '<w:pBdr><w:top w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : ""}<w:spacing w:before="${antes}" w:after="${despues}" w:line="${linea}" w:lineRule="auto"/>${ind ? `<w:ind w:left="${ind}" w:right="${ind}"/>` : ""}<w:jc w:val="${jc}"/></w:pPr>${Array.isArray(runs) ? runs.join("") : runs}</w:p>`;
+}
+function cuerpoOficioXML(o, directorio, mesa) {
+  const dest = (directorio || []).find((d) => d.id === o.destinatarioId) || {};
+  const ccp = (directorio || []).filter((d) => (o.ccpIds || []).includes(d.id) && d.id !== o.destinatarioId);
+  const firm = firmantesDeOficio(o, mesa);
+  const { cuerpo, despedida } = textosOficio(o, mesa);
+  let x = "";
+  x += wPar([wRun(`OFICIO No. ${folioOficio(o)}`, { b: true, sz: 20 })], { jc: "right" });
+  x += wPar([wRun("ASUNTO: ", { b: true, sz: 20 }), wRun(o.tipo === "agradecimiento" ? "AGRADECIMIENTO" : "SOLICITUD", { b: true, u: true, sz: 20 })], { jc: "right", despues: 300 });
+  [dest.nombre || "______________________", dest.cargo, dest.lugar].filter(Boolean).forEach((l) => { x += wPar([wRun(l, { b: true })], { linea: 300 }); });
+  x += wPar([wRun("PRESENTE", { b: true, esp: 60 })], { linea: 300, despues: 300 });
+  cuerpo.split(/\n+/).forEach((par) => { x += wPar([wRun(par)], { jc: "both", linea: 360, despues: 160 }); });
+  x += wPar([wRun(despedida)], { jc: "both", linea: 360, despues: 300 });
+  x += wPar([wRun("ATENTAMENTE", { esp: 60 })], { jc: "center" });
+  x += wPar([wRun(fechaOficio(o.fecha))], { jc: "center", despues: o.conDirector !== false ? 700 : 200 });
+  if (o.conDirector !== false) {
+    x += wPar([wRun(DIRECTOR_OFICIO.nombre, { b: true })], { jc: "center", borde: true, ind: 2600 });
+    x += wPar([wRun(DIRECTOR_OFICIO.cargo)], { jc: "center", despues: 240 });
+  }
+  if (firm.length) {
+    x += wPar([wRun("Vo. Bo. MESA DIRECTIVA DE LA ASOCIACIÓN DE PADRES DE FAMILIA", { b: true, sz: 19 })], { jc: "center", despues: 0 });
+    const celda = (f) => `<w:tc><w:tcPr><w:tcW w:w="4800" w:type="dxa"/></w:tcPr>${f ? wPar([wRun("", { sz: 18 })], { antes: 360 }) + wPar([wRun(f.nombre, { sz: 18 })], { jc: "center", borde: true, ind: 300 }) + wPar([wRun(f.cargo, { sz: 18 })], { jc: "center" }) : wPar([wRun("")])}</w:tc>`;
+    let filas = "";
+    const cols = firm.length === 1 ? 1 : 2;
+    for (let i = 0; i < firm.length; i += cols) filas += `<w:tr>${celda(firm[i])}${cols === 2 ? celda(firm[i + 1]) : ""}</w:tr>`;
+    x += `<w:tbl><w:tblPr><w:tblW w:w="${cols === 2 ? 9600 : 4800}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${cols === 2 ? '<w:gridCol w:w="4800"/><w:gridCol w:w="4800"/>' : '<w:gridCol w:w="4800"/>'}</w:tblGrid>${filas}</w:tbl>`;
+  }
+  if (ccp.length) x += wPar([wRun(`c.c.p. ${ccp.map((d) => `${nombrePropio(d.nombre)}, ${nombrePropio(d.cargo)}`).join("; ")}. · Archivo`, { sz: 17 })], { antes: 240 });
+  return x;
+}
+async function descargarOficioWord(o, directorio, mesa) {
+  const JSZip = await cargarJSZip();
+  const resp = await fetch("assets/oficios/Plantilla_oficio.docx");
+  if (!resp.ok) throw new Error("No se encontró la plantilla del oficio");
+  const zip = await JSZip.loadAsync(await resp.arrayBuffer());
+  const doc = await zip.file("word/document.xml").async("string");
+  const nuevo = doc.replace("<w:p><w:r><w:t>{{CUERPO}}</w:t></w:r></w:p>", cuerpoOficioXML(o, directorio, mesa));
+  zip.file("word/document.xml", nuevo);
+  const blob = await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  const tipo = o.tipo === "agradecimiento" ? "Agradecimiento" : "Solicitud";
+  a.download = `Oficio_${String(o.folio || "").padStart(3, "0")}_${tipo}_${plantillaOficio(o.plantilla).id}.docx`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+const ESTADOS_OFICIO = {
+  espera: { txt: "En espera", color: "#a86a00" }, apoyado: { txt: "Apoyado ✔", color: "var(--verde)" },
+  noapoyado: { txt: "No apoyado", color: "var(--rojo)" }, entregado: { txt: "Entregado", color: "var(--verde)" },
+};
+
+function OficiosTab({ onStamp }) {
+  const [lista, setLista] = useState([]);
+  const [directorio, setDirectorio] = useState(DIRECTORIO_OFICIOS_INICIAL);
+  const [mesa, setMesa] = useState({});
+  const [o, setO] = useState(null);
+  const [estado, setEstado] = useState("");
+  const [imprimiendo, setImprimiendo] = useState(false);
+  const [editDir, setEditDir] = useState(false);
+  const [cargando, setCargando] = useState(true);
+
+  const siguienteFolio = (l) => String((l || []).reduce((mx, x) => Math.max(mx, parseInt(x.folio, 10) || 0), 0) + 1).padStart(3, "0");
+  const vacio = (l, dir) => ({
+    id: uid(), folio: siguienteFolio(l), tipo: "solicitud", destinatarioId: (dir[0] || {}).id || "", ccpIds: [],
+    plantilla: "telefono", detalle: "", mes: mesActualOficio(hoyISO()), monto: "130", fecha: hoyISO(),
+    conDirector: true, firmantesAPF: CARGOS_APF_OFICIO.map((c) => c.key), extras: [], cuerpoManual: "", estado: "espera", origenId: "",
+  });
+  const cargar = async () => {
+    const [l, d, m] = await Promise.all([listarStorage("oficio:"), getStorage("oficios:directorio", null), getStorage("apf:mesaDirectiva", {})]);
+    const ls = (l || []).filter((x) => x.id && x.tipo);
+    const dir = Array.isArray(d) && d.length ? d : DIRECTORIO_OFICIOS_INICIAL;
+    setLista(ls); setDirectorio(dir); setMesa(m || {});
+    return { ls, dir };
+  };
+  useEffect(() => { cargar().then(({ ls, dir }) => { setO(vacio(ls, dir)); setCargando(false); }); }, []);
+
+  if (cargando || !o) return <div className="card text-sm" style={{ opacity: 0.6 }}>Cargando oficios…</div>;
+
+  const cambiar = (k, v) => setO((p) => ({ ...p, [k]: v }));
+  const p = plantillaOficio(o.plantilla);
+  const { auto } = textosOficio(o, mesa);
+  const guardar = async (dato = o) => {
+    setEstado("Guardando…");
+    const ok = await setStorage(`oficio:${dato.id}`, dato);
+    setEstado(ok ? "✓ Guardado en tu Hoja" : "No se pudo guardar (revisa la conexión con tu Hoja)");
+    if (ok) { onStamp && onStamp("Oficio guardado"); await cargar(); }
+    return ok;
+  };
+  const imprimir = async () => {
+    await guardar();
+    setImprimiendo(true);
+    document.body.classList.add("solo-portal");
+    window.onafterprint = () => { document.body.classList.remove("solo-portal"); setImprimiendo(false); window.onafterprint = null; };
+    setTimeout(() => window.print(), 400);
+  };
+  const word = async () => {
+    await guardar();
+    try { await descargarOficioWord(o, directorio, mesa); } catch (e) { console.error(e); setEstado("No se pudo generar el Word. Intenta de nuevo."); }
+  };
+  const nuevo = () => { setO(vacio(lista, directorio)); setEstado(""); window.scrollTo(0, 0); };
+  const repetir = (x) => {
+    setO({ ...x, id: uid(), folio: siguienteFolio(lista), fecha: hoyISO(), mes: x.plantilla === "telefono" ? mesActualOficio(hoyISO()) : x.mes, cuerpoManual: "", estado: x.tipo === "agradecimiento" ? "entregado" : "espera", origenId: x.tipo === "agradecimiento" ? x.origenId : "" });
+    setEstado("Copia lista: revisa la fecha y el detalle, y guarda."); window.scrollTo(0, 0);
+  };
+  const hacerAgradecimiento = (x) => {
+    setO({ ...x, id: uid(), folio: siguienteFolio(lista), tipo: "agradecimiento", fecha: hoyISO(), cuerpoManual: "", estado: "entregado", origenId: x.id });
+    setEstado("Agradecimiento listo con los datos de la solicitud. Revisa y guarda."); window.scrollTo(0, 0);
+  };
+  const borrar = async (x) => {
+    if (!window.confirm(`¿Borrar el oficio ${folioOficio(x)}? Esta acción no se puede deshacer.`)) return;
+    await borrarStorage(`oficio:${x.id}`); if (o.id === x.id) nuevo(); cargar();
+  };
+  const cambiarEstado = async (x, est) => { await setStorage(`oficio:${x.id}`, { ...x, estado: est }); if (o.id === x.id) cambiar("estado", est); cargar(); };
+  const guardarDirectorio = async (dir) => { setDirectorio(dir); await setStorage("oficios:directorio", dir); };
+  const toggle = (k, val) => setO((prev) => { const arr = prev[k] || []; return { ...prev, [k]: arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val] }; });
+
+  const chip = (activo, onClick, txt, key) => <button key={key} onClick={onClick} className={`chip-grado ${activo ? "activo" : ""}`} style={{ fontSize: "0.78rem", textAlign: "left" }}>{activo ? "✔ " : ""}{txt}</button>;
+  const etq = (t) => <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75, marginTop: "0.6rem" }}>{t}</label>;
+
+  const yaAgradecidas = new Set(lista.filter((x) => x.tipo === "agradecimiento" && x.origenId).map((x) => x.origenId));
+  const pendientesAgr = lista.filter((x) => x.tipo === "solicitud" && x.estado === "apoyado" && !yaAgradecidas.has(x.id));
+  const porMes = {};
+  [...lista].sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "") || String(b.folio).localeCompare(String(a.folio))).forEach((x) => {
+    const k = (x.fecha || "").slice(0, 7); (porMes[k] = porMes[k] || []).push(x);
+  });
+  const nombreMes = (k) => { const [y, m] = k.split("-").map(Number); return m ? `${MESES_OFICIO[m - 1].charAt(0) + MESES_OFICIO[m - 1].slice(1).toLowerCase()} ${y}` : "Sin fecha"; };
+  const mesasVacias = CARGOS_APF_OFICIO.every((c) => !mesa[c.key]);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {imprimiendo && ReactDOM.createPortal(
+        <div className="solo-impresion portal-impresion">
+          <style>{"@page { size: letter; margin: 0; } .hoja-oficio img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }"}</style>
+          <OficioHoja o={o} directorio={directorio} mesa={mesa} />
+        </div>, document.body)}
+
+      <div className="card" style={{ background: "var(--crema, #f3ece0)" }}>
+        <div className="font-display" style={{ fontWeight: 700, fontSize: "0.95rem" }}>📨 Solicitudes y agradecimientos</div>
+        <p className="text-sm" style={{ opacity: 0.7, marginTop: "0.25rem" }}>Oficios para las autoridades con el membrete de la escuela. Elija el tipo, a quién va, el motivo y las firmas; a la derecha (o abajo en el celular) se ve cómo queda. Se guarda con número de oficio para llevar el control de cada mes.</p>
+        {pendientesAgr.length > 0 && (
+          <div className="text-sm" style={{ marginTop: "0.6rem", background: "#fff6d6", borderRadius: "8px", padding: "0.5rem 0.7rem" }}>
+            🙏 <b>Falta el agradecimiento de {pendientesAgr.length === 1 ? "1 solicitud apoyada" : `${pendientesAgr.length} solicitudes apoyadas`}:</b>{" "}
+            {pendientesAgr.map((x) => <button key={x.id} onClick={() => hacerAgradecimiento(x)} className="btn-secundario" style={{ fontSize: "0.72rem", margin: "0.2rem 0.3rem 0 0" }}>{folioOficio(x)} · {plantillaOficio(x.plantilla).nombre.replace(/^\S+\s/, "")} → Hacer agradecimiento</button>)}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 22rem), 1fr))", gap: "1rem", alignItems: "start" }}>
+        <div className="flex flex-col gap-4">
+          <div className="card">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="font-display" style={{ fontWeight: 700, fontSize: "0.9rem" }}>Oficio No. {folioOficio(o)}</div>
+              <button onClick={nuevo} className="btn-secundario" style={{ fontSize: "0.75rem" }}><Plus size={14} /> Nuevo oficio</button>
+            </div>
+            {etq("1. Tipo de oficio")}
+            <div className="flex gap-2 flex-wrap">
+              {chip(o.tipo === "solicitud", () => setO((x) => ({ ...x, tipo: "solicitud", estado: x.estado === "entregado" ? "espera" : x.estado })), "📝 Solicitud", "s")}
+              {chip(o.tipo === "agradecimiento", () => setO((x) => ({ ...x, tipo: "agradecimiento", estado: "entregado" })), "🙏 Agradecimiento", "a")}
+            </div>
+
+            {etq("2. ¿A quién va dirigido?")}
+            <div className="flex gap-2 flex-wrap">
+              {directorio.map((d) => chip(o.destinatarioId === d.id, () => setO((x) => ({ ...x, destinatarioId: d.id, ccpIds: (x.ccpIds || []).filter((c) => c !== d.id) })), `${nombrePropio(d.nombre)} · ${nombrePropio(d.cargo)}`, d.id))}
+            </div>
+            {directorio.length > 1 && (<>
+              {etq("Con copia para (c.c.p.) — opcional")}
+              <div className="flex gap-2 flex-wrap">
+                {directorio.filter((d) => d.id !== o.destinatarioId).map((d) => chip((o.ccpIds || []).includes(d.id), () => toggle("ccpIds", d.id), `${nombrePropio(d.nombre)}`, d.id))}
+              </div>
+            </>)}
+            <button onClick={() => setEditDir((v) => !v)} className="btn-secundario" style={{ fontSize: "0.72rem", marginTop: "0.5rem" }}><Pencil size={13} /> {editDir ? "Cerrar directorio" : "Agregar o editar destinatarios"}</button>
+            {editDir && (
+              <div style={{ marginTop: "0.5rem", borderTop: "1px solid var(--linea)", paddingTop: "0.5rem" }}>
+                <p className="text-sm" style={{ opacity: 0.6 }}>Se captura una sola vez. Si cambia la autoridad, se corrige aquí.</p>
+                {directorio.map((d, i) => (
+                  <div key={d.id} className="flex gap-2 flex-wrap items-end" style={{ marginTop: "0.4rem" }}>
+                    {["nombre", "cargo", "lugar"].map((k) => (
+                      <input key={k} className="campo" style={{ flex: k === "nombre" ? 2 : 1, minWidth: "8rem", fontSize: "0.8rem" }} placeholder={{ nombre: "C. NOMBRE COMPLETO", cargo: "CARGO", lugar: "LUGAR (ej. DE TEPEOJUMA, PUE.)" }[k]}
+                        value={d[k] || ""} onChange={(e) => setDirectorio(directorio.map((x, j) => (j === i ? { ...x, [k]: e.target.value.toUpperCase() } : x)))} onBlur={() => guardarDirectorio(directorio)} />
+                    ))}
+                    <button className="btn-icono" title="Quitar" onClick={() => { if (window.confirm(`¿Quitar a ${d.nombre || "este destinatario"} del directorio?`)) guardarDirectorio(directorio.filter((x) => x.id !== d.id)); }}><Trash2 size={14} /></button>
+                  </div>
+                ))}
+                <button onClick={() => guardarDirectorio([...directorio, { id: uid(), nombre: "", cargo: "", lugar: "" }])} className="btn-secundario" style={{ fontSize: "0.72rem", marginTop: "0.5rem" }}><Plus size={13} /> Agregar otro (DIF, Comisariado, Regidor…)</button>
+              </div>
+            )}
+
+            {etq("3. Motivo")}
+            <div className="flex gap-2 flex-wrap">
+              {PLANTILLAS_OFICIO.map((t) => chip(o.plantilla === t.id, () => setO((x) => ({ ...x, plantilla: t.id, cuerpoManual: "" })), t.nombre, t.id))}
+            </div>
+            {p.conMes && (
+              <div className="flex gap-3 flex-wrap">
+                <div style={{ flex: 1, minWidth: "9rem" }}>{etq("Mes que se paga")}<input className="campo" value={o.mes || ""} onChange={(e) => cambiar("mes", e.target.value.toUpperCase())} placeholder="OCTUBRE DE 2026" /></div>
+                <div style={{ flex: 1, minWidth: "9rem" }}>{etq("Monto ($)")}<input className="campo font-mono" inputMode="decimal" value={o.monto || ""} onChange={(e) => cambiar("monto", e.target.value)} placeholder="130" />
+                  {o.monto && <div className="text-sm" style={{ opacity: 0.6, marginTop: "0.2rem" }}>{montoConLetra(o.monto)}</div>}</div>
+              </div>
+            )}
+            {!p.conMes && (<>
+              {etq(o.tipo === "agradecimiento" ? "Se agradece el apoyo de / para:" : "Se solicita el apoyo de / para:")}
+              <textarea className="campo" rows={3} value={o.detalle || ""} onChange={(e) => cambiar("detalle", e.target.value)} placeholder={`Ej. ${p.ej}`} />
+            </>)}
+            {etq("Fecha del oficio")}
+            <input className="campo" type="date" value={o.fecha || ""} onChange={(e) => cambiar("fecha", e.target.value)} />
+
+            {etq("4. Firmas")}
+            <div className="flex gap-2 flex-wrap">
+              {chip(o.conDirector !== false, () => cambiar("conDirector", o.conDirector === false), "Director", "dir")}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap text-sm" style={{ marginTop: "0.5rem" }}>
+              <span style={{ opacity: 0.7 }}>Mesa Directiva APF (Vo. Bo.):</span>
+              <button className="btn-secundario" style={{ fontSize: "0.7rem", padding: "0.2rem 0.6rem" }} onClick={() => cambiar("firmantesAPF", CARGOS_APF_OFICIO.map((c) => c.key))}>Todos</button>
+              <button className="btn-secundario" style={{ fontSize: "0.7rem", padding: "0.2rem 0.6rem" }} onClick={() => cambiar("firmantesAPF", [])}>Ninguno</button>
+            </div>
+            {mesasVacias ? <p className="text-sm" style={{ color: "var(--rojo)" }}>No hay Mesa Directiva capturada. Se captura en Gestión escolar → Documentos de Dirección → APF.</p> : (
+              <div className="flex gap-2 flex-wrap" style={{ marginTop: "0.3rem" }}>
+                {CARGOS_APF_OFICIO.filter((c) => mesa[c.key]).map((c) => chip((o.firmantesAPF || []).includes(c.key), () => toggle("firmantesAPF", c.key), `${c.cargo}: ${nombrePropio(mesa[c.key])}`, c.key))}
+              </div>
+            )}
+            {(o.extras || []).map((e, i) => (
+              <div key={i} className="flex gap-2 flex-wrap" style={{ marginTop: "0.4rem" }}>
+                <input className="campo" style={{ flex: 2, minWidth: "9rem" }} placeholder="Nombre de quien firma" value={e.nombre} onChange={(ev) => cambiar("extras", o.extras.map((x, j) => (j === i ? { ...x, nombre: ev.target.value } : x)))} />
+                <input className="campo" style={{ flex: 1, minWidth: "7rem" }} placeholder="Cargo" value={e.cargo} onChange={(ev) => cambiar("extras", o.extras.map((x, j) => (j === i ? { ...x, cargo: ev.target.value } : x)))} />
+                <button className="btn-icono" onClick={() => cambiar("extras", o.extras.filter((_, j) => j !== i))}><Trash2 size={14} /></button>
+              </div>
+            ))}
+            <button onClick={() => cambiar("extras", [...(o.extras || []), { nombre: "", cargo: "" }])} className="btn-secundario" style={{ fontSize: "0.72rem", marginTop: "0.4rem" }}><Plus size={13} /> Agregar otra firma</button>
+
+            <details style={{ marginTop: "0.8rem" }}>
+              <summary className="text-sm" style={{ cursor: "pointer", fontWeight: 600 }}>✏️ Cambiar la redacción del oficio (opcional)</summary>
+              <textarea className="campo" rows={7} style={{ marginTop: "0.4rem" }} value={o.cuerpoManual || auto} onChange={(e) => cambiar("cuerpoManual", e.target.value === auto ? "" : e.target.value)} />
+              {o.cuerpoManual && <button className="btn-secundario" style={{ fontSize: "0.72rem", marginTop: "0.3rem" }} onClick={() => cambiar("cuerpoManual", "")}>Volver al texto automático</button>}
+            </details>
+
+            <div className="flex gap-2 flex-wrap" style={{ marginTop: "0.9rem" }}>
+              <button onClick={word} className="btn-primario" style={{ fontSize: "0.8rem" }}><Download size={14} /> Word</button>
+              <button onClick={imprimir} className="btn-primario" style={{ fontSize: "0.8rem" }}><Printer size={14} /> Imprimir / PDF</button>
+              <button onClick={() => guardar()} className="btn-secundario" style={{ fontSize: "0.8rem" }}><Check size={14} /> Guardar</button>
+            </div>
+            {estado && <p className="text-sm" style={{ marginTop: "0.4rem", fontWeight: 600, color: estado.startsWith("✓") ? "var(--verde)" : undefined }}>{estado}</p>}
+          </div>
+
+          <div className="card">
+            <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.9rem" }}>5. Historial de oficios ({lista.length})</div>
+            {lista.length === 0 ? <p className="text-sm" style={{ opacity: 0.55 }}>Todavía no hay oficios guardados.</p> : Object.keys(porMes).map((k) => (
+              <div key={k} style={{ marginBottom: "0.6rem" }}>
+                <div className="text-sm" style={{ fontWeight: 700, opacity: 0.7, borderBottom: "1px solid var(--linea)", paddingBottom: "0.2rem" }}>{nombreMes(k)}</div>
+                {porMes[k].map((x) => (
+                  <div key={x.id} className="flex items-center justify-between gap-2 flex-wrap" style={{ padding: "0.35rem 0", borderBottom: "1px dashed var(--linea)", background: x.id === o.id ? "rgba(122,26,31,0.05)" : undefined }}>
+                    <div className="text-sm" style={{ flex: "1 1 12rem" }}>
+                      <b>{folioOficio(x)}</b> · {fechaBonita(x.fecha || hoyISO())} · {x.tipo === "agradecimiento" ? "Agradecimiento" : "Solicitud"}
+                      <div style={{ fontSize: "0.75rem", opacity: 0.65 }}>{plantillaOficio(x.plantilla).nombre.replace(/^\S+\s/, "")}{x.plantilla === "telefono" ? ` · ${x.mes}` : x.detalle ? ` · ${x.detalle.slice(0, 60)}` : ""} · {nombrePropio(((directorio.find((d) => d.id === x.destinatarioId)) || {}).cargo || "")}</div>
+                    </div>
+                    <div className="flex gap-1 flex-wrap items-center">
+                      {x.tipo === "solicitud" ? (
+                        <select className="campo" style={{ fontSize: "0.72rem", padding: "0.2rem", width: "auto", color: ESTADOS_OFICIO[x.estado || "espera"].color, fontWeight: 700 }} value={x.estado || "espera"} onChange={(e) => cambiarEstado(x, e.target.value)}>
+                          {["espera", "apoyado", "noapoyado"].map((s) => <option key={s} value={s}>{ESTADOS_OFICIO[s].txt}</option>)}
+                        </select>
+                      ) : <span className="text-sm" style={{ color: ESTADOS_OFICIO.entregado.color, fontWeight: 700 }}>Entregado</span>}
+                      {x.tipo === "solicitud" && x.estado === "apoyado" && !yaAgradecidas.has(x.id) && <button onClick={() => hacerAgradecimiento(x)} className="btn-secundario" style={{ fontSize: "0.7rem" }}>🙏 Hacer agradecimiento</button>}
+                      <button onClick={() => repetir(x)} className="btn-secundario" style={{ fontSize: "0.7rem" }} title="Copiar este oficio para el mes actual">🔁 Repetir</button>
+                      <button onClick={() => { setO(x); setEstado(""); window.scrollTo(0, 0); }} className="btn-secundario" style={{ fontSize: "0.7rem" }}><Pencil size={12} /> Abrir</button>
+                      <button onClick={() => borrar(x)} className="btn-icono"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+            <p className="text-sm" style={{ opacity: 0.55, marginTop: "0.3rem" }}>🔁 Repetir copia el oficio para este mes (útil para el teléfono e internet). Cuando una solicitud quede "Apoyado ✔", el botón 🙏 hace su agradecimiento con los mismos datos.</p>
+          </div>
+        </div>
+
+        <div style={{ position: "sticky", top: "0.5rem" }}>
+          <div className="text-sm" style={{ fontWeight: 700, opacity: 0.7, marginBottom: "0.4rem" }}>Vista previa</div>
+          <div style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.15)", borderRadius: "4px", overflow: "hidden" }}>
+            <OficioHoja o={o} directorio={directorio} mesa={mesa} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function RecibosTab({ onStamp }) {
   const vacio = () => ({
@@ -24781,6 +25197,7 @@ function App() {
     { id: "documentos", label: "Documentos de Dirección", icon: FolderKanban },
     { id: "cortecaja", label: "Corte de Caja", icon: Wallet },
     { id: "recibos", label: "Recibos", icon: FileText },
+    { id: "oficios", label: "Solicitudes y agradecimientos", icon: Mail },
     { id: "deportes", label: "Juegos deportivos", icon: Users },
     { id: "dispositivos", label: "Dispositivos (Acuerdo 09/09/26)", icon: ShieldAlert },
     { id: "convivenciaescolar", label: "Convivencia Escolar", icon: HeartHandshake },
@@ -24797,7 +25214,7 @@ function App() {
     { id: "pic", tabs: ["pic"] },
     { id: "estadistica911", tabs: ["estadistica911"] },
     { id: "comunicacion", label: "Comunicación", tabs: ["avisos", "calendario"] },
-    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "consejo", "documentos", "cortecaja", "recibos", "deportes", "dispositivos", "convivenciaescolar", "personal"] },
+    { id: "gestion", label: "Gestión escolar", tabs: ["cte", "reglamento", "consejo", "documentos", "cortecaja", "recibos", "oficios", "deportes", "dispositivos", "convivenciaescolar", "personal"] },
     { id: "recursos", tabs: ["recursos"] },
   ];
 
@@ -24952,6 +25369,7 @@ function App() {
         {tab === "consejo" && <ConsejoEscolar onStamp={fireStamp} alumnos={alumnos} gradosPermitidos={gradosPermitidos} personal={personal} />}
         {tab === "documentos" && <DocumentosDireccion alumnos={alumnos} onStamp={fireStamp} rolActual={rol} />}
         {tab === "recibos" && <RecibosTab onStamp={fireStamp} />}
+        {tab === "oficios" && <OficiosTab onStamp={fireStamp} />}
         {tab === "deportes" && <JuegosDeportivosTab alumnos={alumnos} onStamp={fireStamp} />}
         {tab === "dispositivos" && <AcuerdoDispositivosTab alumnos={alumnos} onStamp={fireStamp} />}
         {tab === "cortecaja" && <DocumentosDireccion key="cortecaja" alumnos={alumnos} onStamp={fireStamp} rolActual={rol} subTabInicial="bimestral" />}
