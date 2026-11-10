@@ -5512,13 +5512,34 @@ const DIRECTORIO_OFICIOS_INICIAL = [
   { id: "pm-tepeojuma", nombre: "C. GUSTAVO LEONCIO SÁNCHEZ MARTIÑÓN", cargo: "PRESIDENTE MUNICIPAL", lugar: "DE TEPEOJUMA, PUE." },
   { id: "pa-xoyatla", nombre: "C. JORGE ARTURO BARRIENTOS AMADOR", cargo: "PRESIDENTE AUXILIAR 2025-2028", lugar: "XOYATLA, TEPEOJUMA, PUE." },
 ];
-const CARGOS_APF_OFICIO = [
-  { key: "presidente", cargo: "Presidenta" }, { key: "vicepresidente", cargo: "Vicepresidenta" },
-  { key: "secretario", cargo: "Secretaria" }, { key: "tesorero", cargo: "Tesorera" },
-  { key: "vocal1", cargo: "Primer Vocal" }, { key: "vocal2", cargo: "Segundo Vocal" },
-  { key: "vocal3", cargo: "Tercer Vocal" }, { key: "vocal4", cargo: "Cuarto Vocal" },
-  { key: "vocal5", cargo: "Quinto Vocal" }, { key: "vocal6", cargo: "Sexto Vocal" },
-];
+// Comités que pueden firmar (Vo. Bo.). Los nombres NO van en el código: se
+// leen en el momento de la Hoja, así siempre sale el titular ACTUAL del cargo
+// según el comité vigente. Al guardar un oficio se "fija" quién firmó ese día,
+// para que el historial no cambie si después cambia el comité.
+const COMITES_OFICIO = {
+  apf: { nombre: "Mesa Directiva APF", texto: "el Comité de la Asociación de Padres de Familia", encabezado: "Vo. Bo. MESA DIRECTIVA DE LA ASOCIACIÓN DE PADRES DE FAMILIA", dondeSeCaptura: "Gestión escolar → Documentos de Dirección → APF (Mesa Directiva)" },
+  contraloria: { nombre: "Contraloría Social", texto: "el Comité de Contraloría Social", encabezado: "Vo. Bo. COMITÉ DE CONTRALORÍA SOCIAL", dondeSeCaptura: "Gestión escolar → Documentos de Dirección → APF (Contraloría Social)" },
+  ceps: { nombre: "Consejo de Participación Escolar", texto: "el Consejo de Participación Escolar", encabezado: "Vo. Bo. CONSEJO DE PARTICIPACIÓN ESCOLAR EN LA TRANSFORMACIÓN DE LA EDUCACIÓN", dondeSeCaptura: "Consejo de Participación Escolar → Integrantes" },
+};
+// Cargo en femenino o masculino: en APF/Contraloría se deduce del primer nombre
+// (termina en "a" → femenino); en el Consejo se usa el campo "sexo" capturado.
+const esMujerNombre = (n) => { const p = String(n || "").trim().split(/\s+/)[0] || ""; return /a$/i.test(p) && !/^(josé|jose)$/i.test(p); };
+const FEM_CARGO = { Presidente: "Presidenta", Vicepresidente: "Vicepresidenta", Secretario: "Secretaria", Tesorero: "Tesorera" };
+const cargoSegunGenero = (cargo, mujer) => {
+  let c = String(cargo || "");
+  if (/\(a\)/.test(c)) return mujer ? c.replace(/o\(a\)/g, "a").replace(/e\(a\)/g, "a").replace(/\(a\)/g, "") : c.replace(/\(a\)/g, "");
+  return mujer && FEM_CARGO[c] ? FEM_CARGO[c] : c;
+};
+function miembrosComiteOficio(comite, fuentes) {
+  const f = fuentes || {};
+  if (comite === "ceps") {
+    return (f.ceps || []).filter((x) => x && (x.nombre || x.apellidoPaterno))
+      .map((x) => { const nom = [x.nombre, x.apellidoPaterno, x.apellidoMaterno].filter(Boolean).join(" "); return { key: x.id, nombre: nombrePropio(nom), cargo: cargoSegunGenero(x.cargo || "Integrante", /^(m|mujer|f|femenino)$/i.test(String(x.sexo || "").trim()) || (!x.sexo && esMujerNombre(x.nombre))) }; });
+  }
+  const datos = comite === "contraloria" ? f.contraloria : f.mesa;
+  const puestos = comite === "contraloria" ? PUESTOS_CONTRALORIA : PUESTOS_MESA_DIRECTIVA;
+  return puestos.filter((pz) => (datos || {})[pz.key]).map((pz) => ({ key: pz.key, nombre: nombrePropio(datos[pz.key]), cargo: cargoSegunGenero(pz.etiqueta, esMujerNombre(datos[pz.key])) }));
+}
 const MESES_OFICIO = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
 const montoOficio = (m) => (m ? `$${fmtMonto(m)} (${montoConLetra(m)})` : "$______");
 const PLANTILLAS_OFICIO = [
@@ -5541,19 +5562,20 @@ const mesActualOficio = (iso) => { const [y, m] = String(iso || hoyISO()).split(
 const folioOficio = (o) => `${o.folio || "___"}/${CICLO_OFICIO}`;
 const fechaOficio = (iso) => (iso ? `XOYATLA, TEPEOJUMA, PUEBLA, A ${fechaLarga(iso).replace(/^(\d) /, "0$1 ").toUpperCase()}` : "");
 
-function firmantesDeOficio(o, mesa) {
-  const apf = CARGOS_APF_OFICIO.filter((c) => (o.firmantesAPF || []).includes(c.key) && (mesa || {})[c.key])
-    .map((c) => ({ nombre: nombrePropio(mesa[c.key]), cargo: c.cargo }));
+function firmantesDeOficio(o, fuentes) {
+  if (o.fijado && Array.isArray(o.fijado.firmas)) return o.fijado.firmas;
+  const apf = miembrosComiteOficio(o.comite || "apf", fuentes).filter((m) => o.firmantesAPF == null || o.firmantesAPF.includes(m.key)).map(({ nombre, cargo }) => ({ nombre, cargo }));
   const extras = (o.extras || []).filter((e) => (e.nombre || "").trim()).map((e) => ({ nombre: e.nombre.trim(), cargo: (e.cargo || "").trim() }));
   return [...apf, ...extras];
 }
 
 function textosOficio(o, mesa) {
   const conAPF = firmantesDeOficio(o, mesa).length > 0;
+  const com = COMITES_OFICIO[o.comite || "apf"] || COMITES_OFICIO.apf;
   const p = plantillaOficio(o.plantilla);
   const esc = `de la Escuela Telesecundaria "Amado Nervo", C.C.T. 21ETV0473W, de la comunidad de Xoyatla, Tepeojuma, Pue.`;
   const quien = conAPF
-    ? `Los que suscriben, C. ${DIRECTOR_OFICIO.nombre}, Director Comisionado, y el Comité de la Asociación de Padres de Familia ${esc}, por medio de la presente y de la manera más atenta y respetuosa nos dirigimos a usted para`
+    ? `Los que suscriben, C. ${DIRECTOR_OFICIO.nombre}, Director Comisionado, y ${com.texto} ${esc}, por medio de la presente y de la manera más atenta y respetuosa nos dirigimos a usted para`
     : `El que suscribe, C. ${DIRECTOR_OFICIO.nombre}, Director Comisionado ${esc}, por medio de la presente y de la manera más atenta y respetuosa me dirijo a usted para`;
   const auto = o.tipo === "agradecimiento" ? `${quien} agradecerle ${p.agr(o)}.` : `${quien} solicitar ${p.sol(o)}.`;
   const cuerpo = (o.cuerpoManual || "").trim() || auto;
@@ -5563,9 +5585,16 @@ function textosOficio(o, mesa) {
   return { cuerpo, auto, despedida };
 }
 
+function destinatariosDeOficio(o, directorio) {
+  if (o.fijado && o.fijado.dest) return { dest: o.fijado.dest, ccp: o.fijado.ccp || [] };
+  return {
+    dest: (directorio || []).find((d) => d.id === o.destinatarioId) || {},
+    ccp: (directorio || []).filter((d) => (o.ccpIds || []).includes(d.id) && d.id !== o.destinatarioId),
+  };
+}
 function OficioHoja({ o, directorio, mesa }) {
-  const dest = (directorio || []).find((d) => d.id === o.destinatarioId) || {};
-  const ccp = (directorio || []).filter((d) => (o.ccpIds || []).includes(d.id) && d.id !== o.destinatarioId);
+  const { dest, ccp } = destinatariosDeOficio(o, directorio);
+  const com = COMITES_OFICIO[o.comite || "apf"] || COMITES_OFICIO.apf;
   const firm = firmantesDeOficio(o, mesa);
   const { cuerpo, despedida } = textosOficio(o, mesa);
   const linea = { borderTop: "1px solid #000", paddingTop: "2px" };
@@ -5593,7 +5622,7 @@ function OficioHoja({ o, directorio, mesa }) {
         )}
         {firm.length > 0 && (
           <>
-            <div style={{ textAlign: "center", fontWeight: 700, fontSize: "9.5pt", marginTop: "0.25in" }}>Vo. Bo. MESA DIRECTIVA DE LA ASOCIACIÓN DE PADRES DE FAMILIA</div>
+            <div style={{ textAlign: "center", fontWeight: 700, fontSize: "9.5pt", marginTop: "0.25in" }}>{com.encabezado}</div>
             <div style={{ display: "grid", gridTemplateColumns: firm.length === 1 ? "1fr" : "1fr 1fr", gap: "0 0.5in", fontSize: "9pt", textAlign: "center", width: firm.length === 1 ? "3.3in" : "100%", margin: "0 auto" }}>
               {firm.map((f, i) => <div key={i} style={{ marginTop: firm.length > 6 ? "0.3in" : "0.4in", ...linea }}>{f.nombre}<br />{f.cargo}</div>)}
             </div>
@@ -5626,8 +5655,8 @@ function wPar(runs, { jc = "left", antes = 0, despues = 0, linea = 240, borde, i
   return `<w:p><w:pPr>${borde ? '<w:pBdr><w:top w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : ""}<w:spacing w:before="${antes}" w:after="${despues}" w:line="${linea}" w:lineRule="auto"/>${ind ? `<w:ind w:left="${ind}" w:right="${ind}"/>` : ""}<w:jc w:val="${jc}"/></w:pPr>${Array.isArray(runs) ? runs.join("") : runs}</w:p>`;
 }
 function cuerpoOficioXML(o, directorio, mesa) {
-  const dest = (directorio || []).find((d) => d.id === o.destinatarioId) || {};
-  const ccp = (directorio || []).filter((d) => (o.ccpIds || []).includes(d.id) && d.id !== o.destinatarioId);
+  const { dest, ccp } = destinatariosDeOficio(o, directorio);
+  const com = COMITES_OFICIO[o.comite || "apf"] || COMITES_OFICIO.apf;
   const firm = firmantesDeOficio(o, mesa);
   const { cuerpo, despedida } = textosOficio(o, mesa);
   let x = "";
@@ -5644,7 +5673,7 @@ function cuerpoOficioXML(o, directorio, mesa) {
     x += wPar([wRun(DIRECTOR_OFICIO.cargo)], { jc: "center", despues: 240 });
   }
   if (firm.length) {
-    x += wPar([wRun("Vo. Bo. MESA DIRECTIVA DE LA ASOCIACIÓN DE PADRES DE FAMILIA", { b: true, sz: 19 })], { jc: "center", despues: 0 });
+    x += wPar([wRun(com.encabezado, { b: true, sz: 19 })], { jc: "center", despues: 0 });
     const celda = (f) => `<w:tc><w:tcPr><w:tcW w:w="4800" w:type="dxa"/></w:tcPr>${f ? wPar([wRun("", { sz: 18 })], { antes: 360 }) + wPar([wRun(f.nombre, { sz: 18 })], { jc: "center", borde: true, ind: 300 }) + wPar([wRun(f.cargo, { sz: 18 })], { jc: "center" }) : wPar([wRun("")])}</w:tc>`;
     let filas = "";
     const cols = firm.length === 1 ? 1 : 2;
@@ -5690,28 +5719,36 @@ function OficiosTab({ onStamp }) {
   const vacio = (l, dir) => ({
     id: uid(), folio: siguienteFolio(l), tipo: "solicitud", destinatarioId: (dir[0] || {}).id || "", ccpIds: [],
     plantilla: "telefono", detalle: "", mes: mesActualOficio(hoyISO()), monto: "130", fecha: hoyISO(),
-    conDirector: true, firmantesAPF: CARGOS_APF_OFICIO.map((c) => c.key), extras: [], cuerpoManual: "", estado: "espera", origenId: "",
+    comite: "apf", conDirector: true, firmantesAPF: null, extras: [], cuerpoManual: "", estado: "espera", origenId: "",
   });
   const cargar = async () => {
-    const [l, d, m] = await Promise.all([listarStorage("oficio:"), getStorage("oficios:directorio", null), getStorage("apf:mesaDirectiva", {})]);
+    const [l, d, m, cs, ints] = await Promise.all([listarStorage("oficio:"), getStorage("oficios:directorio", null), getStorage("apf:mesaDirectiva", {}), getStorage("apf:contraloriaSocial", {}), listarStorage("consejo-integrante:")]);
     const ls = (l || []).filter((x) => x.id && x.tipo);
     const dir = Array.isArray(d) && d.length ? d : DIRECTORIO_OFICIOS_INICIAL;
-    setLista(ls); setDirectorio(dir); setMesa(m || {});
+    setLista(ls); setDirectorio(dir); setMesa({ mesa: m || {}, contraloria: cs || {}, ceps: (ints || []).sort((a, b) => String(a.id).localeCompare(String(b.id))) });
     return { ls, dir };
   };
   useEffect(() => { cargar().then(({ ls, dir }) => { setO(vacio(ls, dir)); setCargando(false); }); }, []);
 
   if (cargando || !o) return <div className="card text-sm" style={{ opacity: 0.6 }}>Cargando oficios…</div>;
 
-  const cambiar = (k, v) => setO((p) => ({ ...p, [k]: v }));
+  // Toda edición quita lo "fijado" del oficio guardado: vuelve a tomar los
+  // titulares actuales del comité y del directorio.
+  const setOEd = (fn) => setO((prev) => ({ ...(typeof fn === "function" ? fn(prev) : fn), fijado: null }));
+  const cambiar = (k, v) => setOEd((p) => ({ ...p, [k]: v }));
+  const miembros = miembrosComiteOficio(o.comite || "apf", mesa);
+  const keysSel = o.firmantesAPF == null ? miembros.map((m) => m.key) : o.firmantesAPF;
   const p = plantillaOficio(o.plantilla);
   const { auto } = textosOficio(o, mesa);
-  const guardar = async (dato = o) => {
+  const guardar = async () => {
     setEstado("Guardando…");
+    const libre = { ...o, fijado: null, firmantesAPF: keysSel };
+    const { dest, ccp } = destinatariosDeOficio(o, directorio);
+    const dato = { ...libre, fijado: o.fijado || { dest, ccp, firmas: firmantesDeOficio(libre, mesa), fecha: hoyISO() } };
     const ok = await setStorage(`oficio:${dato.id}`, dato);
     setEstado(ok ? "✓ Guardado en tu Hoja" : "No se pudo guardar (revisa la conexión con tu Hoja)");
-    if (ok) { onStamp && onStamp("Oficio guardado"); await cargar(); }
-    return ok;
+    if (ok) { setO(dato); onStamp && onStamp("Oficio guardado"); await cargar(); }
+    return dato;
   };
   const imprimir = async () => {
     await guardar();
@@ -5721,16 +5758,15 @@ function OficiosTab({ onStamp }) {
     setTimeout(() => window.print(), 400);
   };
   const word = async () => {
-    await guardar();
-    try { await descargarOficioWord(o, directorio, mesa); } catch (e) { console.error(e); setEstado("No se pudo generar el Word. Intenta de nuevo."); }
+    try { const d = await guardar(); await descargarOficioWord(d, directorio, mesa); } catch (e) { console.error(e); setEstado("No se pudo generar el Word. Intenta de nuevo."); }
   };
   const nuevo = () => { setO(vacio(lista, directorio)); setEstado(""); window.scrollTo(0, 0); };
   const repetir = (x) => {
-    setO({ ...x, id: uid(), folio: siguienteFolio(lista), fecha: hoyISO(), mes: x.plantilla === "telefono" ? mesActualOficio(hoyISO()) : x.mes, cuerpoManual: "", estado: x.tipo === "agradecimiento" ? "entregado" : "espera", origenId: x.tipo === "agradecimiento" ? x.origenId : "" });
+    setO({ ...x, fijado: null, id: uid(), folio: siguienteFolio(lista), fecha: hoyISO(), mes: x.plantilla === "telefono" ? mesActualOficio(hoyISO()) : x.mes, cuerpoManual: "", estado: x.tipo === "agradecimiento" ? "entregado" : "espera", origenId: x.tipo === "agradecimiento" ? x.origenId : "" });
     setEstado("Copia lista: revisa la fecha y el detalle, y guarda."); window.scrollTo(0, 0);
   };
   const hacerAgradecimiento = (x) => {
-    setO({ ...x, id: uid(), folio: siguienteFolio(lista), tipo: "agradecimiento", fecha: hoyISO(), cuerpoManual: "", estado: "entregado", origenId: x.id });
+    setO({ ...x, fijado: null, id: uid(), folio: siguienteFolio(lista), tipo: "agradecimiento", fecha: hoyISO(), cuerpoManual: "", estado: "entregado", origenId: x.id });
     setEstado("Agradecimiento listo con los datos de la solicitud. Revisa y guarda."); window.scrollTo(0, 0);
   };
   const borrar = async (x) => {
@@ -5739,7 +5775,7 @@ function OficiosTab({ onStamp }) {
   };
   const cambiarEstado = async (x, est) => { await setStorage(`oficio:${x.id}`, { ...x, estado: est }); if (o.id === x.id) cambiar("estado", est); cargar(); };
   const guardarDirectorio = async (dir) => { setDirectorio(dir); await setStorage("oficios:directorio", dir); };
-  const toggle = (k, val) => setO((prev) => { const arr = prev[k] || []; return { ...prev, [k]: arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val] }; });
+  const toggle = (k, val) => setOEd((prev) => { const arr = k === "firmantesAPF" && prev[k] == null ? miembros.map((m) => m.key) : prev[k] || []; return { ...prev, [k]: arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val] }; });
 
   const chip = (activo, onClick, txt, key) => <button key={key} onClick={onClick} className={`chip-grado ${activo ? "activo" : ""}`} style={{ fontSize: "0.78rem", textAlign: "left" }}>{activo ? "✔ " : ""}{txt}</button>;
   const etq = (t) => <label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75, marginTop: "0.6rem" }}>{t}</label>;
@@ -5751,7 +5787,7 @@ function OficiosTab({ onStamp }) {
     const k = (x.fecha || "").slice(0, 7); (porMes[k] = porMes[k] || []).push(x);
   });
   const nombreMes = (k) => { const [y, m] = k.split("-").map(Number); return m ? `${MESES_OFICIO[m - 1].charAt(0) + MESES_OFICIO[m - 1].slice(1).toLowerCase()} ${y}` : "Sin fecha"; };
-  const mesasVacias = CARGOS_APF_OFICIO.every((c) => !mesa[c.key]);
+  const com = COMITES_OFICIO[o.comite || "apf"];
 
   return (
     <div className="flex flex-col gap-4">
@@ -5781,13 +5817,13 @@ function OficiosTab({ onStamp }) {
             </div>
             {etq("1. Tipo de oficio")}
             <div className="flex gap-2 flex-wrap">
-              {chip(o.tipo === "solicitud", () => setO((x) => ({ ...x, tipo: "solicitud", estado: x.estado === "entregado" ? "espera" : x.estado })), "📝 Solicitud", "s")}
-              {chip(o.tipo === "agradecimiento", () => setO((x) => ({ ...x, tipo: "agradecimiento", estado: "entregado" })), "🙏 Agradecimiento", "a")}
+              {chip(o.tipo === "solicitud", () => setOEd((x) => ({ ...x, tipo: "solicitud", estado: x.estado === "entregado" ? "espera" : x.estado })), "📝 Solicitud", "s")}
+              {chip(o.tipo === "agradecimiento", () => setOEd((x) => ({ ...x, tipo: "agradecimiento", estado: "entregado" })), "🙏 Agradecimiento", "a")}
             </div>
 
             {etq("2. ¿A quién va dirigido?")}
             <div className="flex gap-2 flex-wrap">
-              {directorio.map((d) => chip(o.destinatarioId === d.id, () => setO((x) => ({ ...x, destinatarioId: d.id, ccpIds: (x.ccpIds || []).filter((c) => c !== d.id) })), `${nombrePropio(d.nombre)} · ${nombrePropio(d.cargo)}`, d.id))}
+              {directorio.map((d) => chip(o.destinatarioId === d.id, () => setOEd((x) => ({ ...x, destinatarioId: d.id, ccpIds: (x.ccpIds || []).filter((c) => c !== d.id) })), `${nombrePropio(d.nombre)} · ${nombrePropio(d.cargo)}`, d.id))}
             </div>
             {directorio.length > 1 && (<>
               {etq("Con copia para (c.c.p.) — opcional")}
@@ -5814,7 +5850,7 @@ function OficiosTab({ onStamp }) {
 
             {etq("3. Motivo")}
             <div className="flex gap-2 flex-wrap">
-              {PLANTILLAS_OFICIO.map((t) => chip(o.plantilla === t.id, () => setO((x) => ({ ...x, plantilla: t.id, cuerpoManual: "" })), t.nombre, t.id))}
+              {PLANTILLAS_OFICIO.map((t) => chip(o.plantilla === t.id, () => setOEd((x) => ({ ...x, plantilla: t.id, cuerpoManual: "" })), t.nombre, t.id))}
             </div>
             {p.conMes && (
               <div className="flex gap-3 flex-wrap">
@@ -5834,14 +5870,25 @@ function OficiosTab({ onStamp }) {
             <div className="flex gap-2 flex-wrap">
               {chip(o.conDirector !== false, () => cambiar("conDirector", o.conDirector === false), "Director", "dir")}
             </div>
+            <div className="text-sm" style={{ opacity: 0.7, marginTop: "0.6rem" }}>Comité que da el Vo. Bo. (sale el titular actual de cada cargo):</div>
+            <div className="flex gap-2 flex-wrap" style={{ marginTop: "0.3rem" }}>
+              {Object.entries(COMITES_OFICIO).map(([id, c]) => chip((o.comite || "apf") === id, () => setOEd((x) => ({ ...x, comite: id, firmantesAPF: null })), c.nombre, id))}
+            </div>
             <div className="flex items-center gap-2 flex-wrap text-sm" style={{ marginTop: "0.5rem" }}>
-              <span style={{ opacity: 0.7 }}>Mesa Directiva APF (Vo. Bo.):</span>
-              <button className="btn-secundario" style={{ fontSize: "0.7rem", padding: "0.2rem 0.6rem" }} onClick={() => cambiar("firmantesAPF", CARGOS_APF_OFICIO.map((c) => c.key))}>Todos</button>
+              <span style={{ opacity: 0.7 }}>Quiénes firman:</span>
+              <button className="btn-secundario" style={{ fontSize: "0.7rem", padding: "0.2rem 0.6rem" }} onClick={() => cambiar("firmantesAPF", null)}>Todos</button>
               <button className="btn-secundario" style={{ fontSize: "0.7rem", padding: "0.2rem 0.6rem" }} onClick={() => cambiar("firmantesAPF", [])}>Ninguno</button>
             </div>
-            {mesasVacias ? <p className="text-sm" style={{ color: "var(--rojo)" }}>No hay Mesa Directiva capturada. Se captura en Gestión escolar → Documentos de Dirección → APF.</p> : (
+            {miembros.length === 0 ? <p className="text-sm" style={{ color: "var(--rojo)" }}>No hay integrantes capturados en {com.nombre}. Se capturan en {com.dondeSeCaptura}.</p> : (
               <div className="flex gap-2 flex-wrap" style={{ marginTop: "0.3rem" }}>
-                {CARGOS_APF_OFICIO.filter((c) => mesa[c.key]).map((c) => chip((o.firmantesAPF || []).includes(c.key), () => toggle("firmantesAPF", c.key), `${c.cargo}: ${nombrePropio(mesa[c.key])}`, c.key))}
+                {miembros.map((m) => chip(keysSel.includes(m.key), () => toggle("firmantesAPF", m.key), `${m.cargo}: ${m.nombre}`, m.key))}
+              </div>
+            )}
+            <p className="text-sm" style={{ opacity: 0.55, marginTop: "0.3rem" }}>Si cambia el comité, actualice los nombres en {com.dondeSeCaptura} y aquí saldrán solos.</p>
+            {o.fijado && (
+              <div className="text-sm" style={{ marginTop: "0.5rem", background: "#fff6d6", borderRadius: "8px", padding: "0.45rem 0.65rem" }}>
+                📌 Este oficio guardado conserva a quien firmó y a quien se dirigió el {fechaBonita(o.fijado.fecha || o.fecha || hoyISO())}.{" "}
+                <button className="btn-secundario" style={{ fontSize: "0.7rem", padding: "0.2rem 0.6rem" }} onClick={() => setOEd((x) => x)}>Actualizar a los titulares actuales</button>
               </div>
             )}
             {(o.extras || []).map((e, i) => (
@@ -5876,7 +5923,7 @@ function OficiosTab({ onStamp }) {
                   <div key={x.id} className="flex items-center justify-between gap-2 flex-wrap" style={{ padding: "0.35rem 0", borderBottom: "1px dashed var(--linea)", background: x.id === o.id ? "rgba(122,26,31,0.05)" : undefined }}>
                     <div className="text-sm" style={{ flex: "1 1 12rem" }}>
                       <b>{folioOficio(x)}</b> · {fechaBonita(x.fecha || hoyISO())} · {x.tipo === "agradecimiento" ? "Agradecimiento" : "Solicitud"}
-                      <div style={{ fontSize: "0.75rem", opacity: 0.65 }}>{plantillaOficio(x.plantilla).nombre.replace(/^\S+\s/, "")}{x.plantilla === "telefono" ? ` · ${x.mes}` : x.detalle ? ` · ${x.detalle.slice(0, 60)}` : ""} · {nombrePropio(((directorio.find((d) => d.id === x.destinatarioId)) || {}).cargo || "")}</div>
+                      <div style={{ fontSize: "0.75rem", opacity: 0.65 }}>{plantillaOficio(x.plantilla).nombre.replace(/^\S+\s/, "")}{x.plantilla === "telefono" ? ` · ${x.mes}` : x.detalle ? ` · ${x.detalle.slice(0, 60)}` : ""} · {nombrePropio(destinatariosDeOficio(x, directorio).dest.cargo || "")}</div>
                     </div>
                     <div className="flex gap-1 flex-wrap items-center">
                       {x.tipo === "solicitud" ? (
