@@ -5523,7 +5523,16 @@ const COMITES_OFICIO = {
 };
 // Cargo en femenino o masculino: en APF/Contraloría se deduce del primer nombre
 // (termina en "a" → femenino); en el Consejo se usa el campo "sexo" capturado.
-const esMujerNombre = (n) => { const p = String(n || "").trim().split(/\s+/)[0] || ""; return /a$/i.test(p) && !/^(josé|jose)$/i.test(p); };
+const NOMBRES_MUJER_SIN_A = /^(elizabeth|isabel|raquel|ruth|carmen|beatriz|ines|inés|mercedes|dolores|guadalupe|lourdes|rocio|rocío|consuelo|soledad|pilar|esther|ester|abigail|itzel|yazmin|yazmín|jazmin|jazmín|marisol|maribel|araceli|nayeli|belen|belén|leticia|monserrat|montserrat|nancy|karen|evelyn|jaqueline|jacqueline|liz|sol|flor|luz|rosario|noemi|noemí|miriam|yuridia|yesenia|anahi|anahí|nallely|nelly|edith|judith|ivonne|lizbeth|lisbeth|maricel|abril|yadira|zoe|jocelyn|joselyn|naomi|mabel|griselda|marlen|marlene|ingrid|iris|aurora|yolanda|irene|clarisa|denisse|janeth|yaneth|gisel|giselle|odalys|aracely)$/i;
+const esMujerNombre = (n) => {
+  const pal = String(n || "").trim().split(/\s+/);
+  const p = (pal[0] || "").toLowerCase();
+  if (/^(josé|jose)$/.test(p)) return false;
+  if (/^(ma\.?|maria|maría)$/.test(p)) return true;
+  return /a$/i.test(p) || NOMBRES_MUJER_SIN_A.test(p);
+};
+// Corrección manual (se guarda en oficios:generos) cuando el nombre engaña.
+const claveGenero = (n) => String(n || "").trim().toUpperCase().replace(/\s+/g, " ");
 const FEM_CARGO = { Presidente: "Presidenta", Vicepresidente: "Vicepresidenta", Secretario: "Secretaria", Tesorero: "Tesorera" };
 const cargoSegunGenero = (cargo, mujer) => {
   let c = String(cargo || "");
@@ -5532,13 +5541,15 @@ const cargoSegunGenero = (cargo, mujer) => {
 };
 function miembrosComiteOficio(comite, fuentes) {
   const f = fuentes || {};
+  const g = f.generos || {};
+  const mujer = (nombre, porDefecto) => (g[claveGenero(nombre)] ? g[claveGenero(nombre)] === "f" : porDefecto);
   if (comite === "ceps") {
     return (f.ceps || []).filter((x) => x && (x.nombre || x.apellidoPaterno))
-      .map((x) => { const nom = [x.nombre, x.apellidoPaterno, x.apellidoMaterno].filter(Boolean).join(" "); return { key: x.id, nombre: nombrePropio(nom), cargo: cargoSegunGenero(x.cargo || "Integrante", /^(m|mujer|f|femenino)$/i.test(String(x.sexo || "").trim()) || (!x.sexo && esMujerNombre(x.nombre))) }; });
+      .map((x) => { const nom = [x.nombre, x.apellidoPaterno, x.apellidoMaterno].filter(Boolean).join(" "); const fem = mujer(nom, /^(m|mujer|f|femenino)$/i.test(String(x.sexo || "").trim()) || (!x.sexo && esMujerNombre(x.nombre))); return { key: x.id, nombre: nombrePropio(nom), nombreOriginal: nom, mujer: fem, cargo: cargoSegunGenero(x.cargo || "Integrante", fem) }; });
   }
   const datos = comite === "contraloria" ? f.contraloria : f.mesa;
   const puestos = comite === "contraloria" ? PUESTOS_CONTRALORIA : PUESTOS_MESA_DIRECTIVA;
-  return puestos.filter((pz) => (datos || {})[pz.key]).map((pz) => ({ key: pz.key, nombre: nombrePropio(datos[pz.key]), cargo: cargoSegunGenero(pz.etiqueta, esMujerNombre(datos[pz.key])) }));
+  return puestos.filter((pz) => (datos || {})[pz.key]).map((pz) => { const fem = mujer(datos[pz.key], esMujerNombre(datos[pz.key])); return { key: pz.key, nombre: nombrePropio(datos[pz.key]), nombreOriginal: datos[pz.key], mujer: fem, cargo: cargoSegunGenero(pz.etiqueta, fem) }; });
 }
 const MESES_OFICIO = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
 const montoOficio = (m) => (m ? `$${fmtMonto(m)} (${montoConLetra(m)})` : "$______");
@@ -5569,24 +5580,26 @@ function firmantesDeOficio(o, fuentes) {
   return [...apf, ...extras];
 }
 
+const vozOficio = (o, conAPF) => o.voz || (o.directorVoBo && conAPF ? "comite" : conAPF ? "ambos" : "director");
 function textosOficio(o, mesa) {
   const conAPF = firmantesDeOficio(o, mesa).length > 0;
   const com = COMITES_OFICIO[o.comite || "apf"] || COMITES_OFICIO.apf;
   const p = plantillaOficio(o.plantilla);
   const esc = `de la Escuela Telesecundaria "Amado Nervo", C.C.T. 21ETV0473W, de la comunidad de Xoyatla, Tepeojuma, Pue.`;
-  // Vo. Bo. = solo el director, cuando se necesita: entonces suscribe el
-  // comité y el director únicamente da su visto bueno (como en sus oficios).
-  const voBo = o.conDirector !== false && o.directorVoBo && conAPF;
-  const quien = voBo
+  // ¿Quién habla en el oficio? Lo elige el director: "director", "comite" o
+  // "ambos". Si no lo eligió (oficios anteriores), se deduce de las firmas.
+  const voz = vozOficio(o, conAPF);
+  const plural = voz !== "director";
+  const quien = voz === "comite"
     ? `Los que suscriben, integrantes d${com.texto} ${esc}, por medio de la presente y de la manera más atenta y respetuosa nos dirigimos a usted para`
-    : conAPF
+    : voz === "ambos"
     ? `Los que suscriben, C. ${DIRECTOR_OFICIO.nombre}, Director Comisionado, y ${com.texto} ${esc}, por medio de la presente y de la manera más atenta y respetuosa nos dirigimos a usted para`
     : `El que suscribe, C. ${DIRECTOR_OFICIO.nombre}, Director Comisionado ${esc}, por medio de la presente y de la manera más atenta y respetuosa me dirijo a usted para`;
   const auto = o.tipo === "agradecimiento" ? `${quien} agradecerle ${p.agr(o)}.` : `${quien} solicitar ${p.sol(o)}.`;
   const cuerpo = (o.cuerpoManual || "").trim() || auto;
   const despedida = o.tipo === "agradecimiento"
-    ? `Sin más por el momento, ${conAPF ? "nos despedimos" : "me despido"} de usted agradeciendo su valioso apoyo.`
-    : `Agradeciendo de antemano su atención y esperando pronta respuesta favorable, ${conAPF ? "nos despedimos" : "me despido"} de usted.`;
+    ? `Sin más por el momento, ${plural ? "nos despedimos" : "me despido"} de usted agradeciendo su valioso apoyo.`
+    : `Agradeciendo de antemano su atención y esperando pronta respuesta favorable, ${plural ? "nos despedimos" : "me despido"} de usted.`;
   return { cuerpo, auto, despedida };
 }
 
@@ -5733,10 +5746,10 @@ function OficiosTab({ onStamp }) {
     comite: "apf", conDirector: true, firmantesAPF: null, extras: [], cuerpoManual: "", estado: "espera", origenId: "",
   });
   const cargar = async () => {
-    const [l, d, m, cs, ints] = await Promise.all([listarStorage("oficio:"), getStorage("oficios:directorio", null), getStorage("apf:mesaDirectiva", {}), getStorage("apf:contraloriaSocial", {}), listarStorage("consejo-integrante:")]);
+    const [l, d, m, cs, ints, gen] = await Promise.all([listarStorage("oficio:"), getStorage("oficios:directorio", null), getStorage("apf:mesaDirectiva", {}), getStorage("apf:contraloriaSocial", {}), listarStorage("consejo-integrante:"), getStorage("oficios:generos", {})]);
     const ls = (l || []).filter((x) => x.id && x.tipo);
     const dir = Array.isArray(d) && d.length ? d : DIRECTORIO_OFICIOS_INICIAL;
-    setLista(ls); setDirectorio(dir); setMesa({ mesa: m || {}, contraloria: cs || {}, ceps: (ints || []).sort((a, b) => String(a.id).localeCompare(String(b.id))) });
+    setLista(ls); setDirectorio(dir); setMesa({ mesa: m || {}, contraloria: cs || {}, ceps: (ints || []).sort((a, b) => String(a.id).localeCompare(String(b.id))), generos: gen || {} });
     return { ls, dir };
   };
   useEffect(() => { cargar().then(({ ls, dir }) => { setO(vacio(ls, dir)); setCargando(false); }); }, []);
@@ -5749,6 +5762,13 @@ function OficiosTab({ onStamp }) {
   const cambiar = (k, v) => setOEd((p) => ({ ...p, [k]: v }));
   const miembros = miembrosComiteOficio(o.comite || "apf", mesa);
   const keysSel = o.firmantesAPF == null ? miembros.map((m) => m.key) : o.firmantesAPF;
+  const vozActual = vozOficio(o, firmantesDeOficio({ ...o, fijado: null }, mesa).length > 0);
+  const cambiarGenero = async (m) => {
+    const gen = { ...(mesa.generos || {}), [claveGenero(m.nombreOriginal)]: m.mujer ? "m" : "f" };
+    setMesa((f) => ({ ...f, generos: gen }));
+    setO((x) => ({ ...x, fijado: null }));
+    await setStorage("oficios:generos", gen);
+  };
   const p = plantillaOficio(o.plantilla);
   const { auto } = textosOficio(o, mesa);
   const guardar = async () => {
@@ -5877,12 +5897,21 @@ function OficiosTab({ onStamp }) {
             {etq("Fecha del oficio")}
             <input className="campo" type="date" value={o.fecha || ""} onChange={(e) => cambiar("fecha", e.target.value)} />
 
+            {etq("¿Cómo se redacta? (quién suscribe el oficio)")}
+            <div className="flex gap-2 flex-wrap">
+              {[["director", "👤 Como Director"], ["comite", `👥 Como ${com.nombre}`], ["ambos", `🤝 Director y ${com.nombre}`]].map(([id, txt]) =>
+                chip(vozActual === id, () => {
+                  if (o.cuerpoManual && !window.confirm("Usted cambió la redacción a mano. ¿Reemplazarla por el texto automático?")) return;
+                  setOEd((x) => ({ ...x, voz: id, cuerpoManual: "", directorVoBo: id === "comite" ? x.directorVoBo : false, conDirector: id === "comite" ? x.conDirector : true, firmantesAPF: id === "director" && x.voz !== "director" ? [] : id !== "director" && (x.firmantesAPF || []).length === 0 ? null : x.firmantesAPF }));
+                }, txt, id))}
+            </div>
+            <p className="text-sm" style={{ opacity: 0.55, marginTop: "0.25rem" }}>{{ director: "\"El que suscribe, C. Neftalid… Director Comisionado…, me dirijo a usted…\"", comite: `"Los que suscriben, integrantes d${com.texto}…, nos dirigimos a usted…" (si quiere, ponga su Vo. Bo. abajo)`, ambos: `"Los que suscriben, C. Neftalid…, Director Comisionado, y ${com.texto}…, nos dirigimos a usted…"` }[vozActual]}</p>
+
             {etq("4. Firmas")}
             <div className="flex gap-2 flex-wrap">
               {chip(o.conDirector !== false, () => cambiar("conDirector", o.conDirector === false), "Director", "dir")}
-              {o.conDirector !== false && chip(!!o.directorVoBo, () => cambiar("directorVoBo", !o.directorVoBo), "Poner Vo. Bo. sobre mi firma", "vobo")}
+              {o.conDirector !== false && vozActual === "comite" && chip(!!o.directorVoBo, () => cambiar("directorVoBo", !o.directorVoBo), "Poner Vo. Bo. sobre mi firma", "vobo")}
             </div>
-            {o.directorVoBo && o.conDirector !== false && <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.3rem" }}>Con Vo. Bo., el oficio lo suscribe el comité y usted solo da su visto bueno.</p>}
             <div className="text-sm" style={{ opacity: 0.7, marginTop: "0.6rem" }}>Comité que firma (sale el titular actual de cada cargo):</div>
             <div className="flex gap-2 flex-wrap" style={{ marginTop: "0.3rem" }}>
               {Object.entries(COMITES_OFICIO).map(([id, c]) => chip((o.comite || "apf") === id, () => setOEd((x) => ({ ...x, comite: id, firmantesAPF: null })), c.nombre, id))}
@@ -5894,9 +5923,15 @@ function OficiosTab({ onStamp }) {
             </div>
             {miembros.length === 0 ? <p className="text-sm" style={{ color: "var(--rojo)" }}>No hay integrantes capturados en {com.nombre}. Se capturan en {com.dondeSeCaptura}.</p> : (
               <div className="flex gap-2 flex-wrap" style={{ marginTop: "0.3rem" }}>
-                {miembros.map((m) => chip(keysSel.includes(m.key), () => toggle("firmantesAPF", m.key), `${m.cargo}: ${m.nombre}`, m.key))}
+                {miembros.map((m) => (
+                  <span key={m.key} style={{ display: "inline-flex", alignItems: "center", gap: "0.15rem" }}>
+                    {chip(keysSel.includes(m.key), () => toggle("firmantesAPF", m.key), `${m.cargo}: ${m.nombre}`, m.key)}
+                    <button className="btn-icono" title={`Cambiar a ${m.mujer ? "masculino" : "femenino"} (ej. ${m.mujer ? "Tesorero" : "Tesorera"})`} style={{ fontSize: "0.7rem", padding: "0.15rem 0.3rem" }} onClick={() => cambiarGenero(m)}>{m.mujer ? "♀" : "♂"}</button>
+                  </span>
+                ))}
               </div>
             )}
+            {miembros.length > 0 && <p className="text-sm" style={{ opacity: 0.55, marginTop: "0.3rem" }}>¿Un cargo salió en masculino o femenino por error? Toque ♀/♂ junto al nombre y se corrige para siempre.</p>}
             <p className="text-sm" style={{ opacity: 0.55, marginTop: "0.3rem" }}>Si cambia el comité, actualice los nombres en {com.dondeSeCaptura} y aquí saldrán solos.</p>
             {o.fijado && (
               <div className="text-sm" style={{ marginTop: "0.5rem", background: "#fff6d6", borderRadius: "8px", padding: "0.45rem 0.65rem" }}>
