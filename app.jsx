@@ -5517,9 +5517,9 @@ const DIRECTORIO_OFICIOS_INICIAL = [
 // según el comité vigente. Al guardar un oficio se "fija" quién firmó ese día,
 // para que el historial no cambie si después cambia el comité.
 const COMITES_OFICIO = {
-  apf: { nombre: "Mesa Directiva APF", texto: "el Comité de la Asociación de Padres de Familia", encabezado: "Vo. Bo. MESA DIRECTIVA DE LA ASOCIACIÓN DE PADRES DE FAMILIA", dondeSeCaptura: "Gestión escolar → Documentos de Dirección → APF (Mesa Directiva)" },
-  contraloria: { nombre: "Contraloría Social", texto: "el Comité de Contraloría Social", encabezado: "Vo. Bo. COMITÉ DE CONTRALORÍA SOCIAL", dondeSeCaptura: "Gestión escolar → Documentos de Dirección → APF (Contraloría Social)" },
-  ceps: { nombre: "Consejo de Participación Escolar", texto: "el Consejo de Participación Escolar", encabezado: "Vo. Bo. CONSEJO DE PARTICIPACIÓN ESCOLAR EN LA TRANSFORMACIÓN DE LA EDUCACIÓN", dondeSeCaptura: "Consejo de Participación Escolar → Integrantes" },
+  apf: { nombre: "Mesa Directiva APF", texto: "el Comité de la Asociación de Padres de Familia", encabezado: "MESA DIRECTIVA DE LA ASOCIACIÓN DE PADRES DE FAMILIA", dondeSeCaptura: "Gestión escolar → Documentos de Dirección → APF (Mesa Directiva)" },
+  contraloria: { nombre: "Contraloría Social", texto: "el Comité de Contraloría Social", encabezado: "COMITÉ DE CONTRALORÍA SOCIAL", dondeSeCaptura: "Gestión escolar → Documentos de Dirección → APF (Contraloría Social)" },
+  ceps: { nombre: "Consejo de Participación Escolar", texto: "el Consejo de Participación Escolar", encabezado: "CONSEJO DE PARTICIPACIÓN ESCOLAR EN LA TRANSFORMACIÓN DE LA EDUCACIÓN", dondeSeCaptura: "Consejo de Participación Escolar → Integrantes" },
 };
 // Cargo en femenino o masculino: en APF/Contraloría se deduce del primer nombre
 // (termina en "a" → femenino); en el Consejo se usa el campo "sexo" capturado.
@@ -5574,7 +5574,12 @@ function textosOficio(o, mesa) {
   const com = COMITES_OFICIO[o.comite || "apf"] || COMITES_OFICIO.apf;
   const p = plantillaOficio(o.plantilla);
   const esc = `de la Escuela Telesecundaria "Amado Nervo", C.C.T. 21ETV0473W, de la comunidad de Xoyatla, Tepeojuma, Pue.`;
-  const quien = conAPF
+  // Vo. Bo. = solo el director, cuando se necesita: entonces suscribe el
+  // comité y el director únicamente da su visto bueno (como en sus oficios).
+  const voBo = o.conDirector !== false && o.directorVoBo && conAPF;
+  const quien = voBo
+    ? `Los que suscriben, integrantes d${com.texto} ${esc}, por medio de la presente y de la manera más atenta y respetuosa nos dirigimos a usted para`
+    : conAPF
     ? `Los que suscriben, C. ${DIRECTOR_OFICIO.nombre}, Director Comisionado, y ${com.texto} ${esc}, por medio de la presente y de la manera más atenta y respetuosa nos dirigimos a usted para`
     : `El que suscribe, C. ${DIRECTOR_OFICIO.nombre}, Director Comisionado ${esc}, por medio de la presente y de la manera más atenta y respetuosa me dirijo a usted para`;
   const auto = o.tipo === "agradecimiento" ? `${quien} agradecerle ${p.agr(o)}.` : `${quien} solicitar ${p.sol(o)}.`;
@@ -5616,8 +5621,13 @@ function OficioHoja({ o, directorio, mesa }) {
         <p style={{ lineHeight: 1.8, textAlign: "justify" }}>{despedida}</p>
         <div style={{ textAlign: "center", marginTop: "0.25in", lineHeight: 1.6 }}><span style={{ letterSpacing: "0.3em" }}>ATENTAMENTE</span><br />{fechaOficio(o.fecha)}</div>
         {o.conDirector !== false && (
-          <div style={{ textAlign: "center", margin: "0.55in auto 0", width: "3.3in", ...linea, fontWeight: 700 }}>
-            {DIRECTOR_OFICIO.nombre}<div style={{ fontWeight: 400 }}>{DIRECTOR_OFICIO.cargo}</div>
+          <div style={{ textAlign: "center", margin: o.directorVoBo ? "0.2in auto 0" : "0.55in auto 0", width: "3.3in" }}>
+            {o.directorVoBo && <div style={{ fontWeight: 700, marginBottom: "0.35in" }}>Vo. Bo.</div>}
+            <div style={{ ...linea, fontWeight: 700 }}>{DIRECTOR_OFICIO.nombre}</div>
+          </div>
+        )}
+        {o.conDirector !== false && (
+          <div style={{ textAlign: "center", margin: "0 auto", width: "3.3in" }}>{DIRECTOR_OFICIO.cargo}
           </div>
         )}
         {firm.length > 0 && (
@@ -5667,8 +5677,9 @@ function cuerpoOficioXML(o, directorio, mesa) {
   cuerpo.split(/\n+/).forEach((par) => { x += wPar([wRun(par)], { jc: "both", linea: 360, despues: 160 }); });
   x += wPar([wRun(despedida)], { jc: "both", linea: 360, despues: 300 });
   x += wPar([wRun("ATENTAMENTE", { esp: 60 })], { jc: "center" });
-  x += wPar([wRun(fechaOficio(o.fecha))], { jc: "center", despues: o.conDirector !== false ? 700 : 200 });
+  x += wPar([wRun(fechaOficio(o.fecha))], { jc: "center", despues: o.conDirector !== false ? (o.directorVoBo ? 240 : 700) : 200 });
   if (o.conDirector !== false) {
+    if (o.directorVoBo) x += wPar([wRun("Vo. Bo.", { b: true })], { jc: "center", despues: 600 });
     x += wPar([wRun(DIRECTOR_OFICIO.nombre, { b: true })], { jc: "center", borde: true, ind: 2600 });
     x += wPar([wRun(DIRECTOR_OFICIO.cargo)], { jc: "center", despues: 240 });
   }
@@ -5869,8 +5880,10 @@ function OficiosTab({ onStamp }) {
             {etq("4. Firmas")}
             <div className="flex gap-2 flex-wrap">
               {chip(o.conDirector !== false, () => cambiar("conDirector", o.conDirector === false), "Director", "dir")}
+              {o.conDirector !== false && chip(!!o.directorVoBo, () => cambiar("directorVoBo", !o.directorVoBo), "Poner Vo. Bo. sobre mi firma", "vobo")}
             </div>
-            <div className="text-sm" style={{ opacity: 0.7, marginTop: "0.6rem" }}>Comité que da el Vo. Bo. (sale el titular actual de cada cargo):</div>
+            {o.directorVoBo && o.conDirector !== false && <p className="text-sm" style={{ opacity: 0.6, marginTop: "0.3rem" }}>Con Vo. Bo., el oficio lo suscribe el comité y usted solo da su visto bueno.</p>}
+            <div className="text-sm" style={{ opacity: 0.7, marginTop: "0.6rem" }}>Comité que firma (sale el titular actual de cada cargo):</div>
             <div className="flex gap-2 flex-wrap" style={{ marginTop: "0.3rem" }}>
               {Object.entries(COMITES_OFICIO).map(([id, c]) => chip((o.comite || "apf") === id, () => setOEd((x) => ({ ...x, comite: id, firmantesAPF: null })), c.nombre, id))}
             </div>
