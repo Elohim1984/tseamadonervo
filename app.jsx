@@ -6405,10 +6405,15 @@ function ConcentradoDeportistas({ lista, regs, ev, fotos = {} }) {
       <p style={{ fontSize: "9.5pt", margin: "0 0 6px" }}>Etapa: <b>{ev.etapa || "de zona"}</b> · Fecha: <b>{ev.fechaTexto || "18 y 19 de noviembre de 2026"}</b> · Sede: <b>{ev.sede || "________"}</b> · Entrenador(a): <b>{ev.entrenador || "________"}</b></p>
       {Object.keys(porDeporte).length === 0 && <p>Sin alumnos registrados.</p>}
       {Object.entries(porDeporte).map(([dep, als]) => (
-        <div key={dep} style={{ pageBreakInside: "avoid", marginBottom: "8px" }}>
-          <div style={{ fontWeight: 700, background: "#e6dcc3", padding: "3px 6px", border: "1px solid #000", fontSize: "9.5pt" }}>{dep} · {als.length} alumno(s)</div>
+        // 11 nov 2026: sin "avoid" en el bloque completo — un deporte con muchos
+        // alumnos (ej. Futbol, 23) no cabía en la 1ª hoja y se iba entero a la
+        // 2ª, dejando la 1ª casi en blanco. Ahora la tabla empieza en la misma
+        // hoja y continúa en la siguiente (el encabezado de columnas se repite);
+        // solo se evita que el título del deporte quede solo al pie de una hoja.
+        <div key={dep} style={{ marginBottom: "8px" }}>
+          <div style={{ fontWeight: 700, background: "#e6dcc3", padding: "3px 6px", border: "1px solid #000", fontSize: "9.5pt", pageBreakAfter: "avoid", breakAfter: "avoid" }}>{dep} · {als.length} alumno(s)</div>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr>{["No.", "Foto", "Nombre del alumno", "CURP", "Fecha nac.", "Grado", "Rama", "Pruebas / posición", "Docs."].map((h) => <th key={h} style={{ ...td, background: "#f2f2f2" }}>{h}</th>)}</tr></thead>
+            <thead style={{ display: "table-header-group" }}><tr>{["No.", "Foto", "Nombre del alumno", "CURP", "Fecha nac.", "Grado", "Rama", "Pruebas / posición", "Docs."].map((h) => <th key={h} style={{ ...td, background: "#f2f2f2" }}>{h}</th>)}</tr></thead>
             <tbody>{als.map((a, i) => { const r = regs[a.id] || {}; const d = r.docs || {}; const n = DOCS_DEPORTISTA.filter(([k]) => d[k]).length; return (
               <tr key={a.id}><td style={td}>{i + 1}</td><td style={{ ...td, padding: "2px" }}><FotoAlumnoDep foto={fotos[a.id]} w="1.3cm" h="1.6cm" leyenda="Foto" /></td><td style={td}>{nombreCompletoDep(a).toUpperCase()}</td><td style={td}>{a.ALUMNO_CURP}</td><td style={td}>{a.ALUMNO_FECHA_NACIMIENTO}</td><td style={td}>{a.grado}°</td><td style={td}>{ramaAlumno(a)}</td><td style={td}>{dep === "Atletismo" ? pruebasTexto(r) : ((r.posiciones || {})[dep] || r.posicion || "")}</td><td style={td}>{n}/{DOCS_DEPORTISTA.length}</td></tr>
             ); })}</tbody>
