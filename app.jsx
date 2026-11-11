@@ -1780,7 +1780,7 @@ const CORTE_CAJA_CAMPOS_ENCABEZADO = [
   ["telefono", 450, 113.1, 578],
   ["nivel", 128, 124.3, 251],
   ["zona", 289, 124.3, 409],
-  ["corde", 463, 124.3, 578],
+  ["corde", 449, 124.3, 527], // junto a la etiqueta y dentro de su raya (se completa la raya 448–462)
   ["localidad", 150, 135.2, 337],
   ["municipio", 395, 135.2, 578],
   ["lugarFecha", 166, 146.2, 578],
@@ -1998,6 +1998,7 @@ async function llenarYDescargarCorteCajaPDF(filasBase, arrastre, encabezado, fir
 
     CORTE_CAJA_CAMPOS_ENCABEZADO.forEach(([clave, x, top, xMax]) => {
       const fin = corteCajaDibujarTexto(pagina, fuenteTexto, encabezado[clave], x, top, { xMax, tam: 9, tamMinimo: 5.5 });
+      if (clave === "corde" && encabezado.corde) pagina.drawLine({ start: { x: 448.7, y: corteCajaY(top) - 1.6 }, end: { x: 462.2, y: corteCajaY(top) - 1.6 }, thickness: 0.5 });
       // Si el texto pasa la raya del formato (termina en 525), se alarga la raya.
       if (fin && fin > 526) pagina.drawLine({ start: { x: 525, y: corteCajaY(top) - 2 }, end: { x: fin + 2, y: corteCajaY(top) - 2 }, thickness: 0.6 });
     });
