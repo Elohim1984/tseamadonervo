@@ -6267,6 +6267,23 @@ const pruebasTexto = (r) => deportesDe(r).includes("Atletismo")
 // Responsiva OFICIAL (formato de la Dirección de Educación Física, adaptado con los datos de la escuela).
 // Es un PDF rellenable en assets; se llena una hoja por alumno y por deporte.
 const RUTA_RESPONSIVA_OFICIAL = "assets/juegos-deportivos/Responsiva_oficial_rellenable.pdf";
+// Días del evento sacados del texto "18 y 19 de noviembre de 2026" (o del
+// primer día si no hay texto). Cada alumno puede ir uno o los dos días
+// (r.dias); si no se marcó nada, va a todos los días del evento.
+function diasEventoDep(ev) {
+  const t = String((ev && ev.fechaTexto) || "");
+  const antesDeMes = t.split(/\bde\b/i)[0] || "";
+  const nums = (antesDeMes.match(/\d{1,2}/g) || []).map((n) => String(Number(n)));
+  if (nums.length) return [...new Set(nums)];
+  return ev && ev.fechaEvento ? [String(Number(ev.fechaEvento.split("-")[2]))] : [];
+}
+function diasAlumnoDep(r, ev) {
+  const todos = diasEventoDep(ev);
+  const sel = (r && Array.isArray(r.dias) ? r.dias : []).filter((d) => todos.includes(d));
+  return sel.length ? todos.filter((d) => sel.includes(d)) : todos;
+}
+const textoDiasDep = (dias) => (dias.length <= 1 ? dias[0] || "" : `${dias.slice(0, -1).join(", ")} y ${dias[dias.length - 1]}`);
+
 async function descargarResponsivasOficiales(lista, regs, ev) {
   const { PDFDocument, StandardFonts } = window.PDFLib;
   const resp = await fetch(RUTA_RESPONSIVA_OFICIAL);
@@ -6276,10 +6293,11 @@ async function descargarResponsivasOficiales(lista, regs, ev) {
   const GRADO = { 1: "Primer", 2: "Segundo", 3: "Tercer" };
   const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
   const fecha = ev.fechaCarta ? (() => { const [, m, d] = ev.fechaCarta.split("-").map(Number); return `${d} de ${MESES[m - 1]}`; })() : "";
-  const dia = ev.fechaEvento ? String(Number(ev.fechaEvento.split("-")[2])) : "";
   for (const a of lista) {
     const r = regs[a.id] || {};
     const t = tutorDeportista(a);
+    const dias = diasAlumnoDep(r, ev);
+    const dia = dias.length === 1 ? dias[0] : "";
     for (const dep of deportesDe(r)) {
       const doc = await PDFDocument.load(plantilla);
       const fuente = await doc.embedFont(StandardFonts.Helvetica);
@@ -6302,6 +6320,28 @@ async function descargarResponsivasOficiales(lista, regs, ev) {
       poner("parentesco", t.parentesco || "");
       form.updateFieldAppearances(fuente);
       form.flatten();
+      if (dias.length > 1) {
+        // Va los DOS días (o más): el formato dice "para que asista el __ de
+        // noviembre", así que se reescribe ese renglón como "…para que asista
+        // los días 18 y 19 de noviembre del año en" (misma letra, Helvetica =
+        // Liberation Sans, cursiva) en UNA sola responsiva por alumno y deporte.
+        const pg = doc.getPage(0), H = pg.getHeight();
+        const it = await doc.embedFont(StandardFonts.HelveticaOblique);
+        const a1 = "En la Telesecundaria \u201cAmado Nervo\u201d Turno Matutino para que asista los días ";
+        const dtx = textoDiasDep(dias);
+        const a2 = " de noviembre del año en";
+        let tam = 10.86;
+        const ancho = (z) => it.widthOfTextAtSize(a1, z) + fuente.widthOfTextAtSize(dtx, z) + it.widthOfTextAtSize(a2, z) + 8;
+        while (tam > 8 && ancho(tam) > 457) tam -= 0.1;
+        const yBase = H - 339.8;
+        pg.drawRectangle({ x: 78, y: H - 344.6, width: 462, height: 15.2, color: window.PDFLib.rgb(1, 1, 1) });
+        let x = 79.5;
+        pg.drawText(a1, { x, y: yBase, size: tam, font: it }); x += it.widthOfTextAtSize(a1, tam) + 4;
+        pg.drawText(dtx, { x, y: yBase, size: tam, font: fuente });
+        pg.drawLine({ start: { x: x - 1, y: yBase - 2 }, end: { x: x + fuente.widthOfTextAtSize(dtx, tam) + 1, y: yBase - 2 }, thickness: 0.6 });
+        x += fuente.widthOfTextAtSize(dtx, tam) + 4;
+        pg.drawText(a2, { x, y: yBase, size: tam, font: it });
+      }
       const [pag] = await final.copyPages(doc, [0]);
       final.addPage(pag);
     }
@@ -6588,6 +6628,17 @@ function JuegosDeportivosTab({ alumnos, onStamp }) {
                   {deps.filter((d) => d !== "Atletismo").map((d) => (
                     <input key={d} className="campo mt-2" style={{ fontSize: "0.8rem" }} placeholder={`${d} · posición o prueba (opcional)`} value={(r.posiciones || {})[d] || ""} onChange={(e) => guardarReg(a.id, { ...r, deportes: deps, posiciones: { ...(r.posiciones || {}), [d]: e.target.value } })} />
                   ))}
+                  {deps.length > 0 && diasEventoDep(ev).length > 1 && (
+                    <div className="flex gap-1 flex-wrap items-center mt-2">
+                      <span className="text-sm" style={{ fontSize: "0.72rem", opacity: 0.7 }}>Días que asiste:</span>
+                      {diasEventoDep(ev).map((d) => {
+                        const sel = diasAlumnoDep(r, ev);
+                        const on = sel.includes(d);
+                        return <button key={d} onClick={() => { const nuevo = on ? sel.filter((x) => x !== d) : [...sel, d]; if (!nuevo.length) return; guardarReg(a.id, { ...r, deportes: deps, dias: nuevo }); }} className={`chip-grado ${on ? "activo" : ""}`} style={{ fontSize: "0.68rem" }}>{on ? "✓ " : ""}{d} nov</button>;
+                      })}
+                      <span className="text-sm" style={{ fontSize: "0.68rem", opacity: 0.55 }}>{diasAlumnoDep(r, ev).length > 1 ? "→ una sola responsiva con los dos días" : ""}</span>
+                    </div>
+                  )}
                   {deps.length > 0 && (
                     <div className="flex gap-1 flex-wrap mt-2">
                       {DOCS_DEPORTISTA.map(([k, t]) => <button key={k} title={t} onClick={() => guardarReg(a.id, { ...r, deportes: deps, docs: { ...(r.docs || {}), [k]: !(r.docs || {})[k] } })} className={`chip-grado ${(r.docs || {})[k] ? "activo" : ""}`} style={{ fontSize: "0.68rem" }}>{(r.docs || {})[k] ? "✓ " : ""}{t.split(" (")[0].split(",")[0]}</button>)}
