@@ -1978,6 +1978,20 @@ async function llenarYDescargarCorteCajaPDF(filasBase, arrastre, encabezado, fir
   const fuenteTexto = await documentoFinal.embedFont(StandardFonts.Helvetica);
   const fuenteNegrita = await documentoFinal.embedFont(StandardFonts.HelveticaBold);
 
+  // Un SOLO tamaño de letra para todos los montos (ingreso, egreso, saldo y
+  // SUB TOTAL) en todo el documento: el más grande con el que TODOS caben en
+  // su columna (máx. 8.5, mín. 6) — así se ven parejos (11 nov 2026).
+  const anchoCol = (c) => CORTE_CAJA_COLUMNAS[c][1] - 3 - (CORTE_CAJA_COLUMNAS[c][0] + 1.5) - 2;
+  const textosMonto = [];
+  let ai = 0, ae = 0;
+  filasNumeradas.forEach((f) => {
+    textosMonto.push(["ingreso", corteCajaFormatoPesos(f.ingreso)], ["egreso", corteCajaFormatoPesos(f.egreso)], ["saldo", corteCajaFormatoPesos(f.saldo)]);
+    ai += Number(f.ingreso) || 0; ae += Number(f.egreso) || 0;
+  });
+  textosMonto.push(["ingreso", corteCajaFormatoPesos(ai)], ["egreso", corteCajaFormatoPesos(ae)], ["saldo", corteCajaFormatoPesos(saldoFinal)]);
+  let tamMontos = 8.5;
+  while (tamMontos > 6 && textosMonto.some(([c, txt]) => txt && fuenteNegrita.widthOfTextAtSize(txt, tamMontos) > anchoCol(c))) tamMontos -= 0.25;
+
   for (let pag = 0; pag < totalPaginas; pag++) {
     const pagina = documentoFinal.addPage([CORTE_CAJA_PAG_ANCHO, CORTE_CAJA_PAG_ALTO]);
     pagina.drawPage(paginaIncrustada, { x: 0, y: 0, width: CORTE_CAJA_PAG_ANCHO, height: CORTE_CAJA_PAG_ALTO });
@@ -2022,9 +2036,9 @@ async function llenarYDescargarCorteCajaPDF(filasBase, arrastre, encabezado, fir
           corteCajaDibujarTexto(pagina, fuenteTexto, txt, x0, top, { xMax: x1, tam: 9, tamMinimo: 6.5 });
         }
       }
-      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.ingreso), CORTE_CAJA_COLUMNAS.ingreso[0] + 1.5, top, { xMax: CORTE_CAJA_COLUMNAS.ingreso[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
-      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.egreso), CORTE_CAJA_COLUMNAS.egreso[0] + 1.5, top, { xMax: CORTE_CAJA_COLUMNAS.egreso[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
-      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.saldo), CORTE_CAJA_COLUMNAS.saldo[0] + 1.5, top, { xMax: CORTE_CAJA_COLUMNAS.saldo[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
+      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.ingreso), CORTE_CAJA_COLUMNAS.ingreso[0] + 1.5, top, { xMax: CORTE_CAJA_COLUMNAS.ingreso[1] - 3, align: "right", tam: tamMontos, ajustar: false });
+      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.egreso), CORTE_CAJA_COLUMNAS.egreso[0] + 1.5, top, { xMax: CORTE_CAJA_COLUMNAS.egreso[1] - 3, align: "right", tam: tamMontos, ajustar: false });
+      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.saldo), CORTE_CAJA_COLUMNAS.saldo[0] + 1.5, top, { xMax: CORTE_CAJA_COLUMNAS.saldo[1] - 3, align: "right", tam: tamMontos, ajustar: false });
     });
 
     // Renglón TOTAL de esta página: suma de ingresos/egresos de los movimientos
@@ -2036,9 +2050,9 @@ async function llenarYDescargarCorteCajaPDF(filasBase, arrastre, encabezado, fir
       const etq = "SUB TOTAL", tam = 10;
       pagina.drawText(etq, { x: (x0 + x1) / 2 - fuenteNegrita.widthOfTextAtSize(etq, tam) / 2, y: corteCajaY(CORTE_CAJA_TOTAL_TOP), size: tam, font: fuenteNegrita });
     }
-    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(sumaIngresoPagina) || "0.00", CORTE_CAJA_COLUMNAS.ingreso[0] + 1.5, CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.ingreso[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
-    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(sumaEgresoPagina) || "0.00", CORTE_CAJA_COLUMNAS.egreso[0] + 1.5, CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.egreso[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
-    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(saldoAlCierrePagina) || "0.00", CORTE_CAJA_COLUMNAS.saldo[0] + 1.5, CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.saldo[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
+    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(sumaIngresoPagina) || "0.00", CORTE_CAJA_COLUMNAS.ingreso[0] + 1.5, CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.ingreso[1] - 3, align: "right", tam: tamMontos, ajustar: false });
+    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(sumaEgresoPagina) || "0.00", CORTE_CAJA_COLUMNAS.egreso[0] + 1.5, CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.egreso[1] - 3, align: "right", tam: tamMontos, ajustar: false });
+    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(saldoAlCierrePagina) || "0.00", CORTE_CAJA_COLUMNAS.saldo[0] + 1.5, CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.saldo[1] - 3, align: "right", tam: tamMontos, ajustar: false });
 
     if (pag === totalPaginas - 1) {
       corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(saldoFinal) || "0.00", CORTE_CAJA_CAMPO_EXISTENCIA.x, CORTE_CAJA_CAMPO_EXISTENCIA.top, { xMax: CORTE_CAJA_CAMPO_EXISTENCIA.xMax, align: "left", tam: 9.5, tamMinimo: 7, ajustar: false });
