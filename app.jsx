@@ -1772,16 +1772,18 @@ const CORTE_CAJA_PAG_ALTO = 792;
 
 const CORTE_CAJA_CAMPOS_ENCABEZADO = [
   // [clave, x, topLineaBase, xMax] — formato "Informe bimestral" vigente (nov 2026)
+  // 11 nov 2026: los campos de la orilla derecha pueden seguir hasta 578 (margen
+  // que sobra en la hoja) para que el texto salga COMPLETO (ej. CORDE "Izúcar de Matamoros").
   ["escuela", 142, 102.0, 393],
-  ["clave", 436, 102.0, 525],
+  ["clave", 436, 102.0, 578],
   ["domicilio", 146, 113.1, 409],
-  ["telefono", 450, 113.1, 525],
+  ["telefono", 450, 113.1, 578],
   ["nivel", 128, 124.3, 251],
   ["zona", 289, 124.3, 409],
-  ["corde", 463, 124.3, 525],
+  ["corde", 463, 124.3, 578],
   ["localidad", 150, 135.2, 337],
-  ["municipio", 395, 135.2, 525],
-  ["lugarFecha", 166, 146.2, 525],
+  ["municipio", 395, 135.2, 578],
+  ["lugarFecha", 166, 146.2, 578],
 ];
 const CORTE_CAJA_CAMPO_ETIQUETA = { x: 402, top: 174.0, xMax: 518 };
 const CORTE_CAJA_CAMPO_PERIODO = { x: 341, top: 186.6, xMax: 518 };
@@ -1841,6 +1843,7 @@ function corteCajaDibujarTexto(pagina, fuente, texto, x, top, opciones) {
     xDibujo = centro - fuente.widthOfTextAtSize(ajustado.texto, ajustado.tam) / 2;
   }
   pagina.drawText(ajustado.texto, { x: xDibujo, y: corteCajaY(top), size: ajustado.tam, font: fuente });
+  return xDibujo + fuente.widthOfTextAtSize(ajustado.texto, ajustado.tam);
 }
 
 // Nombres reales de la Mesa Directiva (y sobre todo "Nombre(s) + 2 apellidos" del
@@ -1980,7 +1983,9 @@ async function llenarYDescargarCorteCajaPDF(filasBase, arrastre, encabezado, fir
     pagina.drawPage(paginaIncrustada, { x: 0, y: 0, width: CORTE_CAJA_PAG_ANCHO, height: CORTE_CAJA_PAG_ALTO });
 
     CORTE_CAJA_CAMPOS_ENCABEZADO.forEach(([clave, x, top, xMax]) => {
-      corteCajaDibujarTexto(pagina, fuenteTexto, encabezado[clave], x, top, { xMax, tam: 9, tamMinimo: 6.5 });
+      const fin = corteCajaDibujarTexto(pagina, fuenteTexto, encabezado[clave], x, top, { xMax, tam: 9, tamMinimo: 5.5 });
+      // Si el texto pasa la raya del formato (termina en 525), se alarga la raya.
+      if (fin && fin > 526) pagina.drawLine({ start: { x: 525, y: corteCajaY(top) - 2 }, end: { x: fin + 2, y: corteCajaY(top) - 2 }, thickness: 0.6 });
     });
     corteCajaDibujarTexto(pagina, fuenteTexto, encabezado.etiquetaCorte, CORTE_CAJA_CAMPO_ETIQUETA.x, CORTE_CAJA_CAMPO_ETIQUETA.top, { xMax: CORTE_CAJA_CAMPO_ETIQUETA.xMax, tam: 9.5, tamMinimo: 7 });
     corteCajaDibujarTexto(pagina, fuenteTexto, encabezado.periodo, CORTE_CAJA_CAMPO_PERIODO.x, CORTE_CAJA_CAMPO_PERIODO.top, { xMax: CORTE_CAJA_CAMPO_PERIODO.xMax, tam: 9.5, tamMinimo: 7 });
