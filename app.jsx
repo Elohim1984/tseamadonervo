@@ -1790,8 +1790,10 @@ const CORTE_CAJA_CAMPO_EXISTENCIA = { x: 374, top: 651.6, xMax: 526 };
 // 13 bordes = 12 renglones (altos, ~35 pt): el texto se centra verticalmente.
 // Este formato ya no trae renglón TOTAL; solo "SALDO FINAL $".
 const CORTE_CAJA_BORDES_RENGLON = [228.1, 262.8, 298.0, 326.6, 355.0, 383.6, 418.4, 454.4, 490.4, 526.3, 562.3, 598.3, 634.4];
-const CORTE_CAJA_FILAS_POR_PAGINA = CORTE_CAJA_BORDES_RENGLON.length - 1;
-const CORTE_CAJA_TOTAL_TOP = null;
+// El ÚLTIMO renglón de cada hoja se usa como "SUB TOTAL" (pedido del director,
+// 11 nov 2026): 11 movimientos por hoja + SUB TOTAL al final de TODAS las hojas.
+const CORTE_CAJA_FILAS_POR_PAGINA = CORTE_CAJA_BORDES_RENGLON.length - 2;
+const CORTE_CAJA_TOTAL_TOP = (CORTE_CAJA_BORDES_RENGLON[CORTE_CAJA_BORDES_RENGLON.length - 2] + CORTE_CAJA_BORDES_RENGLON[CORTE_CAJA_BORDES_RENGLON.length - 1]) / 2 + 3.2;
 const CORTE_CAJA_COLUMNAS = {
   np: [92.4, 156.6],
   descripcion: [157.1, 389.8],
@@ -1984,8 +1986,11 @@ async function llenarYDescargarCorteCajaPDF(filasBase, arrastre, encabezado, fir
     corteCajaDibujarTexto(pagina, fuenteTexto, encabezado.periodo, CORTE_CAJA_CAMPO_PERIODO.x, CORTE_CAJA_CAMPO_PERIODO.top, { xMax: CORTE_CAJA_CAMPO_PERIODO.xMax, tam: 9.5, tamMinimo: 7 });
 
     const trozo = filasNumeradas.slice(pag * porPagina, pag * porPagina + porPagina);
-    let sumaIngresoPagina = 0;
-    let sumaEgresoPagina = 0;
+    // SUB TOTAL acumulado hasta esta hoja (desde la primera), para que cuadre:
+    // existencia anterior + ingresos − egresos = saldo de la columna.
+    const previas = filasNumeradas.slice(0, pag * porPagina);
+    let sumaIngresoPagina = previas.reduce((a, f) => a + (Number(f.ingreso) || 0), 0);
+    let sumaEgresoPagina = previas.reduce((a, f) => a + (Number(f.egreso) || 0), 0);
     trozo.forEach((f, i) => {
       const top = (CORTE_CAJA_BORDES_RENGLON[i] + CORTE_CAJA_BORDES_RENGLON[i + 1]) / 2 + 3.2;
       const ing = Number(f.ingreso) || 0;
@@ -2012,18 +2017,23 @@ async function llenarYDescargarCorteCajaPDF(filasBase, arrastre, encabezado, fir
           corteCajaDibujarTexto(pagina, fuenteTexto, txt, x0, top, { xMax: x1, tam: 9, tamMinimo: 6.5 });
         }
       }
-      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.ingreso), CORTE_CAJA_COLUMNAS.ingreso[0], top, { xMax: CORTE_CAJA_COLUMNAS.ingreso[1] - 3, align: "right", tam: 9, tamMinimo: 7, ajustar: false });
-      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.egreso), CORTE_CAJA_COLUMNAS.egreso[0], top, { xMax: CORTE_CAJA_COLUMNAS.egreso[1] - 3, align: "right", tam: 9, tamMinimo: 7, ajustar: false });
-      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.saldo), CORTE_CAJA_COLUMNAS.saldo[0], top, { xMax: CORTE_CAJA_COLUMNAS.saldo[1] - 3, align: "right", tam: 9, tamMinimo: 7, ajustar: false });
+      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.ingreso), CORTE_CAJA_COLUMNAS.ingreso[0] + 1.5, top, { xMax: CORTE_CAJA_COLUMNAS.ingreso[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
+      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.egreso), CORTE_CAJA_COLUMNAS.egreso[0] + 1.5, top, { xMax: CORTE_CAJA_COLUMNAS.egreso[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
+      corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(f.saldo), CORTE_CAJA_COLUMNAS.saldo[0] + 1.5, top, { xMax: CORTE_CAJA_COLUMNAS.saldo[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
     });
 
     // Renglón TOTAL de esta página: suma de ingresos/egresos de los movimientos
     // mostrados en esta hoja, y el saldo corrido al cierre de la misma (el de su
     // último renglón, o el arrastre si la hoja no tuvo renglones).
     const saldoAlCierrePagina = trozo.length ? trozo[trozo.length - 1].saldo : acumulado;
-    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(sumaIngresoPagina), CORTE_CAJA_COLUMNAS.ingreso[0], CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.ingreso[1] - 3, align: "right", tam: 9, tamMinimo: 7, ajustar: false });
-    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(sumaEgresoPagina), CORTE_CAJA_COLUMNAS.egreso[0], CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.egreso[1] - 3, align: "right", tam: 9, tamMinimo: 7, ajustar: false });
-    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(saldoAlCierrePagina), CORTE_CAJA_COLUMNAS.saldo[0], CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.saldo[1] - 3, align: "right", tam: 9, tamMinimo: 7, ajustar: false });
+    {
+      const x0 = CORTE_CAJA_COLUMNAS.descripcion[0], x1 = CORTE_CAJA_COLUMNAS.descripcion[1];
+      const etq = "SUB TOTAL", tam = 10;
+      pagina.drawText(etq, { x: (x0 + x1) / 2 - fuenteNegrita.widthOfTextAtSize(etq, tam) / 2, y: corteCajaY(CORTE_CAJA_TOTAL_TOP), size: tam, font: fuenteNegrita });
+    }
+    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(sumaIngresoPagina) || "0.00", CORTE_CAJA_COLUMNAS.ingreso[0] + 1.5, CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.ingreso[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
+    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(sumaEgresoPagina) || "0.00", CORTE_CAJA_COLUMNAS.egreso[0] + 1.5, CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.egreso[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
+    if (CORTE_CAJA_TOTAL_TOP !== null) corteCajaDibujarTexto(pagina, fuenteNegrita, corteCajaFormatoPesos(saldoAlCierrePagina) || "0.00", CORTE_CAJA_COLUMNAS.saldo[0] + 1.5, CORTE_CAJA_TOTAL_TOP, { xMax: CORTE_CAJA_COLUMNAS.saldo[1] - 3, align: "right", tam: 9, tamMinimo: 5.5 });
 
     if (pag === totalPaginas - 1) {
       corteCajaDibujarTexto(pagina, fuenteTexto, corteCajaFormatoPesos(saldoFinal) || "0.00", CORTE_CAJA_CAMPO_EXISTENCIA.x, CORTE_CAJA_CAMPO_EXISTENCIA.top, { xMax: CORTE_CAJA_CAMPO_EXISTENCIA.xMax, align: "left", tam: 9.5, tamMinimo: 7, ajustar: false });
@@ -18573,7 +18583,7 @@ function InformeBimestralImprimible({ periodo, etiquetaCorte, fechaElaboracion, 
             </tr>
           ))}
           <tr>
-            <td style={{ ...celdaOficial, fontWeight: 700 }} colSpan={2}>Total</td>
+            <td style={{ ...celdaOficial, fontWeight: 700 }} colSpan={2}>SUB TOTAL</td>
             <td style={{ ...celdaOficial, fontWeight: 700, textAlign: "right" }}>{totalIngreso.toFixed(2)}</td>
             <td style={{ ...celdaOficial, fontWeight: 700, textAlign: "right" }}>{totalEgreso.toFixed(2)}</td>
             <td style={{ ...celdaOficial, fontWeight: 700, textAlign: "right" }}>{saldoFinal.toFixed(2)}</td>
