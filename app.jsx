@@ -6277,10 +6277,21 @@ function diasEventoDep(ev) {
   if (nums.length) return [...new Set(nums)];
   return ev && ev.fechaEvento ? [String(Number(ev.fechaEvento.split("-")[2]))] : [];
 }
+// Programa de la Zona 052 (reunión de organización, 8 sept 2026):
+//   18 nov → Atletismo y pruebas de pista · 19 nov → deportes de conjunto y Ajedrez.
+// Cada deporte tiene su día (editable en "Datos del evento"); el alumno va los
+// días de sus deportes. Atletismo + Futbol = va los dos días.
+function diasDeporteDep(ev, dep) {
+  const todos = diasEventoDep(ev);
+  if (todos.length <= 1) return todos;
+  const guardado = ((ev && ev.diasPorDeporte) || {})[dep];
+  const sel = (Array.isArray(guardado) ? guardado : [dep === "Atletismo" ? todos[0] : todos[todos.length - 1]]).filter((d) => todos.includes(d));
+  return sel.length ? todos.filter((d) => sel.includes(d)) : todos;
+}
 function diasAlumnoDep(r, ev) {
   const todos = diasEventoDep(ev);
-  const sel = (r && Array.isArray(r.dias) ? r.dias : []).filter((d) => todos.includes(d));
-  return sel.length ? todos.filter((d) => sel.includes(d)) : todos;
+  const usados = new Set(deportesDe(r).flatMap((d) => diasDeporteDep(ev, d)));
+  return todos.filter((d) => usados.has(d));
 }
 const textoDiasDep = (dias) => (dias.length <= 1 ? dias[0] || "" : `${dias.slice(0, -1).join(", ")} y ${dias[dias.length - 1]}`);
 
@@ -6296,9 +6307,11 @@ async function descargarResponsivasOficiales(lista, regs, ev) {
   for (const a of lista) {
     const r = regs[a.id] || {};
     const t = tutorDeportista(a);
-    const dias = diasAlumnoDep(r, ev);
-    const dia = dias.length === 1 ? dias[0] : "";
     for (const dep of deportesDe(r)) {
+      // Una responsiva por deporte, con el DÍA DE ESE DEPORTE (Atletismo 18,
+      // Futbol 19…). Solo si un deporte dura los dos días dice "los días 18 y 19".
+      const dias = diasDeporteDep(ev, dep);
+      const dia = dias.length === 1 ? dias[0] : "";
       const doc = await PDFDocument.load(plantilla);
       const fuente = await doc.embedFont(StandardFonts.Helvetica);
       const form = doc.getForm();
@@ -6468,6 +6481,54 @@ function ConcentradoDeportistas({ lista, regs, ev, fotos = {} }) {
   );
 }
 
+// Lista para el transporte: una hoja por día con los alumnos que van ese día
+// (según el día de su deporte), su deporte de ese día, si también van el otro
+// día, y el tutor con teléfono para emergencias. Al final: total por camión.
+function ListaTransporteDep({ lista, regs, ev }) {
+  const dias = diasEventoDep(ev);
+  const td = { border: "1px solid #000", padding: "4px 5px", fontSize: "9pt", verticalAlign: "middle" };
+  return (
+    <>
+      {dias.map((dia) => {
+        const van = lista.filter((a) => diasAlumnoDep(regs[a.id], ev).includes(dia));
+        const porDep = {};
+        van.forEach((a) => deportesDe(regs[a.id]).filter((d) => diasDeporteDep(ev, d).includes(dia)).forEach((d) => { porDep[d] = (porDep[d] || 0) + 1; }));
+        return (
+          <div key={dia} style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#000", pageBreakAfter: "always", breakAfter: "page" }}>
+            <EncabezadoEscuelaDep titulo={`LISTA DE TRANSPORTE · ${dia} DE NOVIEMBRE DE 2026 · ${(ev.nombre || "Juegos Deportivos Escolares").toUpperCase()}`} />
+            <p style={{ fontSize: "9.5pt", margin: "0 0 6px" }}>Sede: <b>{ev.sede || "________"}</b> · Responsable: <b>{ev.entrenador || "________"}</b> · Total de alumnos: <b>{van.length}</b> · {Object.entries(porDep).map(([d, n]) => `${d.split(" (")[0]}: ${n}`).join(" · ")}</p>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead style={{ display: "table-header-group" }}><tr>{["No.", "Nombre del alumno", "Grado", "Deporte este día", "¿Va los 2 días?", "Tutor y teléfono", "Subió ✓", "Regresó ✓"].map((h) => <th key={h} style={{ ...td, background: "#e6dcc3" }}>{h}</th>)}</tr></thead>
+              <tbody>{van.map((a, i) => {
+                const r = regs[a.id] || {}; const t = tutorDeportista(a);
+                const depsDia = deportesDe(r).filter((d) => diasDeporteDep(ev, d).includes(dia)).map((d) => d.split(" (")[0]);
+                const dos = diasAlumnoDep(r, ev).length > 1;
+                return (
+                  <tr key={a.id}>
+                    <td style={{ ...td, textAlign: "center" }}>{i + 1}</td>
+                    <td style={td}>{nombreCompletoDep(a).toUpperCase()}</td>
+                    <td style={{ ...td, textAlign: "center" }}>{a.grado}° A</td>
+                    <td style={td}>{depsDia.join(", ")}</td>
+                    <td style={{ ...td, textAlign: "center", fontWeight: dos ? 700 : 400 }}>{dos ? "SÍ" : "No"}</td>
+                    <td style={{ ...td, fontSize: "8pt" }}>{t.nombre || ""}{t.tel ? ` · ${t.tel}` : ""}</td>
+                    <td style={{ ...td, width: "1.3cm" }}></td>
+                    <td style={{ ...td, width: "1.3cm" }}></td>
+                  </tr>
+                );
+              })}</tbody>
+            </table>
+            {van.length === 0 && <p>Nadie va este día.</p>}
+            <div style={{ display: "flex", justifyContent: "space-around", marginTop: "36px", textAlign: "center", fontSize: "9.5pt" }}>
+              <div style={{ width: "40%", borderTop: "1px solid #000", paddingTop: "3px" }}>{ev.entrenador || "Responsable"}<br />Responsable del grupo</div>
+              <div style={{ width: "40%", borderTop: "1px solid #000", paddingTop: "3px" }}>{NOMBRE_COMPLETO.directora}<br />Director(a) del plantel</div>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function OficioEntrenadorDeporte({ ev }) {
   return (
     <div style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "11pt", color: "#000", lineHeight: 1.8, pageBreakAfter: "always", breakAfter: "page" }}>
@@ -6515,7 +6576,7 @@ function JuegosDeportivosTab({ alumnos, onStamp }) {
   const inscritos = alumnos.filter((a) => deportesDe(regs[a.id]).length > 0);
   const [fotos, setFotos] = useState({});
   const imprimir = async (cual) => {
-    if (cual !== "entrenador") {
+    if (cual !== "entrenador" && cual !== "transporte") {
       setEstado("Cargando fotografías de los alumnos…");
       const nuevas = { ...fotos };
       for (const a of inscritos) if (nuevas[a.id] === undefined) { try { nuevas[a.id] = await cargarFotoAlumno(a.id); } catch (e) { nuevas[a.id] = ""; } }
@@ -6538,6 +6599,7 @@ function JuegosDeportivosTab({ alumnos, onStamp }) {
           {imprimiendo === "constancias" && ordenInscritos.map((a) => <ConstanciaEstudiosDeporte key={a.id} a={a} ev={ev} foto={fotos[a.id]} />)}
           {imprimiendo === "cedula" && <ConcentradoDeportistas lista={ordenInscritos} regs={regs} ev={ev} fotos={fotos} />}
           {imprimiendo === "entrenador" && <OficioEntrenadorDeporte ev={ev} />}
+          {imprimiendo === "transporte" && <ListaTransporteDep lista={ordenInscritos} regs={regs} ev={ev} />}
         </div>, document.body)}
 
       <div className="flex gap-2 flex-wrap">
@@ -6581,7 +6643,29 @@ function JuegosDeportivosTab({ alumnos, onStamp }) {
             <div><label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Primer día del evento (para calcular la edad)</label><input className="campo" type="date" value={ev.fechaEvento || ""} onChange={(e) => guardarEv("fechaEvento", e.target.value)} /></div>
             <div><label className="text-sm font-medium mb-1 block" style={{ opacity: 0.75 }}>Fecha de las cartas y constancias</label><input className="campo" type="date" value={ev.fechaCarta || ""} onChange={(e) => guardarEv("fechaCarta", e.target.value)} /></div>
           </div>
+          {diasEventoDep(ev).length > 1 && (
+            <div className="mt-4" style={{ borderTop: "1px solid var(--linea)", paddingTop: "0.7rem" }}>
+              <div className="font-display mb-1" style={{ fontWeight: 700, fontSize: "0.85rem" }}>📅 Día de cada deporte (programa de la zona)</div>
+              <p className="text-sm" style={{ opacity: 0.6, margin: "0 0 0.4rem" }}>Ya viene como lo dio la zona: 18 nov Atletismo; 19 nov Futbol, Béisbol 5, Básquetbol, Voleibol y Ajedrez. Si cambia, toque el día. Con esto la responsiva de cada deporte sale con su día y se arma la lista del transporte.</p>
+              <div className="flex flex-col gap-1">
+                {DEPORTES_SECUNDARIA.map((d) => (
+                  <div key={d} className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm" style={{ minWidth: "11rem" }}>{d} <span style={{ opacity: 0.5 }}>({inscritos.filter((a) => deportesDe(regs[a.id]).includes(d)).length})</span></span>
+                    {diasEventoDep(ev).map((dia) => {
+                      const sel = diasDeporteDep(ev, d); const on = sel.includes(dia);
+                      return <button key={dia} onClick={() => { const nuevo = on ? sel.filter((x) => x !== dia) : [...sel, dia]; if (!nuevo.length) return; guardarEv("diasPorDeporte", { ...(ev.diasPorDeporte || {}), [d]: nuevo }); }} className={`chip-grado ${on ? "activo" : ""}`} style={{ fontSize: "0.7rem" }}>{on ? "✓ " : ""}{dia} nov</button>;
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div className="text-sm mt-2" style={{ fontWeight: 600 }}>
+                {diasEventoDep(ev).map((dia) => `🚌 ${dia} nov: ${inscritos.filter((a) => diasAlumnoDep(regs[a.id], ev).includes(dia)).length} alumnos`).join("  ·  ")}
+                {"  ·  "}{inscritos.filter((a) => diasAlumnoDep(regs[a.id], ev).length > 1).length} van los dos días
+              </div>
+            </div>
+          )}
           <div className="flex gap-2 flex-wrap mt-4">
+            <button onClick={() => imprimir("transporte")} className="btn-primario" style={{ fontSize: "0.78rem" }} disabled={!inscritos.length}><Printer size={14} /> 🚌 Lista de transporte por día</button>
             <button onClick={async () => { setEstado("Llenando responsivas oficiales…"); try { await descargarResponsivasOficiales(ordenInscritos, regs, ev); setEstado("✓ Responsivas oficiales descargadas (una hoja por alumno y deporte)"); } catch (e) { setEstado("No se pudieron generar: " + e.message); } }} className="btn-primario" style={{ fontSize: "0.78rem" }} disabled={!inscritos.length}><Printer size={14} /> Responsivas oficiales ({ordenInscritos.reduce((n, a) => n + deportesDe(regs[a.id]).length, 0)} hojas)</button>
             <a href={RUTA_RESPONSIVA_OFICIAL} download="Responsiva_oficial_en_blanco.pdf" className="btn-secundario" style={{ fontSize: "0.78rem", textDecoration: "none" }}><Printer size={14} /> Responsiva en blanco (rellenable)</a>
             <a href="assets/juegos-deportivos/Responsiva_oficial_editable.docx" download="Responsiva_Juegos_Deportivos_Amado_Nervo.docx" className="btn-secundario" style={{ fontSize: "0.78rem", textDecoration: "none" }}><FileText size={14} /> Responsiva en Word (editable)</a>
@@ -6629,14 +6713,10 @@ function JuegosDeportivosTab({ alumnos, onStamp }) {
                     <input key={d} className="campo mt-2" style={{ fontSize: "0.8rem" }} placeholder={`${d} · posición o prueba (opcional)`} value={(r.posiciones || {})[d] || ""} onChange={(e) => guardarReg(a.id, { ...r, deportes: deps, posiciones: { ...(r.posiciones || {}), [d]: e.target.value } })} />
                   ))}
                   {deps.length > 0 && diasEventoDep(ev).length > 1 && (
-                    <div className="flex gap-1 flex-wrap items-center mt-2">
-                      <span className="text-sm" style={{ fontSize: "0.72rem", opacity: 0.7 }}>Días que asiste:</span>
-                      {diasEventoDep(ev).map((d) => {
-                        const sel = diasAlumnoDep(r, ev);
-                        const on = sel.includes(d);
-                        return <button key={d} onClick={() => { const nuevo = on ? sel.filter((x) => x !== d) : [...sel, d]; if (!nuevo.length) return; guardarReg(a.id, { ...r, deportes: deps, dias: nuevo }); }} className={`chip-grado ${on ? "activo" : ""}`} style={{ fontSize: "0.68rem" }}>{on ? "✓ " : ""}{d} nov</button>;
-                      })}
-                      <span className="text-sm" style={{ fontSize: "0.68rem", opacity: 0.55 }}>{diasAlumnoDep(r, ev).length > 1 ? "→ una sola responsiva con los dos días" : ""}</span>
+                    <div className="text-sm mt-2" style={{ fontSize: "0.72rem" }}>
+                      🚌 <b>Va: {textoDiasDep(diasAlumnoDep(r, ev))} de noviembre</b>
+                      <span style={{ opacity: 0.6 }}> · {deps.map((d) => `${d.split(" (")[0]} ${textoDiasDep(diasDeporteDep(ev, d))}`).join(" · ")}</span>
+                      {diasAlumnoDep(r, ev).length > 1 && <span style={{ color: "#9a6b00", fontWeight: 700 }}> · va los dos días</span>}
                     </div>
                   )}
                   {deps.length > 0 && (
