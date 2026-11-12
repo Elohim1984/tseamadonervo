@@ -5160,7 +5160,7 @@ function EncabezadoConcentradoBoleta({ subtitulo }) {
 }
 
 // Hoja de concentrado por grado: todas las asignaturas × 3 periodos + promedio final.
-function ConcentradoBoletaImprimible({ grado, lista, regs, docente, director }) {
+function ConcentradoBoletaImprimible({ grado, lista, regs, docente, director, periodo = "1" }) {
   const grupos = ASIGNATURAS_BOLETA[grado];
   const planas = asignaturasPlanas(grado);
   return (
@@ -5174,7 +5174,7 @@ function ConcentradoBoletaImprimible({ grado, lista, regs, docente, director }) 
             <th style={{ ...TH_B, textAlign: "left" }} rowSpan={3}>Alumna / alumno (NIA)</th>
             {grupos.map(([campo, l]) => <th key={campo} style={TH_B} colSpan={l.length * 4}>{campo}</th>)}
             <th style={TH_B} rowSpan={3}>Prom. final de grado</th>
-            <th style={TH_B} rowSpan={3}>Asist.</th>
+            <th style={TH_B} rowSpan={3}>Asist. {{ "1": "1er", "2": "2do", "3": "3er" }[periodo]} periodo</th>
           </tr>
           <tr>{planas.map(([k, n]) => <th key={k} style={TH_B} colSpan={4}>{n}</th>)}</tr>
           <tr>{planas.map(([k]) => ["1", "2", "3", "PF"].map((p) => <th key={k + p} style={{ ...TH_B, fontSize: "7.5pt", fontWeight: 600 }}>{p}</th>))}</tr>
@@ -5192,7 +5192,7 @@ function ConcentradoBoletaImprimible({ grado, lista, regs, docente, director }) 
                     .concat(<td key={k + "pf"} style={{ ...TD_B, fontSize: "8.5pt", fontWeight: 700, background: "#f4efe2" }}>{fmtBoleta(promedioAsignaturaBoleta(c))}</td>);
                 })}
                 <td style={{ ...TD_B, fontWeight: 700 }}>{fmtBoleta(promedioFinalGradoBoleta(r, grado))}</td>
-                <td style={TD_B}>{totalAsistBoleta(r)}</td>
+                <td style={TD_B}>{asistTrimBoleta(r)[periodo] || ""}</td>
               </tr>
             );
           })}
@@ -5209,7 +5209,7 @@ function ConcentradoBoletaImprimible({ grado, lista, regs, docente, director }) 
 
 // Una hoja por alumno con el mismo acomodo de la boleta oficial (para revisar
 // y pasar los datos). No sustituye a la boleta oficial.
-function HojaBoletaAlumnoImprimible({ alumno, grado, reg, director }) {
+function HojaBoletaAlumnoImprimible({ alumno, grado, reg, director, periodo = "1" }) {
   const grupos = ASIGNATURAS_BOLETA[grado];
   const planas = asignaturasPlanas(grado);
   const r = reg || {};
@@ -5244,7 +5244,7 @@ function HojaBoletaAlumnoImprimible({ alumno, grado, reg, director }) {
         <div style={{ flex: 1 }}>
           {caja("ARTES", r.artes)}
           {caja("TECNOLOGÍA", r.tecnologia)}
-          {caja("ASISTENCIAS", textoAsistBoleta(r))}
+          {caja(`ASISTENCIAS · ${{ "1": "1er", "2": "2do", "3": "3er" }[periodo]} PERIODO`, asistTrimBoleta(r)[periodo] || "")}
           {caja("FOLIO", r.folio)}
         </div>
         <div style={{ flex: 1 }}>
@@ -5324,7 +5324,7 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
   // Contar asistencias de un trimestre desde la Lista de asistencia de la app
   // (días con "presente" o "retardo" entre las fechas del trimestre).
   const [fechasTrim, setFechasTrim] = useState(TRIMESTRES_ASIST_BOLETA);
-  const [trimContar, setTrimContar] = useState("1");
+  const trimContar = periodo; // el periodo elegido arriba (1er, 2do o 3er)
   useEffect(() => { getStorage(`boleta:${CICLO_BOLETA}:__trimestres`, null).then((v) => { if (v && v["1"]) setFechasTrim(v); }); }, []);
   const cambiarFechaTrim = (p, i, v) => {
     const n = { ...fechasTrim, [p]: fechasTrim[p].map((x, j) => (j === i ? v : x)) };
@@ -5363,9 +5363,9 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
     <div className="flex flex-col gap-4">
       {imprimiendo && ReactDOM.createPortal(
         <div className="solo-impresion portal-impresion">
-          {imprimiendo === "concentrado" && <ConcentradoBoletaImprimible grado={grado} lista={lista} regs={regs} docente={DOCENTE_POR_GRADO_BOLETA[grado]} director={DIRECTOR_BOLETA} />}
+          {imprimiendo === "concentrado" && <ConcentradoBoletaImprimible grado={grado} lista={lista} regs={regs} docente={DOCENTE_POR_GRADO_BOLETA[grado]} director={DIRECTOR_BOLETA} periodo={periodo} />}
           {imprimiendo === "hojas" && lista.map((a) => (
-            <HojaBoletaAlumnoImprimible key={a.id} alumno={a} grado={grado} reg={{ docente: DOCENTE_POR_GRADO_BOLETA[grado], ...(regs[a.id] || {}) }} director={DIRECTOR_BOLETA} />
+            <HojaBoletaAlumnoImprimible key={a.id} alumno={a} grado={grado} reg={{ docente: DOCENTE_POR_GRADO_BOLETA[grado], ...(regs[a.id] || {}) }} director={DIRECTOR_BOLETA} periodo={periodo} />
           ))}
         </div>,
         document.body
@@ -5469,7 +5469,7 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
             <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Datos de la parte de abajo de la boleta</div>
             <div className="flex items-center gap-2 flex-wrap text-sm" style={{ marginBottom: "0.5rem", background: "var(--crema, #f3ece0)", borderRadius: "8px", padding: "0.45rem 0.6rem" }}>
               <span>📋 Asistencias desde la lista de la app:</span>
-              {["1", "2", "3"].map((p) => <button key={p} onClick={() => setTrimContar(p)} className={`chip-grado ${trimContar === p ? "activo" : ""}`} style={{ fontSize: "0.72rem" }}>{p === "1" ? "1er" : p === "2" ? "2do" : "3er"} trim.</button>)}
+              <b>{{ "1": "1er", "2": "2do", "3": "3er" }[periodo]} periodo</b>
               <input type="date" className="campo" style={{ width: "auto", fontSize: "0.75rem", padding: "0.2rem" }} value={(fechasTrim[trimContar] || [])[0] || ""} onChange={(e) => cambiarFechaTrim(trimContar, 0, e.target.value)} />
               <span>a</span>
               <input type="date" className="campo" style={{ width: "auto", fontSize: "0.75rem", padding: "0.2rem" }} value={(fechasTrim[trimContar] || [])[1] || ""} onChange={(e) => cambiarFechaTrim(trimContar, 1, e.target.value)} />
@@ -5478,7 +5478,7 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
             </div>
             <table style={{ borderCollapse: "collapse", fontSize: "0.78rem", minWidth: "100%" }}>
               <thead>
-                <tr>{["Alumna / alumno", "Artes (disciplina)", "Tecnología (énfasis)", "Asist. 1er trim.", "Asist. 2do trim.", "Asist. 3er trim.", "Total asist.", "Folio", "Lengua indígena", "Prom. final de grado"].map((t) => <th key={t} style={{ padding: "4px", textAlign: "left", fontSize: "0.7rem" }}>{t}</th>)}</tr>
+                <tr>{["Alumna / alumno", "Artes (disciplina)", "Tecnología (énfasis)", `Asistencias ${{ "1": "1er", "2": "2do", "3": "3er" }[periodo]} periodo`, "Folio", "Lengua indígena", "Prom. final de grado"].map((t) => <th key={t} style={{ padding: "4px", textAlign: "left", fontSize: "0.7rem" }}>{t}</th>)}</tr>
               </thead>
               <tbody>
                 {lista.map((a) => {
@@ -5491,12 +5491,11 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
                           <input className="campo" style={{ minWidth: "7rem", padding: "0.25rem" }} value={r[c] || ""} placeholder={ph} onChange={(e) => cambiarDato(a.id, c, e.target.value)} />
                         </td>
                       ))}
-                      {["1", "2", "3"].map((p) => (
+                      {[periodo].map((p) => (
                         <td key={"as" + p} style={{ padding: "2px" }}>
                           <input className="campo" inputMode="numeric" style={{ width: "4rem", padding: "0.25rem", textAlign: "center" }} value={asistTrimBoleta(r)[p] ?? ""} placeholder="Días" onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ""); cambiarAsist(a.id, p, v); }} />
                         </td>
                       ))}
-                      <td style={{ textAlign: "center", fontWeight: 700 }}>{totalAsistBoleta(r) === "" ? "—" : totalAsistBoleta(r)}</td>
                       {[["folio", ""], ["lengua", "—"]].map(([c, ph]) => (
                         <td key={c} style={{ padding: "2px" }}>
                           <input className="campo" style={{ minWidth: "7rem", padding: "0.25rem" }} value={r[c] || ""} placeholder={ph} onChange={(e) => cambiarDato(a.id, c, e.target.value)} />
