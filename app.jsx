@@ -5174,7 +5174,7 @@ function ConcentradoBoletaImprimible({ grado, lista, regs, docente, director, pe
             <th style={{ ...TH_B, textAlign: "left" }} rowSpan={3}>Alumna / alumno (NIA)</th>
             {grupos.map(([campo, l]) => <th key={campo} style={TH_B} colSpan={l.length * 4}>{campo}</th>)}
             <th style={TH_B} rowSpan={3}>Prom. final de grado</th>
-            <th style={TH_B} rowSpan={3}>Asist. {{ "1": "1er", "2": "2do", "3": "3er" }[periodo]} periodo</th>
+            <th style={TH_B} rowSpan={3}>Asist.</th>
           </tr>
           <tr>{planas.map(([k, n]) => <th key={k} style={TH_B} colSpan={4}>{n}</th>)}</tr>
           <tr>{planas.map(([k]) => ["1", "2", "3", "PF"].map((p) => <th key={k + p} style={{ ...TH_B, fontSize: "7.5pt", fontWeight: 600 }}>{p}</th>))}</tr>
@@ -5244,7 +5244,7 @@ function HojaBoletaAlumnoImprimible({ alumno, grado, reg, director, periodo = "1
         <div style={{ flex: 1 }}>
           {caja("ARTES", r.artes)}
           {caja("TECNOLOGÍA", r.tecnologia)}
-          {caja(`ASISTENCIAS · ${{ "1": "1er", "2": "2do", "3": "3er" }[periodo]} PERIODO`, asistTrimBoleta(r)[periodo] || "")}
+          {caja("ASISTENCIAS", asistTrimBoleta(r)[periodo] || "")}
           {caja("FOLIO", r.folio)}
         </div>
         <div style={{ flex: 1 }}>
