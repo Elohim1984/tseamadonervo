@@ -5089,6 +5089,27 @@ const PERIODOS_BOLETA = [["1", "1er periodo"], ["2", "2do periodo"], ["3", "3er 
 const asignaturasPlanas = (g) => (ASIGNATURAS_BOLETA[g] || []).flatMap(([, l]) => l);
 const numBoleta = (v) => (v === "" || v === undefined || v === null || isNaN(Number(v)) ? null : Number(v));
 // Promedio final de la asignatura: solo cuando están los 3 periodos (1 decimal).
+// Asistencias por trimestre (12 nov 2026): r.asist = { "1": n, "2": n, "3": n }.
+// Lo de antes (r.asistencias, un solo número) se toma como 1er trimestre.
+const asistTrimBoleta = (r) => {
+  const a = (r && r.asist) || {};
+  if (!r || r.asist || !r.asistencias) return a;
+  return { "1": r.asistencias };
+};
+const totalAsistBoleta = (r) => {
+  const a = asistTrimBoleta(r);
+  const nums = ["1", "2", "3"].map((p) => a[p]).filter((v) => v !== undefined && v !== "" && !isNaN(Number(v)));
+  return nums.length ? nums.reduce((s, v) => s + Number(v), 0) : "";
+};
+const textoAsistBoleta = (r) => {
+  const a = asistTrimBoleta(r);
+  if (!["1", "2", "3"].some((p) => a[p] !== undefined && a[p] !== "")) return "";
+  return `1er trim.: ${a["1"] || "—"}   ·   2do trim.: ${a["2"] || "—"}   ·   3er trim.: ${a["3"] || "—"}   ·   Total: ${totalAsistBoleta(r)}`;
+};
+// Fechas aproximadas de cada trimestre para contar desde la lista de asistencia
+// (se pueden cambiar en pantalla; se guardan en boleta:<ciclo>:__trimestres).
+const TRIMESTRES_ASIST_BOLETA = { "1": ["2026-08-31", "2026-11-27"], "2": ["2026-11-30", "2027-03-13"], "3": ["2027-03-16", "2027-07-09"] };
+
 function promedioAsignaturaBoleta(c) {
   const ns = ["1", "2", "3"].map((p) => numBoleta(c && c[p]));
   if (ns.some((n) => n === null)) return null;
@@ -5157,7 +5178,7 @@ function ConcentradoBoletaImprimible({ grado, lista, regs, docente, director }) 
                     .concat(<td key={k + "pf"} style={{ ...TD_B, fontSize: "8.5pt", fontWeight: 700, background: "#f4efe2" }}>{fmtBoleta(promedioAsignaturaBoleta(c))}</td>);
                 })}
                 <td style={{ ...TD_B, fontWeight: 700 }}>{fmtBoleta(promedioFinalGradoBoleta(r, grado))}</td>
-                <td style={TD_B}>{r.asistencias || ""}</td>
+                <td style={TD_B}>{totalAsistBoleta(r)}</td>
               </tr>
             );
           })}
@@ -5209,7 +5230,7 @@ function HojaBoletaAlumnoImprimible({ alumno, grado, reg, director }) {
         <div style={{ flex: 1 }}>
           {caja("ARTES", r.artes)}
           {caja("TECNOLOGÍA", r.tecnologia)}
-          {caja("ASISTENCIAS", r.asistencias)}
+          {caja("ASISTENCIAS", textoAsistBoleta(r))}
           {caja("FOLIO", r.folio)}
         </div>
         <div style={{ flex: 1 }}>
@@ -5285,6 +5306,34 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
   };
   const cambiarNotaAsig = (id, k, valor) => cambiarNota(id, k, valor);
   const cambiarDato = (id, campo, valor) => actualizar(id, (r) => ({ ...r, grado, [campo]: valor }));
+  const cambiarAsist = (id, p, valor) => actualizar(id, (r) => ({ ...r, grado, asist: { ...asistTrimBoleta(r), [p]: valor } }));
+  // Contar asistencias de un trimestre desde la Lista de asistencia de la app
+  // (días con "presente" o "retardo" entre las fechas del trimestre).
+  const [fechasTrim, setFechasTrim] = useState(TRIMESTRES_ASIST_BOLETA);
+  const [trimContar, setTrimContar] = useState("1");
+  useEffect(() => { getStorage(`boleta:${CICLO_BOLETA}:__trimestres`, null).then((v) => { if (v && v["1"]) setFechasTrim(v); }); }, []);
+  const cambiarFechaTrim = (p, i, v) => {
+    const n = { ...fechasTrim, [p]: fechasTrim[p].map((x, j) => (j === i ? v : x)) };
+    setFechasTrim(n); setStorage(`boleta:${CICLO_BOLETA}:__trimestres`, n);
+  };
+  const contarAsistencias = async () => {
+    const [desde, hasta] = fechasTrim[trimContar] || [];
+    if (!desde || !hasta) return;
+    setEstado("Contando asistencias de la lista…");
+    const asis = await cargarObjetoMigrando("asistencia:", "asistencia-registro");
+    let dias = 0; const cuenta = {};
+    Object.keys(asis || {}).forEach((clave) => {
+      const [g, f] = clave.split("_");
+      if (g !== String(grado) || f < desde || f > hasta) return;
+      dias++;
+      Object.entries(asis[clave] || {}).forEach(([id, est]) => { if (est === "presente" || est === "retardo") cuenta[id] = (cuenta[id] || 0) + 1; });
+    });
+    if (!dias) { setEstado(`No hay días de lista de ${grado}° entre ${fechaBonita(desde)} y ${fechaBonita(hasta)}. Puede escribirlas a mano.`); return; }
+    const vacios = lista.filter((a) => { const v = asistTrimBoleta(regsRef.current[a.id])[trimContar]; return v !== undefined && v !== "" ; });
+    if (vacios.length && !window.confirm(`${vacios.length} alumno(s) ya tienen asistencias en ese trimestre. ¿Reemplazarlas con lo que dice la lista de asistencia?`)) { setEstado(""); return; }
+    lista.forEach((a) => cambiarAsist(a.id, trimContar, String(cuenta[a.id] || 0)));
+    setEstado(`✓ Contadas desde la lista: ${dias} días con lista en el ${{ "1": "1er", "2": "2do", "3": "3er" }[trimContar]} trimestre. Revise y corrija si hace falta.`);
+  };
 
   const imprimir = (cual) => {
     setImprimiendo(cual);
@@ -5404,9 +5453,18 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
 
           <div className="card" style={{ overflowX: "auto", padding: "0.5rem" }}>
             <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Datos de la parte de abajo de la boleta</div>
+            <div className="flex items-center gap-2 flex-wrap text-sm" style={{ marginBottom: "0.5rem", background: "var(--crema, #f3ece0)", borderRadius: "8px", padding: "0.45rem 0.6rem" }}>
+              <span>📋 Asistencias desde la lista de la app:</span>
+              {["1", "2", "3"].map((p) => <button key={p} onClick={() => setTrimContar(p)} className={`chip-grado ${trimContar === p ? "activo" : ""}`} style={{ fontSize: "0.72rem" }}>{p === "1" ? "1er" : p === "2" ? "2do" : "3er"} trim.</button>)}
+              <input type="date" className="campo" style={{ width: "auto", fontSize: "0.75rem", padding: "0.2rem" }} value={(fechasTrim[trimContar] || [])[0] || ""} onChange={(e) => cambiarFechaTrim(trimContar, 0, e.target.value)} />
+              <span>a</span>
+              <input type="date" className="campo" style={{ width: "auto", fontSize: "0.75rem", padding: "0.2rem" }} value={(fechasTrim[trimContar] || [])[1] || ""} onChange={(e) => cambiarFechaTrim(trimContar, 1, e.target.value)} />
+              <button onClick={contarAsistencias} className="btn-secundario" style={{ fontSize: "0.72rem" }}>Contar asistencias</button>
+              <span style={{ opacity: 0.6, fontSize: "0.7rem" }}>Cuenta los días "presente" y "retardo". También puede escribirlas a mano.</span>
+            </div>
             <table style={{ borderCollapse: "collapse", fontSize: "0.78rem", minWidth: "100%" }}>
               <thead>
-                <tr>{["Alumna / alumno", "Artes (disciplina)", "Tecnología (énfasis)", "Asistencias", "Folio", "Lengua indígena", "Prom. final de grado"].map((t) => <th key={t} style={{ padding: "4px", textAlign: "left", fontSize: "0.7rem" }}>{t}</th>)}</tr>
+                <tr>{["Alumna / alumno", "Artes (disciplina)", "Tecnología (énfasis)", "Asist. 1er trim.", "Asist. 2do trim.", "Asist. 3er trim.", "Total asist.", "Folio", "Lengua indígena", "Prom. final de grado"].map((t) => <th key={t} style={{ padding: "4px", textAlign: "left", fontSize: "0.7rem" }}>{t}</th>)}</tr>
               </thead>
               <tbody>
                 {lista.map((a) => {
@@ -5414,9 +5472,20 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
                   return (
                     <tr key={a.id} style={{ borderTop: "1px solid var(--linea)" }}>
                       <td style={{ padding: "4px", whiteSpace: "nowrap" }}>{nombreAlumno(a)}</td>
-                      {[["artes", "Ej. Música"], ["tecnologia", "Ej. Informática"], ["asistencias", "Días"], ["folio", ""], ["lengua", "—"]].map(([c, ph]) => (
+                      {[["artes", "Ej. Música"], ["tecnologia", "Ej. Informática"]].map(([c, ph]) => (
                         <td key={c} style={{ padding: "2px" }}>
-                          <input className="campo" style={{ minWidth: c === "asistencias" ? "4rem" : "7rem", padding: "0.25rem" }} value={r[c] || ""} placeholder={ph} onChange={(e) => cambiarDato(a.id, c, e.target.value)} />
+                          <input className="campo" style={{ minWidth: "7rem", padding: "0.25rem" }} value={r[c] || ""} placeholder={ph} onChange={(e) => cambiarDato(a.id, c, e.target.value)} />
+                        </td>
+                      ))}
+                      {["1", "2", "3"].map((p) => (
+                        <td key={"as" + p} style={{ padding: "2px" }}>
+                          <input className="campo" inputMode="numeric" style={{ width: "4rem", padding: "0.25rem", textAlign: "center" }} value={asistTrimBoleta(r)[p] ?? ""} placeholder="Días" onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ""); cambiarAsist(a.id, p, v); }} />
+                        </td>
+                      ))}
+                      <td style={{ textAlign: "center", fontWeight: 700 }}>{totalAsistBoleta(r) === "" ? "—" : totalAsistBoleta(r)}</td>
+                      {[["folio", ""], ["lengua", "—"]].map(([c, ph]) => (
+                        <td key={c} style={{ padding: "2px" }}>
+                          <input className="campo" style={{ minWidth: "7rem", padding: "0.25rem" }} value={r[c] || ""} placeholder={ph} onChange={(e) => cambiarDato(a.id, c, e.target.value)} />
                         </td>
                       ))}
                       <td style={{ textAlign: "center", fontWeight: 700 }}>{fmtBoleta(promedioFinalGradoBoleta(r, grado)) || "—"}</td>
