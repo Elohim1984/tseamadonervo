@@ -5330,24 +5330,38 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
     const n = { ...fechasTrim, [p]: fechasTrim[p].map((x, j) => (j === i ? v : x)) };
     setFechasTrim(n); setStorage(`boleta:${CICLO_BOLETA}:__trimestres`, n);
   };
-  const contarAsistencias = async () => {
-    const [desde, hasta] = fechasTrim[trimContar] || [];
-    if (!desde || !hasta) return;
-    setEstado("Contando asistencias de la lista…");
-    const asis = await cargarObjetoMigrando("asistencia:", "asistencia-registro");
-    let dias = 0; const cuenta = {};
-    Object.keys(asis || {}).forEach((clave) => {
-      const [g, f] = clave.split("_");
-      if (g !== String(grado) || f < desde || f > hasta) return;
-      dias++;
-      Object.entries(asis[clave] || {}).forEach(([id, est]) => { if (est === "presente" || est === "retardo") cuenta[id] = (cuenta[id] || 0) + 1; });
+  // Asistencias AUTOMÁTICAS desde la Lista de asistencia (presente + retardo
+  // dentro de las fechas del periodo). Si el docente escribe un número, ese
+  // manda; si borra lo escrito, vuelve el automático.
+  const [asisLista, setAsisLista] = useState({});
+  useEffect(() => { cargarObjetoMigrando("asistencia:", "asistencia-registro").then((o) => setAsisLista(o || {})); }, []);
+  const autoAsist = useMemo(() => {
+    const res = {};
+    ["1", "2", "3"].forEach((p) => {
+      const [desde, hasta] = fechasTrim[p] || [];
+      let dias = 0; const cuenta = {};
+      Object.keys(asisLista).forEach((clave) => {
+        const [g, f] = clave.split("_");
+        if (g !== String(grado) || !desde || f < desde || f > hasta) return;
+        dias++;
+        Object.entries(asisLista[clave] || {}).forEach(([id, est]) => { if (est === "presente" || est === "retardo") cuenta[id] = (cuenta[id] || 0) + 1; });
+      });
+      res[p] = { dias, cuenta };
     });
-    if (!dias) { setEstado(`No hay días de lista de ${grado}° entre ${fechaBonita(desde)} y ${fechaBonita(hasta)}. Puede escribirlas a mano.`); return; }
-    const vacios = lista.filter((a) => { const v = asistTrimBoleta(regsRef.current[a.id])[trimContar]; return v !== undefined && v !== "" ; });
-    if (vacios.length && !window.confirm(`${vacios.length} alumno(s) ya tienen asistencias en ese trimestre. ¿Reemplazarlas con lo que dice la lista de asistencia?`)) { setEstado(""); return; }
-    lista.forEach((a) => cambiarAsist(a.id, trimContar, String(cuenta[a.id] || 0)));
-    setEstado(`✓ Contadas desde la lista: ${dias} días con lista en el ${{ "1": "1er", "2": "2do", "3": "3er" }[trimContar]} trimestre. Revise y corrija si hace falta.`);
+    return res;
+  }, [asisLista, fechasTrim, grado]);
+  const asistDe = (id, p) => {
+    const manual = asistTrimBoleta(regs[id])[p];
+    if (manual !== undefined && manual !== "") return { valor: manual, auto: false };
+    const au = autoAsist[p];
+    return au && au.dias ? { valor: String(au.cuenta[id] || 0), auto: true } : { valor: "", auto: false };
   };
+  // Para imprimir: cada alumno con sus asistencias (escritas o automáticas).
+  const regsConAsist = useMemo(() => {
+    const o = { ...regs };
+    lista.forEach((a) => { o[a.id] = { ...(regs[a.id] || {}), asist: { "1": asistDe(a.id, "1").valor, "2": asistDe(a.id, "2").valor, "3": asistDe(a.id, "3").valor } }; });
+    return o;
+  }, [regs, autoAsist, lista]);
 
   const imprimir = (cual) => {
     setImprimiendo(cual);
@@ -5363,9 +5377,9 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
     <div className="flex flex-col gap-4">
       {imprimiendo && ReactDOM.createPortal(
         <div className="solo-impresion portal-impresion">
-          {imprimiendo === "concentrado" && <ConcentradoBoletaImprimible grado={grado} lista={lista} regs={regs} docente={DOCENTE_POR_GRADO_BOLETA[grado]} director={DIRECTOR_BOLETA} periodo={periodo} />}
+          {imprimiendo === "concentrado" && <ConcentradoBoletaImprimible grado={grado} lista={lista} regs={regsConAsist} docente={DOCENTE_POR_GRADO_BOLETA[grado]} director={DIRECTOR_BOLETA} periodo={periodo} />}
           {imprimiendo === "hojas" && lista.map((a) => (
-            <HojaBoletaAlumnoImprimible key={a.id} alumno={a} grado={grado} reg={{ docente: DOCENTE_POR_GRADO_BOLETA[grado], ...(regs[a.id] || {}) }} director={DIRECTOR_BOLETA} periodo={periodo} />
+            <HojaBoletaAlumnoImprimible key={a.id} alumno={a} grado={grado} reg={{ docente: DOCENTE_POR_GRADO_BOLETA[grado], ...(regsConAsist[a.id] || {}) }} director={DIRECTOR_BOLETA} periodo={periodo} />
           ))}
         </div>,
         document.body
@@ -5467,14 +5481,12 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
 
           <div className="card" style={{ overflowX: "auto", padding: "0.5rem" }}>
             <div className="font-display mb-2" style={{ fontWeight: 700, fontSize: "0.85rem" }}>Datos de la parte de abajo de la boleta</div>
-            <div className="flex items-center gap-2 flex-wrap text-sm" style={{ marginBottom: "0.5rem", background: "var(--crema, #f3ece0)", borderRadius: "8px", padding: "0.45rem 0.6rem" }}>
-              <span>📋 Asistencias desde la lista de la app:</span>
-              <b>{{ "1": "1er", "2": "2do", "3": "3er" }[periodo]} periodo</b>
-              <input type="date" className="campo" style={{ width: "auto", fontSize: "0.75rem", padding: "0.2rem" }} value={(fechasTrim[trimContar] || [])[0] || ""} onChange={(e) => cambiarFechaTrim(trimContar, 0, e.target.value)} />
-              <span>a</span>
-              <input type="date" className="campo" style={{ width: "auto", fontSize: "0.75rem", padding: "0.2rem" }} value={(fechasTrim[trimContar] || [])[1] || ""} onChange={(e) => cambiarFechaTrim(trimContar, 1, e.target.value)} />
-              <button onClick={contarAsistencias} className="btn-secundario" style={{ fontSize: "0.72rem" }}>Contar asistencias</button>
-              <span style={{ opacity: 0.6, fontSize: "0.7rem" }}>Cuenta los días "presente" y "retardo". También puede escribirlas a mano.</span>
+            <div className="flex items-center gap-2 flex-wrap text-sm" style={{ marginBottom: "0.5rem", opacity: 0.8 }}>
+              <span>📋 Asistencias del <b>{{ "1": "1er", "2": "2do", "3": "3er" }[periodo]} periodo</b> se llenan solas con la Lista de asistencia ({(autoAsist[periodo] || {}).dias || 0} días con lista) del</span>
+              <input type="date" className="campo" style={{ width: "auto", fontSize: "0.72rem", padding: "0.15rem" }} value={(fechasTrim[trimContar] || [])[0] || ""} onChange={(e) => cambiarFechaTrim(trimContar, 0, e.target.value)} />
+              <span>al</span>
+              <input type="date" className="campo" style={{ width: "auto", fontSize: "0.72rem", padding: "0.15rem" }} value={(fechasTrim[trimContar] || [])[1] || ""} onChange={(e) => cambiarFechaTrim(trimContar, 1, e.target.value)} />
+              <span style={{ opacity: 0.65, fontSize: "0.7rem" }}>· Número gris = automático · si escribe otro, se queda el suyo.</span>
             </div>
             <table style={{ borderCollapse: "collapse", fontSize: "0.78rem", minWidth: "100%" }}>
               <thead>
@@ -5493,7 +5505,7 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
                       ))}
                       {[periodo].map((p) => (
                         <td key={"as" + p} style={{ padding: "2px" }}>
-                          <input className="campo" inputMode="numeric" style={{ width: "4rem", padding: "0.25rem", textAlign: "center" }} value={asistTrimBoleta(r)[p] ?? ""} placeholder="Días" onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ""); cambiarAsist(a.id, p, v); }} />
+                          <input className="campo" inputMode="numeric" style={{ width: "4.5rem", padding: "0.25rem", textAlign: "center", fontWeight: asistDe(a.id, p).auto ? 400 : 700 }} value={asistTrimBoleta(r)[p] ?? ""} placeholder={asistDe(a.id, p).auto ? asistDe(a.id, p).valor : "Días"} title={asistDe(a.id, p).auto ? "Automático desde la Lista de asistencia" : ""} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ""); cambiarAsist(a.id, p, v); }} />
                         </td>
                       ))}
                       {[["folio", ""], ["lengua", "—"]].map(([c, ph]) => (
