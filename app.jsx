@@ -4701,7 +4701,34 @@ function finMes(fechaISO) {
   return `${fechaISO.slice(0, 7)}-${String(ultimo).padStart(2, "0")}`;
 }
 
-function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
+/* ---------- Días sin clases (12 nov 2026) ----------
+   Suspensiones oficiales (se toman solas del calendario: EFEMERIDES con
+   "Suspensión"), actividades extracurriculares, usos y costumbres de la
+   comunidad, CTE u otro motivo. Se guardan en asistSinClases:<fecha> =
+   { fecha, tipo, motivo, grados: ["1","2","3"] } — o { anulado: true } para
+   quitar una suspensión oficial que al final sí tuvo clases. Esos días NO
+   se cuentan en el resumen de asistencia ni en las asistencias de la boleta. */
+const TIPOS_SIN_CLASES = ["Suspensión oficial", "Evento deportivo", "Actividad extracurricular", "Usos y costumbres de la comunidad", "Consejo Técnico Escolar", "Otro"];
+const ICONO_SIN_CLASES = { "Suspensión oficial": "🚫", "Evento deportivo": "🏆", "Actividad extracurricular": "🏃", "Usos y costumbres de la comunidad": "🎉", "Consejo Técnico Escolar": "📚", "Otro": "📌" };
+function suspensionesOficialesCalendario() {
+  try { return Object.fromEntries(EFEMERIDES.filter((e) => /suspensi/i.test(e.titulo)).map((e) => [e.fecha, { fecha: e.fecha, tipo: "Suspensión oficial", motivo: e.titulo.replace(/^Suspensión\s*·\s*/i, ""), grados: ["1", "2", "3"], oficial: true }])); } catch (e) { return {}; }
+}
+async function cargarDiasSinClases() {
+  const lista = await listarStorage("asistSinClases:");
+  const mapa = suspensionesOficialesCalendario();
+  (lista || []).forEach((d) => { if (d && d.fecha) { if (d.anulado) delete mapa[d.fecha]; else mapa[d.fecha] = d; } });
+  return mapa;
+}
+const diasSinClasesLista = (mapa, grado) => Object.values(mapa || {}).filter((d) => !d.grados || d.grados.includes(String(grado))).sort((a, b) => a.fecha.localeCompare(b.fecha));
+const diaSinClases = (mapa, fecha, grado) => { const d = (mapa || {})[fecha]; return d && (!d.grados || d.grados.includes(String(grado))) ? d : null; };
+function useDiasSinClases() {
+  const [mapa, setMapa] = useState(() => suspensionesOficialesCalendario());
+  const recargar = () => cargarDiasSinClases().then(setMapa);
+  useEffect(() => { recargar(); }, []);
+  return [mapa, setMapa, recargar];
+}
+
+function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir, sinClases = {} }) {
   const [periodo, setPeriodo] = useState("semanal");
   const [fechaRef, setFechaRef] = useState(hoyISO());
   // Justificaciones de TODO el grado (todas las fechas), para poder mostrar el
@@ -4733,12 +4760,14 @@ function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
   // alumno faltó (con o sin justificar) dentro del período — para que se
   // pueda ver qué día concreto no vino, y aclararlo con su tutor, en vez de
   // solo ver un número acumulado.
+  const diasSinClasesPeriodo = Object.values(sinClases).filter((d) => d.fecha >= desde && d.fecha <= hasta && diaSinClases(sinClases, d.fecha, grado)).sort((x, y) => x.fecha.localeCompare(y.fecha));
   const filas = listaGrado.map((a) => {
     const c = { presente: 0, retardo: 0, falta: 0, falta_justificada: 0, diasRegistrados: 0 };
     const diasFalta = [];
     Object.keys(asistencia).forEach((clave) => {
       const [g, f] = clave.split("_");
       if (g !== String(grado) || f < desde || f > hasta) return;
+      if (diaSinClases(sinClases, f, grado)) return; // día sin clases: no cuenta
       const estado = asistencia[clave][a.id];
       if (estado) {
         c[estado] = (c[estado] || 0) + 1;
@@ -4785,6 +4814,12 @@ function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
             <Download size={14} /> Imprimir / PDF
           </button>
         </div>
+        {diasSinClasesPeriodo.length > 0 && (
+          <p className="text-sm mb-2" style={{ background: "var(--crema, #f3ece0)", borderRadius: "8px", padding: "0.4rem 0.6rem" }}>
+            <b>Días sin clases en este periodo ({diasSinClasesPeriodo.length}), no se cuentan:</b>{" "}
+            {diasSinClasesPeriodo.map((d) => `${ICONO_SIN_CLASES[d.tipo] || "📌"} ${fechaBonita(d.fecha)} (${d.motivo || d.tipo})`).join(" · ")}
+          </p>
+        )}
         <p className="text-sm mb-2" style={{ opacity: 0.55 }}>
           Toca el nombre de un alumno con faltas para ver los días exactos en que faltó.
         </p>
@@ -4913,6 +4948,21 @@ function Asistencia({ alumnos, asistencia, setAsistencia, gradosPermitidos, onSt
   const [justificaciones, setJustificaciones] = useState({});
   const [editandoJustificacion, setEditandoJustificacion] = useState(null);
   const [datosInforme, setDatosInforme] = useState(null);
+  const [sinClases, setSinClases, recargarSinClases] = useDiasSinClases();
+  const [formSinClases, setFormSinClases] = useState(null);
+  const diaLibre = diaSinClases(sinClases, fecha, grado);
+  const diaSemana = new Date(fecha + "T12:00:00").getDay();
+  const guardarSinClases = async () => {
+    const d = { fecha, tipo: formSinClases.tipo, motivo: (formSinClases.motivo || "").trim(), grados: formSinClases.grados.length ? formSinClases.grados : ["1", "2", "3"] };
+    await setStorage(`asistSinClases:${fecha}`, d);
+    setSinClases((m) => ({ ...m, [fecha]: d })); setFormSinClases(null); onStamp("Guardado");
+  };
+  const quitarSinClases = async () => {
+    if (!window.confirm(`¿Quitar "${diaLibre.motivo || diaLibre.tipo}" del ${fechaBonita(fecha)}? Ese día volverá a contar como día de clases.`)) return;
+    if (diaLibre.oficial) await setStorage(`asistSinClases:${fecha}`, { fecha, anulado: true });
+    else await borrarStorage(`asistSinClases:${fecha}`);
+    setSinClases((m) => { const c = { ...m }; delete c[fecha]; return c; });
+  };
 
   const clave = `${grado}_${fecha}`;
   const registro = asistencia[clave] || {};
@@ -4979,6 +5029,39 @@ function Asistencia({ alumnos, asistencia, setAsistencia, gradosPermitidos, onSt
             <input className="campo" style={{ maxWidth: "10rem" }} type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </div>
 
+          {(diaSemana === 0 || diaSemana === 6) && !diaLibre && <p className="text-sm" style={{ opacity: 0.6, margin: 0 }}>Es {diaSemana === 0 ? "domingo" : "sábado"}: normalmente no se pasa lista.</p>}
+          {diaLibre ? (
+            <div className="card" style={{ background: "var(--crema, #f3ece0)", borderLeft: "4px solid var(--guinda, #7a1a1f)" }}>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <div style={{ fontWeight: 700 }}>{ICONO_SIN_CLASES[diaLibre.tipo] || "📌"} Día sin clases · {diaLibre.tipo}</div>
+                  <div className="text-sm" style={{ opacity: 0.75 }}>{diaLibre.motivo || ""}{diaLibre.grados && diaLibre.grados.length < 3 ? ` · solo ${diaLibre.grados.map((g) => g + "°").join(", ")}` : " · toda la escuela"}{diaLibre.oficial ? " · del calendario oficial" : ""}</div>
+                  <div className="text-sm" style={{ opacity: 0.6, marginTop: "0.2rem" }}>Este día no se pasa lista y no cuenta en el resumen ni en las asistencias de la boleta.</div>
+                </div>
+                <button onClick={quitarSinClases} className="btn-secundario" style={{ fontSize: "0.75rem" }}>Sí hubo clases (quitar)</button>
+              </div>
+            </div>
+          ) : formSinClases ? (
+            <div className="card">
+              <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>Marcar {fechaBonita(fecha)} como día sin clases</div>
+              <div className="flex gap-2 flex-wrap">
+                {TIPOS_SIN_CLASES.map((t) => <button key={t} onClick={() => setFormSinClases((f) => ({ ...f, tipo: t }))} className={`chip-grado ${formSinClases.tipo === t ? "activo" : ""}`} style={{ fontSize: "0.75rem" }}>{ICONO_SIN_CLASES[t]} {t}</button>)}
+              </div>
+              <input className="campo mt-2" placeholder="Motivo (ej. Fiesta patronal, Juegos deportivos de zona, Desfile…)" value={formSinClases.motivo} onChange={(e) => setFormSinClases((f) => ({ ...f, motivo: e.target.value }))} />
+              <div className="flex gap-2 flex-wrap items-center mt-2 text-sm">
+                <span style={{ opacity: 0.7 }}>¿Para qué grados?</span>
+                {["1", "2", "3"].map((g) => <button key={g} onClick={() => setFormSinClases((f) => ({ ...f, grados: f.grados.includes(g) ? f.grados.filter((x) => x !== g) : [...f.grados, g].sort() }))} className={`chip-grado ${formSinClases.grados.includes(g) ? "activo" : ""}`} style={{ fontSize: "0.75rem" }}>{formSinClases.grados.includes(g) ? "✓ " : ""}{g}°</button>)}
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button onClick={guardarSinClases} className="btn-primario" style={{ fontSize: "0.8rem" }}><Check size={14} /> Guardar día sin clases</button>
+                <button onClick={() => setFormSinClases(null)} className="btn-secundario" style={{ fontSize: "0.8rem" }}>Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setFormSinClases({ tipo: TIPOS_SIN_CLASES[1], motivo: "", grados: ["1", "2", "3"] })} className="btn-secundario" style={{ fontSize: "0.78rem", alignSelf: "flex-start" }}>🚫 Marcar este día sin clases (suspensión, actividad, usos y costumbres…)</button>
+          )}
+
+          {!diaLibre && (<>
           <div className="grid grid-cols-4 gap-2">
             <ResumenChip color="var(--verde)" label="Presente" valor={contador.presente} />
             <ResumenChip color="var(--amarillo)" label="Retardo" valor={contador.retardo} />
@@ -5024,11 +5107,22 @@ function Asistencia({ alumnos, asistencia, setAsistencia, gradosPermitidos, onSt
               );
             })}
           </div>
+          </>)}
+          {diasSinClasesLista(sinClases, grado).length > 0 && (
+            <details className="card">
+              <summary className="text-sm" style={{ cursor: "pointer", fontWeight: 600 }}>📅 Días sin clases del ciclo ({diasSinClasesLista(sinClases, grado).length})</summary>
+              <div className="text-sm mt-2" style={{ lineHeight: 1.7 }}>
+                {diasSinClasesLista(sinClases, grado).map((d) => (
+                  <div key={d.fecha}><button onClick={() => setFecha(d.fecha)} style={{ background: "none", border: "none", padding: 0, color: "var(--azul)", cursor: "pointer" }}>{fechaBonita(d.fecha)}</button> · {ICONO_SIN_CLASES[d.tipo] || "📌"} {d.tipo}{d.motivo ? ` — ${d.motivo}` : ""}</div>
+                ))}
+              </div>
+            </details>
+          )}
         </>
       )}
 
       {subTab === "resumen" && (
-        <ResumenAsistencia alumnos={alumnos} asistencia={asistencia} grado={grado} onImprimir={(d) => { setDatosInforme(d); setTimeout(() => window.print(), 100); }} />
+        <ResumenAsistencia alumnos={alumnos} asistencia={asistencia} grado={grado} sinClases={sinClases} onImprimir={(d) => { setDatosInforme(d); setTimeout(() => window.print(), 100); }} />
       )}
 
       <InformeAsistenciaImprimible datos={datosInforme} />
@@ -5334,6 +5428,7 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
   // dentro de las fechas del periodo). Si el docente escribe un número, ese
   // manda; si borra lo escrito, vuelve el automático.
   const [asisLista, setAsisLista] = useState({});
+  const [sinClasesB] = useDiasSinClases();
   useEffect(() => { cargarObjetoMigrando("asistencia:", "asistencia-registro").then((o) => setAsisLista(o || {})); }, []);
   const autoAsist = useMemo(() => {
     const res = {};
@@ -5343,13 +5438,14 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
       Object.keys(asisLista).forEach((clave) => {
         const [g, f] = clave.split("_");
         if (g !== String(grado) || !desde || f < desde || f > hasta) return;
+        if (diaSinClases(sinClasesB, f, grado)) return;
         dias++;
         Object.entries(asisLista[clave] || {}).forEach(([id, est]) => { if (est === "presente" || est === "retardo") cuenta[id] = (cuenta[id] || 0) + 1; });
       });
       res[p] = { dias, cuenta };
     });
     return res;
-  }, [asisLista, fechasTrim, grado]);
+  }, [asisLista, fechasTrim, grado, sinClasesB]);
   const asistDe = (id, p) => {
     const manual = asistTrimBoleta(regs[id])[p];
     if (manual !== undefined && manual !== "") return { valor: manual, auto: false };
@@ -5367,6 +5463,7 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
     Object.keys(o || {}).forEach((clave) => {
       const [g, f] = clave.split("_");
       if (g !== String(grado) || !desde || f < desde || f > hasta) return;
+      if (diaSinClases(sinClasesB, f, grado)) return;
       dias++;
       Object.entries(o[clave] || {}).forEach(([id, est]) => { if (est === "presente" || est === "retardo") cuenta[id] = (cuenta[id] || 0) + 1; });
     });
