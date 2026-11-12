@@ -5356,6 +5356,27 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
     const au = autoAsist[p];
     return au && au.dias ? { valor: String(au.cuenta[id] || 0), auto: true } : { valor: "", auto: false };
   };
+  // Botón "Contar asistencias": vuelve a contar desde la lista y deja el
+  // número fijo (escrito) en el periodo; pregunta antes de reemplazar.
+  const contarAsistencias = async () => {
+    setEstado("Contando asistencias de la lista…");
+    const o = await cargarObjetoMigrando("asistencia:", "asistencia-registro");
+    setAsisLista(o || {});
+    const [desde, hasta] = fechasTrim[periodo] || [];
+    let dias = 0; const cuenta = {};
+    Object.keys(o || {}).forEach((clave) => {
+      const [g, f] = clave.split("_");
+      if (g !== String(grado) || !desde || f < desde || f > hasta) return;
+      dias++;
+      Object.entries(o[clave] || {}).forEach(([id, est]) => { if (est === "presente" || est === "retardo") cuenta[id] = (cuenta[id] || 0) + 1; });
+    });
+    const np = { "1": "1er", "2": "2do", "3": "3er" }[periodo];
+    if (!dias) { setEstado(`No hay días de lista de ${grado}° en el ${np} periodo. Puede escribirlas a mano.`); return; }
+    const conNumero = lista.filter((a) => { const v = asistTrimBoleta(regsRef.current[a.id])[periodo]; return v !== undefined && v !== ""; });
+    if (conNumero.length && !window.confirm(`${conNumero.length} alumno(s) ya tienen un número escrito en el ${np} periodo. ¿Reemplazarlo con lo que dice la lista de asistencia?`)) { setEstado(""); return; }
+    lista.forEach((a) => cambiarAsist(a.id, periodo, String(cuenta[a.id] || 0)));
+    setEstado(`✓ Contadas: ${dias} días con lista en el ${np} periodo.`);
+  };
   // Para imprimir: cada alumno con sus asistencias (escritas o automáticas).
   const regsConAsist = useMemo(() => {
     const o = { ...regs };
@@ -5486,6 +5507,7 @@ function ConcentradoBoleta({ alumnos, gradosPermitidos, onStamp }) {
               <input type="date" className="campo" style={{ width: "auto", fontSize: "0.72rem", padding: "0.15rem" }} value={(fechasTrim[trimContar] || [])[0] || ""} onChange={(e) => cambiarFechaTrim(trimContar, 0, e.target.value)} />
               <span>al</span>
               <input type="date" className="campo" style={{ width: "auto", fontSize: "0.72rem", padding: "0.15rem" }} value={(fechasTrim[trimContar] || [])[1] || ""} onChange={(e) => cambiarFechaTrim(trimContar, 1, e.target.value)} />
+              <button onClick={contarAsistencias} className="btn-secundario" style={{ fontSize: "0.72rem" }}>Contar asistencias</button>
               <span style={{ opacity: 0.65, fontSize: "0.7rem" }}>· Número gris = automático · si escribe otro, se queda el suyo.</span>
             </div>
             <table style={{ borderCollapse: "collapse", fontSize: "0.78rem", minWidth: "100%" }}>
