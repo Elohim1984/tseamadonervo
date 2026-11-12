@@ -4709,6 +4709,11 @@ function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
   // por fecha — se listan una sola vez por grado con el mismo storage genérico.
   const [justificacionesGrado, setJustificacionesGrado] = useState([]);
   const [expandidos, setExpandidos] = useState({});
+  // Trimestral (12 nov 2026): mismas fechas que usa la Boleta para contar
+  // asistencias (boleta:<ciclo>:__trimestres), así ambos dan el mismo número.
+  const [trim, setTrim] = useState(() => { const h = hoyISO(); return Object.keys(TRIMESTRES_ASIST_BOLETA).find((k) => h >= TRIMESTRES_ASIST_BOLETA[k][0] && h <= TRIMESTRES_ASIST_BOLETA[k][1]) || "1"; });
+  const [fechasTrim, setFechasTrim] = useState(TRIMESTRES_ASIST_BOLETA);
+  useEffect(() => { getStorage(`boleta:${CICLO_BOLETA}:__trimestres`, null).then((v) => { if (v && v["1"]) setFechasTrim(v); }); }, []);
 
   useEffect(() => {
     let vivo = true;
@@ -4719,6 +4724,7 @@ function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
   let desde, hasta, etiquetaPeriodo;
   if (periodo === "semanal") { desde = inicioSemana(fechaRef); hasta = finSemana(fechaRef); etiquetaPeriodo = `Semana del ${desde} al ${hasta}`; }
   else if (periodo === "mensual") { desde = inicioMes(fechaRef); hasta = finMes(fechaRef); etiquetaPeriodo = `Mes de ${fechaRef.slice(0, 7)}`; }
+  else if (periodo === "trimestral") { [desde, hasta] = fechasTrim[trim] || TRIMESTRES_ASIST_BOLETA[trim]; etiquetaPeriodo = `${{ "1": "1er", "2": "2do", "3": "3er" }[trim]} trimestre (${fechaBonita(desde)} – ${fechaBonita(hasta)})`; }
   else { desde = CICLO_INICIO; hasta = CICLO_FIN; etiquetaPeriodo = "Ciclo escolar 2026-2027 completo"; }
 
   const listaGrado = alumnos.filter((a) => a.grado === grado).sort((a, b) => nombreAlumno(a).localeCompare(nombreAlumno(b)));
@@ -4754,11 +4760,19 @@ function ResumenAsistencia({ alumnos, asistencia, grado, onImprimir }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex gap-2 flex-wrap">
-        {[["semanal", "Semanal"], ["mensual", "Mensual"], ["anual", "Ciclo completo"]].map(([id, label]) => (
+        {[["semanal", "Semanal"], ["mensual", "Mensual"], ["trimestral", "Trimestral"], ["anual", "Ciclo completo"]].map(([id, label]) => (
           <button key={id} onClick={() => setPeriodo(id)} className={`chip-grado ${periodo === id ? "activo" : ""}`}>{label}</button>
         ))}
       </div>
-      {periodo !== "anual" && (
+      {periodo === "trimestral" && (
+        <div className="card flex items-center gap-2 flex-wrap">
+          {["1", "2", "3"].map((p) => (
+            <button key={p} onClick={() => setTrim(p)} className={`chip-grado ${trim === p ? "activo" : ""}`}>{{ "1": "1er", "2": "2do", "3": "3er" }[p]} trimestre</button>
+          ))}
+          <span className="text-sm" style={{ opacity: 0.6 }}>{fechaBonita(fechasTrim[trim][0])} – {fechaBonita(fechasTrim[trim][1])} · las fechas se cambian en Boleta → Datos de la parte de abajo</span>
+        </div>
+      )}
+      {periodo !== "anual" && periodo !== "trimestral" && (
         <div className="card flex items-center justify-between">
           <label className="font-mono" style={{ fontSize: "0.7rem", opacity: 0.6 }}>FECHA DE REFERENCIA</label>
           <input className="campo" style={{ maxWidth: "10rem" }} type="date" value={fechaRef} onChange={(e) => setFechaRef(e.target.value)} />
