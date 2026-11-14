@@ -25919,6 +25919,20 @@ function Copiloto({ alumnos, pestana, usuario }) {
     setBorrandoTodo(false); nuevaConversacion(); cargarHistorial();
   };
   useEffect(() => { getStorage("ia:notas", "").then((n) => { setNotas(n || ""); setNotasGuardadas(n || ""); }); }, []);
+  // 13 nov 2026: la liga de la IA también se guarda en la Hoja de la escuela
+  // ("ia:liga"), así queda activa en TODOS los dispositivos sin volver a
+  // pegarla (antes solo vivía en el navegador donde se configuró). La clave
+  // de Gemini sigue guardada solo dentro del Apps Script, nunca aquí.
+  useEffect(() => {
+    getStorage("ia:liga", "").then((l) => {
+      if (l && /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(l)) {
+        setLiga((actual) => actual || l);
+        try { if (!localStorage.getItem(CLAVE_LIGA_IA)) localStorage.setItem(CLAVE_LIGA_IA, l); } catch (e) {}
+      } else {
+        try { const loc = localStorage.getItem(CLAVE_LIGA_IA); if (loc) setStorage("ia:liga", loc); } catch (e) {}
+      }
+    });
+  }, []);
   useEffect(() => { try { sessionStorage.setItem("copiloto:convId", convId); } catch (e) {} }, [convId]);
   const guardarNotas = async () => {
     setEstadoNotas("Guardando…");
@@ -25953,6 +25967,7 @@ function Copiloto({ alumnos, pestana, usuario }) {
       if (r && r.servicio === "copiloto") {
         if (!r.listo) { setEstadoLiga("El script responde, pero falta la clave GEMINI_API_KEY en sus propiedades (paso 4)."); return; }
         try { localStorage.setItem(CLAVE_LIGA_IA, l); } catch (e) {}
+        setStorage("ia:liga", l);
         setLiga(l); setEstadoLiga("");
       } else setEstadoLiga("Esa liga no es la de la IA (¿pegó la de la Hoja de la escuela?).");
     } catch (e) { setEstadoLiga("No se pudo conectar. Revise que el acceso sea 'Cualquier usuario'."); }
