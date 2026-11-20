@@ -2822,15 +2822,20 @@ function guardarLiga(url) {
   } catch (e) {}
 }
 
-async function getStorage(key, fallback) {
+async function getStorage(key, fallback, _intento = 0) {
   const liga = obtenerLigaGuardada();
   if (!liga) return fallback;
   try {
     const resp = await fetch(`${liga}?action=get&key=${encodeURIComponent(key)}`);
     const datos = await resp.json();
+    // 20 nov 2026: si Google responde con error (muchas lecturas a la vez), se
+    // reintenta una vez en lugar de devolver vacío (así no se pierden, p. ej.,
+    // los nombres de las firmas del Corte de Caja).
+    if (datos && datos.ok === false && _intento < 1) { await new Promise((r) => setTimeout(r, 700)); return getStorage(key, fallback, _intento + 1); }
     if (!datos.ok || datos.value === null || datos.value === undefined || datos.value === "") return fallback;
     return JSON.parse(datos.value);
   } catch (e) {
+    if (_intento < 1) { await new Promise((r) => setTimeout(r, 700)); return getStorage(key, fallback, _intento + 1); }
     console.error("No se pudo leer de la Hoja:", key, e);
     return fallback;
   }
@@ -18974,7 +18979,30 @@ function InformeBimestralImprimible({ periodo, etiquetaCorte, fechaElaboracion, 
   );
 }
 
-function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosEscuela }) {
+function InformeBimestral({ onStamp, tutores, mesaDirectiva: mesaProp, contraloria: contraProp, datosEscuela: datosProp }) {
+  // 20 nov 2026: los nombres de las firmas (Presidenta, Tesorera, Contraloría)
+  // venían SOLO de lo que cargaba la pestaña de arriba; si esa carga tardaba o
+  // fallaba, el corte salía sin nombres. Ahora el Corte de Caja los busca por
+  // su cuenta si no llegaron, y otra vez justo antes de descargar el PDF.
+  const [mesaPropia, setMesaPropia] = useState(null);
+  const [contraPropia, setContraPropia] = useState(null);
+  const [datosPropios, setDatosPropios] = useState(null);
+  const vacio = (o) => !o || !Object.values(o).some((v) => String(v || "").trim());
+  const mesaDirectiva = vacio(mesaProp) ? mesaPropia || mesaProp : mesaProp;
+  const contraloria = vacio(contraProp) ? contraPropia || contraProp : contraProp;
+  const datosEscuela = vacio(datosProp) ? datosPropios || datosProp : datosProp;
+  const cargarFirmantes = async () => {
+    const seguro = (k) => getStorage(k, {}).catch(() => ({}));
+    const [md, cs, de] = await Promise.all([seguro("apf:mesaDirectiva"), seguro("apf:contraloriaSocial"), seguro("apf:datosEscuela")]);
+    setMesaPropia(md || {}); setContraPropia(cs || {}); setDatosPropios(de || {});
+    return { md: md || {}, cs: cs || {}, de: de || {} };
+  };
+  useEffect(() => { if (vacio(mesaProp) || vacio(contraProp)) cargarFirmantes(); }, [mesaProp, contraProp]);
+  const firmasAlDescargar = async () => {
+    if (!vacio(mesaDirectiva) && !vacio(contraloria)) return { f: firmas, de: datosEscuela };
+    const { md, cs, de } = await cargarFirmantes();
+    return { f: armarFirmas(md, cs), de: vacio(datosEscuela) ? de : datosEscuela };
+  };
   const [bimestre, setBimestre] = useState("1");
   const [periodo, setPeriodo] = useState("");
   const [etiquetaCorte, setEtiquetaCorte] = useState("");
@@ -19123,18 +19151,20 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
     await guardarTodo({ periodo, etiquetaCorte, fechaElaboracion, saldoInicial: saldoInicialUno });
   };
 
-  const firmas = [
-    { etiqueta: "Presidente(a)", nombre: (mesaDirectiva && mesaDirectiva.presidente) || "" },
-    { etiqueta: "Tesorero(a)", nombre: (mesaDirectiva && mesaDirectiva.tesorero) || "" },
-    { etiqueta: "Vo.Bo. Presidente Contraloría Social", nombre: (contraloria && contraloria.presidente) || "" },
+  const armarFirmas = (md, cs) => [
+    { etiqueta: "Presidente(a)", nombre: (md && md.presidente) || "" },
+    { etiqueta: "Tesorero(a)", nombre: (md && md.tesorero) || "" },
+    { etiqueta: "Vo.Bo. Presidente Contraloría Social", nombre: (cs && cs.presidente) || "" },
     { etiqueta: "Director(a)", nombre: NOMBRE_COMPLETO.directora },
   ];
+  const firmas = armarFirmas(mesaDirectiva, contraloria);
 
   const descargarPDFOficial = async () => {
     setGenerandoPDF(true);
     setErrorPDF("");
     try {
-      await descargarCorteCajaPDF(datosEscuela, etiquetaCorte, periodo, fechaElaboracion, conSaldo, arrastre, firmas);
+      const { f, de } = await firmasAlDescargar();
+      await descargarCorteCajaPDF(de, etiquetaCorte, periodo, fechaElaboracion, conSaldo, arrastre, f);
       onStamp && onStamp("Descargado");
     } catch (e) {
       console.error("Descarga de PDF oficial del Corte de Caja falló:", e);
@@ -19152,7 +19182,8 @@ function InformeBimestral({ onStamp, tutores, mesaDirectiva, contraloria, datosE
     setGenerandoPDFSupervision(true);
     setErrorPDF("");
     try {
-      await descargarCorteCajaSupervisionPDF(datosEscuela, etiquetaCorte, periodo, fechaElaboracion, filas, arrastre, firmas);
+      const { f, de } = await firmasAlDescargar();
+      await descargarCorteCajaSupervisionPDF(de, etiquetaCorte, periodo, fechaElaboracion, filas, arrastre, f);
       onStamp && onStamp("Descargado");
     } catch (e) {
       console.error("Descarga de PDF de supervisión del Corte de Caja falló:", e);
@@ -19950,19 +19981,21 @@ function DocumentosDireccion({ alumnos, onStamp, rolActual, subTabInicial }) {
 
   const cargarVistaActa = () => {
     setVistaActa((v) => ({ ...v, cargando: true }));
+    // Cada lectura por separado: si una falla, las demás (firmas) sí llegan.
+    const seguro = (k, d) => getStorage(k, d).catch(() => d);
     Promise.all([
-      getStorage("apf:mesaDirectiva", {}),
-      getStorage("apf:contraloriaSocial", {}),
-      getStorage("apf:mesaSaliente", {}),
-      getStorage("apf:entregaRecepcionChecklist", {}),
-      getStorage("apf:convocatoria", {}),
-      getStorage("apf:constanciaRegistro", {}),
-      getStorage("apf:datosEscuela", {}),
-      getStorage("apf:mesaDebates", {}),
-      getStorage("apf:asamblea", {}),
-      getStorage("apf:entregaRecepcionFecha", {}),
-      getStorage("convivencia:sesion", {}),
-      getStorage("convivencia:integrantes", {}),
+      seguro("apf:mesaDirectiva", {}),
+      seguro("apf:contraloriaSocial", {}),
+      seguro("apf:mesaSaliente", {}),
+      seguro("apf:entregaRecepcionChecklist", {}),
+      seguro("apf:convocatoria", {}),
+      seguro("apf:constanciaRegistro", {}),
+      seguro("apf:datosEscuela", {}),
+      seguro("apf:mesaDebates", {}),
+      seguro("apf:asamblea", {}),
+      seguro("apf:entregaRecepcionFecha", {}),
+      seguro("convivencia:sesion", {}),
+      seguro("convivencia:integrantes", {}),
     ]).then(([md, cs, sal, chk, conv, cons, de, mb, asa, ef, convSesion, convIntegrantes]) => {
       setVistaActa({ mesaDirectiva: md || {}, contraloria: cs || {}, saliente: sal || {}, checklist: chk || {}, convocatoria: conv || {}, constancia: cons || {}, datosEscuela: de || {}, mesaDebates: mb || {}, asamblea: asa || {}, entregaFecha: ef || {}, convivencia: { ...(convSesion || {}), ...(convIntegrantes || {}) }, cargando: false });
     });
