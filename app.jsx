@@ -23732,7 +23732,7 @@ async function aplicarActaOficialREPASE2026(opciones = {}) {
 const IDENT_911_OFICIAL = {
   cct: "21ETV0473W", turno: "1", turnoNombre: "MATUTINO", nombre: "AMADO NERVO",
   vialidadPrincipal: "CALLE CERRO DEL VIGILANTE", vialidadPosterior: "NINGUNO NINGUNO", vialidadDerecha: "NINGUNO NINGUNO", vialidadIzquierda: "NINGUNO NINGUNO",
-  numExt: "0", numInt: "0", asentamiento: "PUEBLO TEPEOJUMA", cp: "74390", entidad: "PUEBLA", municipio: "TEPEOJUMA", localidad: "TEPEOJUMA",
+  numExt: "0", numInt: "0", asentamiento: "PUEBLO TEPEOJUMA", cp: "74394", entidad: "PUEBLA", municipio: "TEPEOJUMA", localidad: "TEPEOJUMA",
   telefono: "2431218498", extension: "", celular: "2225570348", sostenimiento: "FEDERAL TRANSFERIDO-ESTATAL",
   tipoNivel: "BÁSICA - SECUNDARIA - TELESECUNDARIA", caracteristica: "NO APLICA",
   dependencia: "GOBIERNO DEL ESTADO - SECRETARÍA DE EDUCACIÓN DEL GOBIERNO DEL ESTADO", correo: "neftalid.ortan.agui@seppue.gob.mx",
