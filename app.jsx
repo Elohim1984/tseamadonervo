@@ -5901,7 +5901,7 @@ function OficioHoja({ o, directorio, mesa }) {
         )}
         {ccp.length > 0 && <div style={{ fontSize: "8.5pt", marginTop: "0.2in" }}>c.c.p. {ccp.map((d) => `${nombrePropio(d.nombre)}, ${nombrePropio(d.cargo)}`).join("; ")}. · Archivo</div>}
       </div>
-      <div style={{ textAlign: "center", fontSize: "8.5pt", color: "#333", marginTop: "0.2in", position: "relative" }}>Xoyatla, Tepeojuma Puebla, Tel. 2444419381, C.P. 74390</div>
+      <div style={{ textAlign: "center", fontSize: "8.5pt", color: "#333", marginTop: "0.2in", position: "relative" }}>Xoyatla, Tepeojuma Puebla, Tel. 2444419381, C.P. 74394</div>
     </div>
   );
 }
